@@ -9,7 +9,6 @@ __pycache__/
 *.so
 *.egg
 *.egg-info/
-dist/
 build/
 .eggs/
 .pytest_cache/
@@ -44,7 +43,7 @@ backups_storage/
 
 # ─── Node.js / React ─────────────────────────────────────────────────────────
 frontend/node_modules/
-   # مُنشأ أثناء Build — لا تُرفع
+
 
 # ─── macOS ───────────────────────────────────────────────────────────────────
 .DS_Store
