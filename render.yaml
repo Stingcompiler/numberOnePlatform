@@ -1,0 +1,66 @@
+# =============================================================================
+# render.yaml — Render Infrastructure as Code
+# =============================================================================
+# هذا الملف يُعرّف كل خدمات المشروع على Render.
+# وثائق: https://render.com/docs/blueprint-spec
+#
+# الاستخدام:
+#   1. ارفع الكود على GitHub
+#   2. في Render Dashboard: New → Blueprint → ربط المستودع
+#   3. Render سيقرأ هذا الملف وينشئ الخدمات تلقائياً
+# =============================================================================
+
+services:
+  # ─── خدمة الويب الرئيسية (Django + React) ──────────────────────────────────
+  - type: web
+    name: number-platform-api
+    runtime: python
+    region: frankfurt         # اختر المنطقة الأقرب لمستخدميك
+    plan: free                # free | starter | standard | pro
+
+    # ── الخيارات المتعلقة بالبناء ──────────────────────────────────────────
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120 --log-level info"
+
+    # ── متغيرات البيئة ─────────────────────────────────────────────────────
+    envVars:
+      # Django Core
+      - key: SECRET_KEY
+        generateValue: true           # Render يولّد مفتاحاً آمناً تلقائياً
+
+      - key: DEBUG
+        value: "False"
+
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+
+      # ALLOWED_HOSTS: يُضاف دومين Render تلقائياً + أي دومين مخصص
+      # استبدل number-platform-api.onrender.com بالدومين الفعلي بعد النشر
+      - key: ALLOWED_HOSTS
+        value: "number-platform-api.onrender.com"
+
+      # CORS & CSRF: يجب أن يطابق عنوان الـ Frontend
+      # إذا كان Frontend في نفس الـ Service → نفس الدومين
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://number-platform-api.onrender.com"
+
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://number-platform-api.onrender.com"
+
+      # Cookies آمنة في HTTPS
+      - key: COOKIE_SECURE
+        value: "True"
+
+      # DATABASE_URL: يُحقن تلقائياً من قاعدة البيانات المرتبطة أدناه
+      - key: DATABASE_URL
+        fromDatabase:
+          name: number-platform-db
+          property: connectionString
+
+# ─── قاعدة بيانات PostgreSQL ────────────────────────────────────────────────
+databases:
+  - name: number-platform-db
+    databaseName: number_platform
+    user: number_platform_user
+    region: frankfurt
+    plan: free                # free | starter (اختر حسب الحاجة)

@@ -1,0 +1,446 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ══════════════════════════════════════════════════════════════════
+   نظام التصميم — مدارس ومعاهد نمبر ون
+   Dashboard: Glassmorphism Dark Mode + Neon Accents
+   Landing:   Clean White + Professional Red & Blue
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── المتغيرات الأساسية ──────────────────────────────────────────── */
+:root {
+  /* Brand colours — shared across all contexts */
+  --brand-red:         #C0392B;   /* Professional crimson — warm, trustworthy  */
+  --brand-red-light:   #E74C3C;   /* Lighter hover state                       */
+  --brand-red-soft:    rgba(192, 57, 43, 0.08);
+  --brand-blue:        #1A56DB;   /* Royal blue — confident, educational        */
+  --brand-blue-light:  #2563EB;   /* Lighter hover state                        */
+  --brand-blue-soft:   rgba(26, 86, 219, 0.08);
+
+  /* Landing-page surface tokens */
+  --lp-bg:             #FFFFFF;
+  --lp-bg-subtle:      #F8FAFF;   /* Very slight blue-tinted off-white          */
+  --lp-bg-muted:       #F1F5F9;   /* Section separators                         */
+  --lp-surface:        #FFFFFF;
+  --lp-border:         #E2E8F0;
+  --lp-border-strong:  #CBD5E1;
+  --lp-text-primary:   #0F172A;   /* Near-black — excellent contrast            */
+  --lp-text-secondary: #475569;   /* Readable mid-gray                          */
+  --lp-text-muted:     #94A3B8;   /* Labels, captions                           */
+
+  /* Dashboard dark tokens — unchanged */
+  --brand-cyan:        #00F5D4;
+  --dark-900:          #070B14;
+  --dark-800:          #0D1117;
+  --dark-700:          #131A27;
+  --dark-600:          #1A2235;
+  --glass-bg:          rgba(255, 255, 255, 0.06);
+  --glass-border:      rgba(255, 255, 255, 0.10);
+  --glass-strong:      rgba(255, 255, 255, 0.12);
+}
+
+/* ── الخط الافتراضي وإعدادات الأساس ───────────────────────────────── */
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--dark-900);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(26, 86, 219, 0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(192, 57, 43, 0.05) 0%, transparent 60%);
+    min-height: 100vh;
+    overflow-x: hidden;
+    direction: rtl;
+  }
+
+  ::selection {
+    background: rgba(26, 86, 219, 0.2);
+    color: var(--brand-blue);
+  }
+
+  ::-webkit-scrollbar        { width: 6px; }
+  ::-webkit-scrollbar-track  { background: var(--dark-800); }
+  ::-webkit-scrollbar-thumb  { background: rgba(26,86,219,0.35); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(26,86,219,0.6); }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   مكونات مشتركة — Dashboard (glassmorphism dark)
+   ══════════════════════════════════════════════════════════════════ */
+@layer components {
+
+  /* ── البطاقة الزجاجية ──────────────────────────────────────────── */
+  .glass-card {
+    @apply rounded-2xl border border-white/10 shadow-glass;
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.08);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-card:hover {
+    background: var(--glass-strong);
+    border-color: rgba(26, 86, 219, 0.20);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(26,86,219,0.07);
+  }
+
+  .glass-card-strong {
+    @apply rounded-2xl border border-white/10 shadow-glass;
+    background: var(--glass-strong);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  /* ── الشريط العلوي ──────────────────────────────────────────────── */
+  .navbar-glass {
+    background: rgba(7, 11, 20, 0.70);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--glass-border);
+  }
+
+  /* ── Dashboard Buttons ──────────────────────────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-cairo font-semibold text-sm;
+    @apply text-white transition-all duration-300 cursor-pointer;
+    background: linear-gradient(135deg, var(--brand-red), #a93226);
+    box-shadow: 0 4px 20px rgba(192, 57, 43, 0.30);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(192, 57, 43, 0.50);
+    filter: brightness(1.08);
+  }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-cairo font-semibold text-sm;
+    @apply transition-all duration-300 cursor-pointer;
+    color: var(--brand-blue);
+    border: 1px solid rgba(26, 86, 219, 0.28);
+    background: rgba(26, 86, 219, 0.07);
+  }
+  .btn-secondary:hover {
+    background: rgba(26, 86, 219, 0.14);
+    border-color: rgba(26, 86, 219, 0.55);
+    box-shadow: 0 0 18px rgba(26, 86, 219, 0.18);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm;
+    @apply text-white/70 hover:text-white transition-all duration-200 cursor-pointer;
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.07); }
+
+  /* ── حقول الإدخال (dark) ────────────────────────────────────────── */
+  .input-glass {
+    @apply w-full px-4 py-3 rounded-xl text-sm text-white outline-none transition-all duration-300;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+  .input-glass::placeholder { color: rgba(255,255,255,0.35); }
+  .input-glass:focus {
+    background: rgba(255,255,255,0.09);
+    border-color: rgba(26, 86, 219, 0.50);
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.10);
+  }
+
+  /* تحسين القوائم المنسدلة */
+  .input-glass option { background-color: #ffffff; color: #111827; }
+  @media (prefers-color-scheme: dark) {
+    .input-glass option { background-color: var(--dark-800); color: #ffffff; }
+  }
+
+  /* ── Skeleton Loader ─────────────────────────────────────────────── */
+  .skeleton {
+    @apply rounded-lg animate-pulse;
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.05) 75%);
+    background-size: 200% auto;
+    animation: shimmer 1.5s linear infinite;
+  }
+
+  /* ── Sidebar Dashboard ──────────────────────────────────────────── */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-white/60;
+    @apply transition-all duration-200 cursor-pointer;
+  }
+  .sidebar-item:hover { @apply text-white; background: rgba(255,255,255,0.07); }
+  .sidebar-item.active {
+    @apply text-brand-blue;
+    background: rgba(26, 86, 219, 0.12);
+    border-right: 3px solid var(--brand-blue);
+  }
+
+  /* ── جدول Dashboard ──────────────────────────────────────────────── */
+  .table-glass { @apply w-full text-sm text-right; }
+  .table-glass thead tr { border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .table-glass th { @apply px-4 py-3 text-white/50 font-medium text-xs uppercase tracking-wider; }
+  .table-glass td { @apply px-4 py-3 text-white/80 border-b border-white/5; }
+  .table-glass tbody tr:hover td { background: rgba(255,255,255,0.03); @apply text-white; }
+
+  /* ══════════════════════════════════════════════════════════════════
+     مكونات Landing Page — White + Red + Blue
+     ══════════════════════════════════════════════════════════════════ */
+
+  /* ── البطاقة الفاتحة ─────────────────────────────────────────────── */
+  .light-card {
+    background: var(--lp-surface);
+    border: 1px solid var(--lp-border);
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+  }
+  .light-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    border-color: var(--lp-border-strong);
+    transform: translateY(-2px);
+  }
+
+  /* ── زر Landing الأساسي (أزرق) ──────────────────────────────────── */
+  .lp-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-cairo font-semibold text-sm text-white;
+    @apply transition-all duration-300 cursor-pointer select-none whitespace-nowrap;
+    background: var(--brand-blue);
+    box-shadow: 0 2px 8px rgba(26,86,219,0.25);
+  }
+  .lp-btn-primary:hover {
+    background: var(--brand-blue-light);
+    box-shadow: 0 4px 16px rgba(26,86,219,0.35);
+    transform: translateY(-1px);
+  }
+  .lp-btn-primary:active { transform: translateY(0); }
+
+  /* ── زر Landing الثانوي (أحمر outline) ─────────────────────────── */
+  .lp-btn-outline-red {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-cairo font-semibold text-sm;
+    @apply transition-all duration-300 cursor-pointer select-none whitespace-nowrap;
+    color: var(--brand-red);
+    border: 1.5px solid rgba(192,57,43,0.35);
+    background: transparent;
+  }
+  .lp-btn-outline-red:hover {
+    background: var(--brand-red-soft);
+    border-color: rgba(192,57,43,0.60);
+    color: var(--brand-red);
+  }
+
+  /* ── زر Landing ثانوي (رمادي/subtle) ───────────────────────────── */
+  .lp-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-cairo font-semibold text-sm;
+    @apply transition-all duration-300 cursor-pointer select-none whitespace-nowrap;
+    color: var(--lp-text-secondary);
+    border: 1.5px solid var(--lp-border);
+    background: transparent;
+  }
+  .lp-btn-ghost:hover {
+    border-color: var(--lp-border-strong);
+    color: var(--lp-text-primary);
+    background: var(--lp-bg-subtle);
+  }
+
+  /* ── حقل إدخال Landing ──────────────────────────────────────────── */
+  .input-light {
+    @apply w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300;
+    background: var(--lp-bg-subtle);
+    border: 1px solid var(--lp-border);
+    color: var(--lp-text-primary);
+  }
+  .input-light::placeholder { color: var(--lp-text-muted); }
+  .input-light:focus {
+    background: white;
+    border-color: var(--brand-blue);
+    box-shadow: 0 0 0 3px rgba(26,86,219,0.10);
+  }
+
+  /* ── Badges Landing ─────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold;
+  }
+  .badge-blue {
+    @apply badge;
+    background: rgba(26, 86, 219, 0.10);
+    color: var(--brand-blue);
+    border: 1px solid rgba(26,86,219,0.20);
+  }
+  .badge-red {
+    @apply badge;
+    background: rgba(192, 57, 43, 0.10);
+    color: var(--brand-red);
+    border: 1px solid rgba(192,57,43,0.20);
+  }
+  .badge-green {
+    @apply badge;
+    background: rgba(5, 150, 105, 0.10);
+    color: #059669;
+    border: 1px solid rgba(5,150,105,0.20);
+  }
+
+  /* ── Section typography ────────────────────────────────────────── */
+  .section-title {
+    @apply font-cairo font-bold text-3xl md:text-4xl;
+    color: var(--lp-text-primary);
+  }
+  .section-subtitle {
+    @apply font-tajawal text-base md:text-lg leading-relaxed;
+    color: var(--lp-text-secondary);
+  }
+
+  /* ── Divider accent ─────────────────────────────────────────────── */
+  .neon-line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--brand-blue), transparent);
+    opacity: 0.35;
+    border-radius: 9999px;
+  }
+
+  /* ── stat-card (dashboard) ──────────────────────────────────────── */
+  .stat-card { @apply glass-card p-5 flex flex-col gap-2; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Utilities
+   ══════════════════════════════════════════════════════════════════ */
+@layer utilities {
+
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(26,86,219,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26,86,219,0.025) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .glow-text-blue { text-shadow: 0 0 30px rgba(26, 86, 219, 0.40); }
+  .glow-text-red  { text-shadow: 0 0 30px rgba(192, 57, 43, 0.40); }
+
+  /* Landing gradient heading */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--lp-text-primary) 0%, var(--brand-blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-red {
+    background: linear-gradient(135deg, var(--lp-text-primary) 0%, var(--brand-red) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .live-dot::before {
+    content: '';
+    @apply inline-block w-2 h-2 rounded-full bg-green-500 ml-2 animate-pulse;
+  }
+
+  /* Custom scrollbar (sidebar, notification panel) */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(26, 86, 219, 0.25) transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar        { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track  { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb  {
+    background: rgba(26, 86, 219, 0.25);
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(26, 86, 219, 0.50);
+  }
+
+  /* Glass notification panel slide-in */
+  @keyframes notif-drop {
+    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+  .notif-panel-enter { animation: notif-drop 0.18s ease-out; }
+
+  /* Sidebar section divider opacity tweaks */
+  .bg-white\/04   { background-color: rgba(255,255,255,0.04); }
+  .bg-white\/08   { background-color: rgba(255,255,255,0.08); }
+  .bg-brand-red\/08  { background-color: rgba(192,57,43,0.08); }
+  .hover\:bg-brand-red\/08:hover { background-color: rgba(192,57,43,0.08); }
+  .border-white\/08  { border-color: rgba(255,255,255,0.08); }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   إعدادات الطباعة
+   ══════════════════════════════════════════════════════════════════ */
+@media print {
+  @page { size: A4 portrait; margin: 12mm 15mm; }
+
+  body > *, body * { visibility: hidden !important; }
+  #print-area, #print-area * { visibility: visible !important; }
+
+  #print-area {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    background: #fff !important;
+    color: #000 !important;
+    direction: rtl !important;
+    font-family: 'Cairo', 'Tajawal', Arial, sans-serif !important;
+    z-index: 9999 !important;
+    padding: 8mm !important;
+    overflow: visible !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #print-area .glass-card,
+  #print-area .glass-card-strong {
+    background: #fff !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    border-radius: 6px !important;
+  }
+
+  #print-area table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 10pt !important;
+    page-break-inside: auto;
+  }
+  #print-area th, #print-area td {
+    border: 1px solid #bbb !important;
+    padding: 5px 8px !important;
+    color: #000 !important;
+    background: transparent !important;
+    text-align: right !important;
+  }
+  #print-area thead th {
+    font-weight: 700 !important;
+    color: #222 !important;
+    background: #f0f0f0 !important;
+  }
+  #print-area tbody tr:nth-child(even) td { background: #fafafa !important; }
+  #print-area tr { page-break-inside: avoid; }
+
+  #print-area * { color: #000 !important; text-shadow: none !important; box-shadow: none !important; }
+
+  #print-area span[class*="bg-"] {
+    background: transparent !important;
+    border: 1px solid #888 !important;
+    color: #000 !important;
+    padding: 1px 4px !important;
+    border-radius: 3px !important;
+  }
+}
