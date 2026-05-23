@@ -11,7 +11,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'https://numberoneplatform.onrender.com/api',
   withCredentials: true,          // ضروري لإرسال HttpOnly Cookies
   headers: {
     'Content-Type': 'application/json',

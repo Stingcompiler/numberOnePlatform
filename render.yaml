@@ -37,15 +37,14 @@ services:
       # ALLOWED_HOSTS: يُضاف دومين Render تلقائياً + أي دومين مخصص
       # استبدل number-platform-api.onrender.com بالدومين الفعلي بعد النشر
       - key: ALLOWED_HOSTS
-        value: "number-platform-api.onrender.com"
+        value: "numberoneplatform.onrender.com"
 
       # CORS & CSRF: يجب أن يطابق عنوان الـ Frontend
-      # إذا كان Frontend في نفس الـ Service → نفس الدومين
       - key: CORS_ALLOWED_ORIGINS
-        value: "https://number-platform-api.onrender.com"
+        value: "https://numberoneplatform.onrender.com"
 
       - key: CSRF_TRUSTED_ORIGINS
-        value: "https://number-platform-api.onrender.com"
+        value: "https://numberoneplatform.onrender.com"
 
       # Cookies آمنة في HTTPS
       - key: COOKIE_SECURE
