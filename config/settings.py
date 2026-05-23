@@ -233,9 +233,9 @@ STATIC_URL  = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # مجلدات إضافية للملفات الثابتة (React assets build)
-STATICFILES_DIRS = [
-    BASE_DIR / "frontend" / "dist" / "assets",
-]
+# مشروطة: إذا لم يكن المجلد موجوداً (قبل npm run build) لا يحدث خطأ
+_react_assets = BASE_DIR / "frontend" / "dist" / "assets"
+STATICFILES_DIRS = [_react_assets] if _react_assets.exists() else []
 
 # WhiteNoise: ضغط Brotli/Gzip + Cache-busting hash في أسماء الملفات
 STORAGES = {

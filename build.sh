@@ -17,18 +17,25 @@ pip install --upgrade pip
 pip install -r requirements.txt
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  📦 Checking Node.js / npm availability"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+node --version
+npm --version
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  ⚛️  Step 2: Building React frontend"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 cd frontend
-npm ci --prefer-offline   # install exact versions from package-lock.json
-npm run build             # outputs to frontend/dist/
+npm ci                # install exact versions from package-lock.json
+npm run build         # outputs to frontend/dist/
 cd ..
+
+echo "  ✅ React build complete. Contents of frontend/dist/:"
+ls -la frontend/dist/
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  📦 Step 3: Collecting Django static files"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-# يجمع كل الملفات الثابتة (بما فيها React assets) في staticfiles/
-# WhiteNoise ستخدمها مباشرةً
 python manage.py collectstatic --noinput
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
