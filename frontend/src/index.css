@@ -378,10 +378,9 @@
    إعدادات الطباعة
    ══════════════════════════════════════════════════════════════════ */
 @media print {
-  @page { size: A4 portrait; margin: 12mm 15mm; }
+  @page { size: A4 portrait; margin: 0; }
 
-  body > *, body * { visibility: hidden !important; }
-  #print-area, #print-area * { visibility: visible !important; }
+  /* Removed generic visibility hidden to allow Tailwind print utilities to work properly */
 
   #print-area {
     position: fixed !important;
@@ -392,7 +391,7 @@
     direction: rtl !important;
     font-family: 'Cairo', 'Tajawal', Arial, sans-serif !important;
     z-index: 9999 !important;
-    padding: 8mm !important;
+    padding: 15mm !important; /* Compensate for @page margin: 0 */
     overflow: visible !important;
   }
 

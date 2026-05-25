@@ -136,7 +136,7 @@ export default function StudentDetailsPage() {
   const settled = bal === 0 && totReq > 0
 
   return (
-    <div className="space-y-5 animate-fade-in print:text-black print:bg-white max-w-5xl mx-auto">
+    <div className="space-y-5 animate-fade-in print:p-8 print:text-black print:bg-white max-w-5xl mx-auto">
       {/* Header Actions - Hidden in Print */}
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <button onClick={() => navigate('/dashboard/students')} className="btn-ghost p-2 text-white/60 hover:text-white flex items-center gap-2 pr-0 border-0">
@@ -232,7 +232,7 @@ export default function StudentDetailsPage() {
       </div>
 
       {/* Information Cards */}
-      <div className="flex flex-col md:flex-row gap-5 print:hidden">
+      <div className="flex flex-col md:flex-row gap-5">
         <InfoSection title="المعلومات الشخصية" data={basicInfo} />
         <InfoSection title="المعلومات الأكاديمية" data={academicInfo} />
         <InfoSection title="معلومات ولي الأمر" data={parentInfo} />

@@ -422,7 +422,8 @@ export default function FinancePage() {
   const totalPages = Math.ceil(total / 10)
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <>
+      <div className="space-y-5 animate-fade-in print:hidden">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="font-cairo font-bold text-white text-xl flex items-center gap-2">
           <DollarSign size={20} className="text-brand-blue" /> الملفات المالية
@@ -667,9 +668,6 @@ export default function FinancePage() {
         />
       )}
 
-      {/* بيانات الطباعة */}
-      {printData && <PrintableReceipt file={printData.file} payment={printData.payment} />}
-
       {/* نافذة إنشاء/تعديل الملف المالي */}
       {editFinance && (
         <UpdateFinanceProfileModal
@@ -698,6 +696,10 @@ export default function FinancePage() {
           }}
         />
       )}
-    </div>
+      </div>
+
+      {/* بيانات الطباعة (Rendered outside the print:hidden container) */}
+      {printData && <PrintableReceipt file={printData.file} payment={printData.payment} />}
+    </>
   )
 }
