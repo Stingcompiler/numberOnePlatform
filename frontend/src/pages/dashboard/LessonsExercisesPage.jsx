@@ -95,7 +95,7 @@ function YouTubePlayer({ url, title }) {
   return (
     <div className="relative rounded-t-xl overflow-hidden bg-dark-700" style={{ paddingBottom: '56.25%' }}>
       <iframe className="absolute inset-0 w-full h-full" src={url} title={title || 'درس'}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
     </div>
   )
 }

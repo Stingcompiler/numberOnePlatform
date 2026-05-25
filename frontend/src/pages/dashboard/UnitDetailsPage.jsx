@@ -115,6 +115,7 @@ function YouTubePlayer({ url, title }) {
         title={title || 'درس'}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
       />
     </div>
   )

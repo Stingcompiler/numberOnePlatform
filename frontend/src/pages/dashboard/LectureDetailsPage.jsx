@@ -18,6 +18,7 @@ function YouTubePlayer({ url, title }) {
         title={title || 'محاضرة'}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
       />
     </div>
   )
