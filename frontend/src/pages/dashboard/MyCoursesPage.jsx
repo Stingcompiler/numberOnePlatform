@@ -13,12 +13,13 @@ import api from '../../api/axiosInstance'
 /* ─ مشغل يوتيوب Embed ───────────────────────────────────────── */
 function YouTubeEmbed({ embedUrl, title }) {
   if (!embedUrl) return null
+  const srcUrl = embedUrl.includes('?') ? `${embedUrl}&origin=${window.location.origin}` : `${embedUrl}?origin=${window.location.origin}`
   return (
     <div className="relative w-full rounded-2xl overflow-hidden bg-dark-700"
       style={{ paddingBottom: '56.25%' }}>
       <iframe
         className="absolute inset-0 w-full h-full"
-        src={embedUrl}
+        src={srcUrl}
         title={title}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen

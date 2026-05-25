@@ -107,11 +107,12 @@ function ItemModal({ title, fields, initialData = {}, endpoint, onClose, onSaved
    ═══════════════════════════════════════════════════════════════════ */
 function YouTubePlayer({ url, title }) {
   if (!url) return null
+  const embedUrl = url.includes('?') ? `${url}&origin=${window.location.origin}` : `${url}?origin=${window.location.origin}`
   return (
     <div className="relative rounded-xl overflow-hidden bg-dark-700 mb-3" style={{ paddingBottom: '56.25%' }}>
       <iframe
         className="absolute inset-0 w-full h-full rounded-xl"
-        src={url}
+        src={embedUrl}
         title={title || 'درس'}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen

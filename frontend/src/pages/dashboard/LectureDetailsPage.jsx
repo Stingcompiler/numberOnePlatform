@@ -10,11 +10,12 @@ import api from '../../api/axiosInstance'
 /* ─── YouTube Player ─────────────────────────────────────────────── */
 function YouTubePlayer({ url, title }) {
   if (!url) return null
+  const embedUrl = url.includes('?') ? `${url}&origin=${window.location.origin}` : `${url}?origin=${window.location.origin}`
   return (
     <div className="relative rounded-2xl overflow-hidden bg-dark-800 shadow-2xl" style={{ paddingBottom: '56.25%' }}>
       <iframe
         className="absolute inset-0 w-full h-full"
-        src={url}
+        src={embedUrl}
         title={title || 'محاضرة'}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
