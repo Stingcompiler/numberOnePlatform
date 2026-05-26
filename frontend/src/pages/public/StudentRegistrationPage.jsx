@@ -38,6 +38,11 @@ const INITIAL = {
   residence: '', date_of_birth: '', student_phone: '',
   guardian_name: '', guardian_phone: '', guardian_residence: '', mother_full_name: '',
   supervisor: '',
+
+  academic_result_image: '', birth_certificate_image: '',
+  personal_photo: '', mother_id_image: '', father_id_image: '',
+  national_id_image: '', payment_receipt_image: '',
+
 }
 
 /* ── File Input ── */
@@ -96,8 +101,6 @@ export default function StudentRegistrationPage() {
       setLevels(levelsData.data.results || levelsData.data)
       setGrades(gradesData.data.results || gradesData.data)
 
-      console.log(gradesData.data.results || gradesData.data)
-      console.log(levelsData.data.results || levelsData.data)
     }
     fetchAcademic()
 
@@ -110,7 +113,8 @@ export default function StudentRegistrationPage() {
 
   const handleFile = (name, file) => setFiles(f => ({ ...f, [name]: file }))
 
-  const addSibling = () => setForm(f => ({ ...f, siblings_info: [...f.siblings_info, { name: '', grade: '' }] }))
+  const addSibling = () => setForm(f =>
+    ({ ...f, siblings_info: [...f.siblings_info, { name: '', grade: '' }] }))
   const updateSibling = (idx, key, val) => {
     setForm(f => {
       const updated = [...f.siblings_info]
@@ -118,7 +122,8 @@ export default function StudentRegistrationPage() {
       return { ...f, siblings_info: updated }
     })
   }
-  const removeSibling = idx => setForm(f => ({ ...f, siblings_info: f.siblings_info.filter((_, i) => i !== idx) }))
+  const removeSibling = idx => setForm(f =>
+    ({ ...f, siblings_info: f.siblings_info.filter((_, i) => i !== idx) }))
 
   const handleSubmit = async e => {
     e.preventDefault()
