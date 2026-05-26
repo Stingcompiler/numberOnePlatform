@@ -455,22 +455,25 @@ class NewStudentRegistration(models.Model):
 
     # ── الملفات المرفقة ───────────────────────────────────────────────────────
     academic_result_image    = models.ImageField(
-        _("صورة آخر نتيجة دراسية"), upload_to=registration_upload_path, blank=True, null=True,
+        _(" تحميل اخر نتيجة دراسية للطالب "), upload_to=registration_upload_path, blank=False, null=False,
     )
     birth_certificate_image  = models.ImageField(
-        _("صورة شهادة الميلاد"), upload_to=registration_upload_path, blank=True, null=True,
+        _("   تحميل شهادة ميلاد الطالب"), upload_to=registration_upload_path, blank=False, null=False,
     )
     personal_photo           = models.ImageField(
-        _("صورة شخصية / جواز"), upload_to=registration_upload_path, blank=True, null=True,
+        _("   صورة شخصية للطالب / باسبورت"), upload_to=registration_upload_path, blank=False, null=False,
+    )
+    student_id_image         = models.ImageField(
+        _("  تحميل الرقم الوطني للطالب "), upload_to=registration_upload_path, blank=False, null=False,
     )
     father_id_image          = models.ImageField(
-        _("صورة بطاقة الأب"), upload_to=registration_upload_path, blank=True, null=True,
+        _("  تحميل الرقم الوطني للأب "), upload_to=registration_upload_path, blank=False, null=False,
     )
     mother_id_image          = models.ImageField(
-        _("صورة بطاقة الأم"), upload_to=registration_upload_path, blank=True, null=True,
+        _("  تحميل الرقم الوطني للأم"), upload_to=registration_upload_path, blank=False, null=False,
     )
     payment_receipt_image    = models.ImageField(
-        _("صورة إيصال الدفع"), upload_to=registration_upload_path, blank=True, null=True,
+        _("  تحميل اشعار سداد الرسوم / اشعار بنكك "), upload_to=registration_upload_path, blank=True, null=True,
     )
 
     # ── بيانات ولي الأمر ──────────────────────────────────────────────────────
@@ -496,8 +499,8 @@ class NewStudentRegistration(models.Model):
         choices=RequestStatusChoices.choices,
         default=RequestStatusChoices.NEW,
     )
-    admin_notes = models.TextField(_("ملاحظات الإدارة"), blank=True)
-    submitted_at = models.DateTimeField(_("تاريخ الإرسال"), auto_now_add=True)
+    admin_notes = models.TextField(_("ملاحظات الإدارة"), blank=False)
+    submitted_at = models.DateTimeField(_("تاريخ الإرسال"), auto_now_add=False)
 
     class Meta:
         verbose_name        = _("طلب تسجيل جديد")

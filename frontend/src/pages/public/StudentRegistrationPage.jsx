@@ -83,9 +83,24 @@ export default function StudentRegistrationPage() {
   const [status, setStatus] = useState('idle')
   const [errMsg, setErrMsg] = useState('')
 
+  const [grades, setGrades] = useState([])
+  const [levels, setLevels] = useState([])
+
   useEffect(() => {
-    api.get('/registration-conditions/public/').then(r => setConditions(r.data.results || r.data)).catch(() => {})
-    api.get('/supervisors/public/').then(r => setSupervisors(r.data.results || r.data)).catch(() => {})
+    api.get('/registration-conditions/public/').then(r => setConditions(r.data.results || r.data)).catch(() => { })
+    api.get('/supervisors/public/').then(r => setSupervisors(r.data.results || r.data)).catch(() => { })
+
+    const fetchAcademic = async () => {
+      const gradesData = await api.get('/academic/grades/?system_type=online')
+      const levelsData = await api.get('/academic/levels/?system_type=online')
+      setLevels(levelsData.data.results || levelsData.data)
+      setGrades(gradesData.data.results || gradesData.data)
+
+      console.log(gradesData.data.results || gradesData.data)
+      console.log(levelsData.data.results || levelsData.data)
+    }
+    fetchAcademic()
+
   }, [])
 
   const handleChange = e => {
@@ -107,7 +122,35 @@ export default function StudentRegistrationPage() {
 
   const handleSubmit = async e => {
     e.preventDefault()
-    const required = ['student_full_name', 'national_id', 'level', 'grade', 'gender', 'student_status', 'residence', 'date_of_birth', 'guardian_name', 'guardian_phone', 'guardian_residence', 'mother_full_name']
+    const required = [
+      'student_full_name',
+      'student_phone',
+      'national_id',
+      'level',
+      'grade',
+      'gender',
+      'student_status',
+      'residence',
+      'date_of_birth',
+      'guardian_name',
+      'guardian_phone',
+      'guardian_residence',
+      'mother_full_name',
+      'has_siblings',
+      'siblings_info',
+      'supervisor',
+
+      'academic_result_image',
+      'birth_certificate_image',
+      'personal_photo',
+      'national_id_image',
+      'mother_id_image',
+      'father_id_image',
+      'payment_receipt_image',
+
+
+
+    ]
     for (const key of required) {
       if (!form[key]?.toString().trim()) {
         setStatus('error'); setErrMsg('يرجى تعبئة جميع الحقول الإلزامية.'); return
@@ -204,31 +247,32 @@ export default function StudentRegistrationPage() {
               <SectionHeader icon={User} title="بيانات الطالب" subtitle="المعلومات الأساسية للطالب" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>الاسم الكامل <span className="text-red-500">*</span></label>
-                  <input required name="student_full_name" value={form.student_full_name} onChange={handleChange} className={inputClass} placeholder="الاسم الرباعي" />
+                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>اسم الطالب رباعي <span className="text-red-500">*</span></label>
+                  <input required name="student_full_name" value={form.student_full_name} onChange={handleChange} className={inputClass} placeholder="اسم الطالب رباعي " />
                 </div>
                 <div>
-                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>الرقم الوطني <span className="text-red-500">*</span></label>
-                  <input required name="national_id" value={form.national_id} onChange={handleChange} className={inputClass} placeholder="رقم الهوية الوطنية" />
+                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>  الرقم الوطني للطالب  <span className="text-red-500">*</span></label>
+                  <input required name="national_id" value={form.national_id} onChange={handleChange} className={inputClass} placeholder="الرقم الوطني للطالب  " />
                 </div>
                 <div>
-                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>المرحلة <span className="text-red-500">*</span></label>
+
+                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>اختيار المرحلة المراد الالتحاق به <span className="text-red-500">*</span></label>
                   <select required name="level" value={form.level} onChange={handleChange} className={selectClass}>
-                    <option value="" disabled>اختر المرحلة</option>
-                    {LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                    <option value="" disabled>  اخترالمرحلة   المراد الالتحاق به   </option>
+                    {levels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>الصف <span className="text-red-500">*</span></label>
                   <select required name="grade" value={form.grade} onChange={handleChange} className={selectClass}>
-                    <option value="" disabled>اختر الصف</option>
-                    {GRADES.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                    <option value="" disabled>  اختر الصف   </option>
+                    {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>الجنس <span className="text-red-500">*</span></label>
+                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>جنس الطالب <span className="text-red-500">*</span></label>
                   <select required name="gender" value={form.gender} onChange={handleChange} className={selectClass}>
-                    <option value="" disabled>اختر الجنس</option>
+                    <option value="" disabled>  اختر جنس الطالب   </option>
                     {GENDERS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
                   </select>
                 </div>
@@ -240,7 +284,7 @@ export default function StudentRegistrationPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>تاريخ الميلاد <span className="text-red-500">*</span></label>
+                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}> تاريخ ميلاد الطالب <span className="text-red-500">*</span></label>
                   <input required type="date" name="date_of_birth" value={form.date_of_birth} onChange={handleChange} className={inputClass} />
                 </div>
                 <div>
@@ -282,8 +326,8 @@ export default function StudentRegistrationPage() {
               <SectionHeader icon={Shield} title="بيانات ولي الأمر" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>اسم ولي الأمر <span className="text-red-500">*</span></label>
-                  <input required name="guardian_name" value={form.guardian_name} onChange={handleChange} className={inputClass} placeholder="الاسم الكامل" />
+                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>اسم ولي الأمر رباعي<span className="text-red-500">*</span></label>
+                  <input required name="guardian_name" value={form.guardian_name} onChange={handleChange} className={inputClass} placeholder="اسم ولي الأمر رباعي" />
                 </div>
                 <div>
                   <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>هاتف ولي الأمر <span className="text-red-500">*</span></label>
@@ -294,8 +338,8 @@ export default function StudentRegistrationPage() {
                   <input required name="guardian_residence" value={form.guardian_residence} onChange={handleChange} className={inputClass} placeholder="المدينة، الحي..." />
                 </div>
                 <div>
-                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>اسم الأم الكامل <span className="text-red-500">*</span></label>
-                  <input required name="mother_full_name" value={form.mother_full_name} onChange={handleChange} className={inputClass} placeholder="اسم الأم الكامل" />
+                  <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>  اسم والدة الطالب رباعي <span className="text-red-500">*</span></label>
+                  <input required name="mother_full_name" value={form.mother_full_name} onChange={handleChange} className={inputClass} placeholder="  اسم والدة الطالب رباعي" />
                 </div>
               </div>
             </div>
@@ -304,8 +348,8 @@ export default function StudentRegistrationPage() {
             {supervisors.length > 0 && (
               <div className="rounded-2xl p-6 shadow-sm" style={{ background: 'white', border: '1px solid var(--lp-border)' }}>
                 <SectionHeader icon={GraduationCap} title="المشرفة" />
-                <select name="supervisor" value={form.supervisor} onChange={handleChange} className={selectClass}>
-                  <option value="">اختر المشرفة (اختياري)</option>
+                <select required name="supervisor" value={form.supervisor} onChange={handleChange} className={selectClass}>
+                  <option value=""> اسم المشرفة التي تم عن طريقها التسجيل</option>
                   {supervisors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
@@ -315,19 +359,20 @@ export default function StudentRegistrationPage() {
             <div className="rounded-2xl p-6 shadow-sm" style={{ background: 'white', border: '1px solid var(--lp-border)' }}>
               <SectionHeader icon={Upload} title="المستندات والمرفقات" subtitle="يرجى رفع المستندات المطلوبة" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FileInput label="صورة آخر نتيجة دراسية" name="academic_result_image" icon={FileText} onChange={handleFile} file={files.academic_result_image} />
-                <FileInput label="صورة شهادة الميلاد" name="birth_certificate_image" icon={FileText} onChange={handleFile} file={files.birth_certificate_image} />
-                <FileInput label="صورة شخصية / جواز" name="personal_photo" icon={Camera} onChange={handleFile} file={files.personal_photo} />
-                <FileInput label="صورة بطاقة الأب" name="father_id_image" icon={CreditCard} onChange={handleFile} file={files.father_id_image} />
-                <FileInput label="صورة بطاقة الأم" name="mother_id_image" icon={CreditCard} onChange={handleFile} file={files.mother_id_image} />
-                <FileInput label="إيصال الدفع / بنكك" name="payment_receipt_image" icon={CreditCard} onChange={handleFile} file={files.payment_receipt_image} />
+                <FileInput required={true} label="   تحميل اخر نتيجة دراسية للطالب" name="academic_result_image" icon={FileText} onChange={handleFile} file={files.academic_result_image} />
+                <FileInput required={true} label="  تحميل شهادة ميلاد الطالب" name="birth_certificate_image" icon={FileText} onChange={handleFile} file={files.birth_certificate_image} />
+                <FileInput required={true} label="تحميل الرقم الوطني للطالب  " name="national_id_image" icon={Camera} onChange={handleFile} file={files.national_id_image} />
+                <FileInput required={true} label="  صورة شخصية للطالب / باسبورت" name="personal_photo" icon={Camera} onChange={handleFile} file={files.personal_photo} />
+                <FileInput required={true} label="تحميل الرقم الوطني للأب  " name="father_id_image" icon={CreditCard} onChange={handleFile} file={files.father_id_image} />
+                <FileInput required={true} label="تحميل الرقم الوطني للأم   " name="mother_id_image" icon={CreditCard} onChange={handleFile} file={files.mother_id_image} />
+                <FileInput label="  تحميل اشعار سداد الرسوم / اشعار بنكك " name="payment_receipt_image" icon={CreditCard} onChange={handleFile} file={files.payment_receipt_image} />
               </div>
             </div>
 
             {/* Submit */}
             <button type="submit" disabled={status === 'loading'} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-white text-base transition-all"
               style={{ background: status === 'loading' ? '#94a3b8' : 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 15px rgba(37,99,235,0.3)' }}>
-              {status === 'loading' ? <><Loader2 size={20} className="animate-spin" /> جاري الإرسال...</> : <><Send size={20} /> إرسال طلب التسجيل</>}
+              {status === 'loading' ? <><Loader2 size={20} className="animate-spin" /> جاري الإرسال...</> : <><Send size={20} /> إرسال البيانات   </>}
             </button>
             <p className="text-xs text-center" style={{ color: 'var(--lp-text-muted)' }}>الحقول المشار إليها بـ <span className="text-red-500">*</span> إلزامية</p>
           </form>

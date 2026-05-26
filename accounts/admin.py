@@ -6,4 +6,5 @@ admin.site.register(CustomUser)
 admin.site.register(Supervisor)
 admin.site.register(TeacherProfile)
 admin.site.register(StudentProfile)
+admin.site.register(NewStudentRegistration)
     
