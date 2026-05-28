@@ -123,9 +123,6 @@ export default function StudentRegistrationPage() {
       'guardian_residence',
       'mother_full_name',
     ]
-    if (supervisors.length > 0) {
-      requiredText.push('supervisor')
-    }
 
     for (const key of requiredText) {
       if (!form[key]?.toString().trim()) {
@@ -166,9 +163,12 @@ export default function StudentRegistrationPage() {
       Object.entries(files).forEach(([k, v]) => { if (v) fd.append(k, v) })
       await api.post('/student-registration/public/', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       setStatus('success')
-    } catch (err) {
+    }
+    catch (err) {
+      console.log(err)
       setStatus('error')
       const d = err?.response?.data
+      console.log(d)
       if (typeof d === 'object' && d) {
         const msgs = []
         Object.entries(d).forEach(([k, v]) => msgs.push(`${k}: ${Array.isArray(v) ? v.join(' ') : v}`))
@@ -350,7 +350,7 @@ export default function StudentRegistrationPage() {
             {supervisors.length > 0 && (
               <div className="rounded-2xl p-6 shadow-sm" style={{ background: 'white', border: '1px solid var(--lp-border)' }}>
                 <SectionHeader icon={GraduationCap} title="المشرفة" />
-                <select required name="supervisor" value={form.supervisor} onChange={handleChange} className={selectClass}>
+                <select name="supervisor" value={form.supervisor} onChange={handleChange} className={selectClass}>
                   <option value=""> اسم المشرفة التي تم عن طريقها التسجيل</option>
                   {supervisors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>

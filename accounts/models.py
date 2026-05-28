@@ -499,8 +499,8 @@ class NewStudentRegistration(models.Model):
         choices=RequestStatusChoices.choices,
         default=RequestStatusChoices.NEW,
     )
-    admin_notes = models.TextField(_("ملاحظات الإدارة"), blank=False)
-    submitted_at = models.DateTimeField(_("تاريخ الإرسال"), auto_now_add=False)
+    admin_notes = models.TextField(_("ملاحظات الإدارة"), blank=True)
+    submitted_at = models.DateTimeField(_("تاريخ الإرسال"), auto_now_add=True)
 
     class Meta:
         verbose_name        = _("طلب تسجيل جديد")
