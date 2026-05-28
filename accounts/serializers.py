@@ -328,8 +328,8 @@ class NewStudentRegistrationSerializer(serializers.ModelSerializer):
     """سيريالايزر طلبات التسجيل الجديدة — للإرسال العام وللقراءة الإدارية."""
 
     status_display         = serializers.CharField(source="get_status_display", read_only=True)
-    level_display          = serializers.CharField(source="get_level_display", read_only=True)
-    grade_display          = serializers.CharField(source="get_grade_display", read_only=True)
+    level_display          = serializers.CharField(source="level.name", read_only=True)
+    grade_display          = serializers.CharField(source="grade.name", read_only=True)
     gender_display         = serializers.CharField(source="get_gender_display", read_only=True)
     student_status_display = serializers.CharField(source="get_student_status_display", read_only=True)
     supervisor_name        = serializers.CharField(source="supervisor.name", read_only=True, default=None)

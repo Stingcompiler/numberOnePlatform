@@ -426,11 +426,11 @@ class NewStudentRegistration(models.Model):
     # ── بيانات الطالب الأساسية ─────────────────────────────────────────────────
     student_full_name = models.CharField(_("الاسم الكامل للطالب"), max_length=200)
     national_id       = models.CharField(_("الرقم الوطني للطالب"), max_length=50)
-    level             = models.CharField(
-        _("المرحلة الدراسية"), max_length=20, choices=LevelChoices.choices,
+    level             = models.ForeignKey(
+        "academic.Level", on_delete=models.PROTECT, verbose_name=_("المرحلة الدراسية")
     )
-    grade             = models.CharField(
-        _("الصف الدراسي"), max_length=20, choices=GradeChoices.choices,
+    grade             = models.ForeignKey(
+        "academic.Grade", on_delete=models.PROTECT, verbose_name=_("الصف الدراسي")
     )
     gender            = models.CharField(
         _("الجنس"), max_length=10, choices=GenderChoices.choices,
