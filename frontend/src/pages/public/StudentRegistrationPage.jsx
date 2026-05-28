@@ -10,19 +10,6 @@ import {
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
 
-const LEVELS = [
-  { value: 'primary', label: 'ابتدائي' },
-  { value: 'middle', label: 'متوسط' },
-  { value: 'secondary', label: 'ثانوي' },
-]
-const GRADES = [
-  { value: 'first', label: 'الأول' },
-  { value: 'second', label: 'الثاني' },
-  { value: 'third', label: 'الثالث' },
-  { value: 'fourth', label: 'الرابع' },
-  { value: 'fifth', label: 'الخامس' },
-  { value: 'sixth', label: 'السادس' },
-]
 const GENDERS = [
   { value: 'male', label: 'ذكر' },
   { value: 'female', label: 'أنثى' },
@@ -38,11 +25,6 @@ const INITIAL = {
   residence: '', date_of_birth: '', student_phone: '',
   guardian_name: '', guardian_phone: '', guardian_residence: '', mother_full_name: '',
   supervisor: '',
-
-  academic_result_image: '', birth_certificate_image: '',
-  personal_photo: '', mother_id_image: '', father_id_image: '',
-  national_id_image: '', payment_receipt_image: '',
-
 }
 
 /* ── File Input ── */
@@ -127,9 +109,8 @@ export default function StudentRegistrationPage() {
 
   const handleSubmit = async e => {
     e.preventDefault()
-    const required = [
+    const requiredText = [
       'student_full_name',
-      'student_phone',
       'national_id',
       'level',
       'grade',
@@ -141,24 +122,37 @@ export default function StudentRegistrationPage() {
       'guardian_phone',
       'guardian_residence',
       'mother_full_name',
-      'has_siblings',
-      'siblings_info',
-      'supervisor',
+    ]
+    if (supervisors.length > 0) {
+      requiredText.push('supervisor')
+    }
 
+    for (const key of requiredText) {
+      if (!form[key]?.toString().trim()) {
+        setStatus('error'); setErrMsg('يرجى تعبئة جميع الحقول النصية الإلزامية.'); return
+      }
+    }
+
+    if (form.has_siblings && form.siblings_info.length > 0) {
+      for (const sib of form.siblings_info) {
+        if (!sib.name.trim() || !sib.grade.trim()) {
+          setStatus('error'); setErrMsg('يرجى استكمال بيانات الأشقاء أو حذف الحقول الفارغة.'); return
+        }
+      }
+    }
+
+    const requiredFiles = [
       'academic_result_image',
       'birth_certificate_image',
       'personal_photo',
-      'national_id_image',
-      'mother_id_image',
+      'student_id_image',
       'father_id_image',
-      'payment_receipt_image',
-
-
-
+      'mother_id_image',
     ]
-    for (const key of required) {
-      if (!form[key]?.toString().trim()) {
-        setStatus('error'); setErrMsg('يرجى تعبئة جميع الحقول الإلزامية.'); return
+
+    for (const key of requiredFiles) {
+      if (!files[key]) {
+        setStatus('error'); setErrMsg('يرجى رفع جميع المستندات الإلزامية.'); return
       }
     }
     setStatus('loading')
@@ -317,7 +311,10 @@ export default function StudentRegistrationPage() {
                   {form.siblings_info.map((s, i) => (
                     <div key={i} className="flex gap-3 items-center">
                       <input value={s.name} onChange={e => updateSibling(i, 'name', e.target.value)} className="input-light flex-1" placeholder={`اسم الشقيق ${i + 1}`} />
-                      <input value={s.grade} onChange={e => updateSibling(i, 'grade', e.target.value)} className="input-light w-32" placeholder="الصف" />
+                      <select value={s.grade} onChange={e => updateSibling(i, 'grade', e.target.value)} className="input-light w-32 cursor-pointer">
+                        <option value="" disabled>الصف</option>
+                        {grades.map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
+                      </select>
                       <button type="button" onClick={() => removeSibling(i)} className="text-red-500 text-sm hover:underline">حذف</button>
                     </div>
                   ))}
@@ -366,7 +363,7 @@ export default function StudentRegistrationPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FileInput required={true} label="   تحميل اخر نتيجة دراسية للطالب" name="academic_result_image" icon={FileText} onChange={handleFile} file={files.academic_result_image} />
                 <FileInput required={true} label="  تحميل شهادة ميلاد الطالب" name="birth_certificate_image" icon={FileText} onChange={handleFile} file={files.birth_certificate_image} />
-                <FileInput required={true} label="تحميل الرقم الوطني للطالب  " name="national_id_image" icon={Camera} onChange={handleFile} file={files.national_id_image} />
+                <FileInput required={true} label="تحميل الرقم الوطني للطالب  " name="student_id_image" icon={Camera} onChange={handleFile} file={files.student_id_image} />
                 <FileInput required={true} label="  صورة شخصية للطالب / باسبورت" name="personal_photo" icon={Camera} onChange={handleFile} file={files.personal_photo} />
                 <FileInput required={true} label="تحميل الرقم الوطني للأب  " name="father_id_image" icon={CreditCard} onChange={handleFile} file={files.father_id_image} />
                 <FileInput required={true} label="تحميل الرقم الوطني للأم   " name="mother_id_image" icon={CreditCard} onChange={handleFile} file={files.mother_id_image} />
