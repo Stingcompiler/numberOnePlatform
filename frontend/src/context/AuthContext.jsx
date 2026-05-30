@@ -51,15 +51,21 @@ export function AuthProvider({ children }) {
   const updateUser = (partial) => setUser((prev) => ({ ...prev, ...partial }))
 
   // ── مساعدات الدور ────────────────────────────────────────────────
-  const isAdmin   = user?.role === 'admin'
-  const isManager = user?.role === 'manager'
-  const isTeacher = user?.role === 'teacher'
-  const isStudent = user?.role === 'student'
-  const canManage = isAdmin || isManager
+  const isAdmin             = user?.role === 'admin'
+  const isManager           = user?.role === 'manager'
+  const isTeacher           = user?.role === 'teacher'
+  const isStudent           = user?.role === 'student'
+  const isLectureSupervisor = user?.role === 'lecture_supervisor'
+  const canManage           = isAdmin || isManager
+  const canManageLectures   = isAdmin || isManager || isLectureSupervisor
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, logout, updateUser, isAdmin, isManager, isTeacher, isStudent, canManage }}
+      value={{
+        user, loading, login, logout, updateUser,
+        isAdmin, isManager, isTeacher, isStudent,
+        isLectureSupervisor, canManage, canManageLectures,
+      }}
     >
       {children}
     </AuthContext.Provider>

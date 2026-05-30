@@ -22,7 +22,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import CustomUser, StudentProfile, TeacherProfile, Supervisor, StudentRequest, NewStudentRegistration, RegistrationCondition
+from .models import CustomUser, StudentProfile, TeacherProfile, Supervisor, StudentRequest, NewStudentRegistration, RegistrationCondition, LectureSupervisorProfile
 from .permissions import IsAdmin, IsAdminOrManager
 from .serializers import (
     ChangePasswordSerializer,
@@ -37,6 +37,8 @@ from .serializers import (
     StudentRequestSerializer,
     NewStudentRegistrationSerializer,
     RegistrationConditionSerializer,
+    LectureSupervisorProfileSerializer,
+    LectureSupervisorCreateSerializer,
 )
 
 
@@ -751,3 +753,150 @@ class PublicSupervisorMiniListView(generics.ListAPIView):
     serializer_class = MiniSupervisorSerializer
     queryset = Supervisor.objects.filter(is_active=True).order_by("name")
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 12. إدارة مشرفي المحاضرات (Lecture Supervisors)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class LectureSupervisorListCreateView(generics.ListCreateAPIView):
+    """GET /api/lecture-supervisors/ | POST /api/lecture-supervisors/ — المدير فقط"""
+
+    permission_classes = [IsAdminOrManager]
+    queryset = LectureSupervisorProfile.objects.select_related("user").prefetch_related(
+        "assigned_courses", "assigned_courses__grade", "assigned_courses__grade__level"
+    ).order_by("-created_at")
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        params = self.request.query_params
+
+        search = params.get("search")
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(user__full_name__icontains=search) |
+                Q(user__username__icontains=search) |
+                Q(user__email__icontains=search)
+            )
+
+        is_active = params.get("is_active")
+        if is_active is not None:
+            qs = qs.filter(user__is_active=(is_active.lower() == "true"))
+
+        return qs
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return LectureSupervisorCreateSerializer
+        return LectureSupervisorProfileSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = LectureSupervisorCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user    = serializer.save()
+        profile = user.lecture_supervisor_profile
+        return Response(
+            LectureSupervisorProfileSerializer(profile).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class LectureSupervisorDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """GET / PATCH / DELETE /api/lecture-supervisors/<uuid>/ — المدير فقط"""
+
+    permission_classes = [IsAdminOrManager]
+    queryset = LectureSupervisorProfile.objects.select_related("user").prefetch_related(
+        "assigned_courses", "assigned_courses__grade"
+    )
+    serializer_class = LectureSupervisorProfileSerializer
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        partial  = kwargs.pop("partial", False)
+        instance = self.get_object()
+
+        # تحديث بيانات المستخدم nested
+        data = request.data.copy() if hasattr(request.data, "copy") else dict(request.data)
+        user_data = data.pop("user", None)
+        if user_data:
+            user_ser = UserDetailSerializer(
+                instance.user, data=user_data, partial=True
+            )
+            user_ser.is_valid(raise_exception=True)
+            user_ser.save()
+
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        instance.refresh_from_db()
+        return Response(LectureSupervisorProfileSerializer(instance).data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user = instance.user
+        instance.delete()
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class LectureSupervisorMeView(APIView):
+    """GET/PATCH /api/lecture-supervisors/me/ — الملف الشخصي للمشرف المسجّل دخوله"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != CustomUser.Roles.LECTURE_SUPERVISOR:
+            return Response(
+                {"detail": _("هذا المسار مخصص لمشرفي المحاضرات فقط.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            profile = request.user.lecture_supervisor_profile
+        except LectureSupervisorProfile.DoesNotExist:
+            return Response(
+                {"detail": _("الملف الشخصي غير موجود.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(LectureSupervisorProfileSerializer(profile).data)
+
+    def patch(self, request):
+        """يتيح لمشرف المحاضرات تحديث بياناته الأساسية فقط (phone, email, full_name, avatar)."""
+        if request.user.role != CustomUser.Roles.LECTURE_SUPERVISOR:
+            return Response(
+                {"detail": _("غير مصرح بهذا الإجراء.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        allowed_fields = {"full_name", "email", "phone", "avatar"}
+        user_data = {k: v for k, v in request.data.items() if k in allowed_fields}
+        if user_data:
+            user_ser = UserDetailSerializer(
+                request.user, data=user_data, partial=True
+            )
+            user_ser.is_valid(raise_exception=True)
+            user_ser.save()
+        return Response(UserDetailSerializer(request.user).data)
+
+
+class LectureSupervisorToggleActiveView(APIView):
+    """POST /api/lecture-supervisors/<uuid>/toggle-active/ — تفعيل أو تعطيل حساب مشرف"""
+
+    permission_classes = [IsAdminOrManager]
+
+    def post(self, request, pk):
+        try:
+            profile = LectureSupervisorProfile.objects.select_related("user").get(pk=pk)
+        except LectureSupervisorProfile.DoesNotExist:
+            return Response(
+                {"detail": _("مشرف المحاضرات غير موجود.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        user = profile.user
+        user.is_active = not user.is_active
+        user.save(update_fields=["is_active"])
+        return Response({
+            "detail": _("تم تفعيل الحساب.") if user.is_active else _("تم تعطيل الحساب."),
+            "is_active": user.is_active,
+        })

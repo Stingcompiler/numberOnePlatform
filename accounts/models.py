@@ -66,10 +66,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     """
 
     class Roles(models.TextChoices):
-        STUDENT  = "student",  _("طالب")
-        TEACHER  = "teacher",  _("أستاذ")
-        ADMIN    = "admin",    _("مدير النظام")
-        MANAGER  = "manager",  _("مدير")
+        STUDENT            = "student",            _("طالب")
+        TEACHER            = "teacher",            _("أستاذ")
+        ADMIN              = "admin",              _("مدير النظام")
+        MANAGER            = "manager",            _("مدير")
+        LECTURE_SUPERVISOR = "lecture_supervisor", _("مشرف محاضرات")
 
     # ── الحقول الأساسية ──────────────────────────────────────────────────────
     id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -124,6 +125,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     @property
     def is_manager(self):
         return self.role == self.Roles.MANAGER
+
+    @property
+    def is_lecture_supervisor(self):
+        return self.role == self.Roles.LECTURE_SUPERVISOR
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -539,3 +544,49 @@ class RegistrationCondition(models.Model):
     def __str__(self):
         return self.title
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. LectureSupervisorProfile – ملف مشرف المحاضرات
+# ─────────────────────────────────────────────────────────────────────────────
+
+class LectureSupervisorProfile(models.Model):
+    """
+    الملف الشخصي لمشرف المحاضرات.
+
+    مشرف المحاضرات هو عضو كادر محدود الصلاحيات يساعد المدير
+    في إدارة محتوى المحاضرات (إضافة وتعديل وعرض) للكورسات المخصصة له.
+
+    الصلاحيات:
+      - يستطيع: إضافة وتعديل وعرض المحاضرات للكورسات المخصصة.
+      - لا يستطيع: حذف محاضرات، إدارة مستخدمين، الوصول للإعدادات أو المالية.
+    """
+
+    user = models.OneToOneField(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="lecture_supervisor_profile",
+        verbose_name=_("المستخدم"),
+        limit_choices_to={"role": CustomUser.Roles.LECTURE_SUPERVISOR},
+    )
+    assigned_courses = models.ManyToManyField(
+        "academic.Course",
+        blank=True,
+        related_name="lecture_supervisors",
+        verbose_name=_("الكورسات المخصصة"),
+        help_text=_("الكورسات التي يملك هذا المشرف صلاحية إدارة محاضراتها."),
+    )
+    notes = models.TextField(_("ملاحظات"), blank=True)
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("آخر تحديث"), auto_now=True)
+
+    class Meta:
+        verbose_name        = _("مشرف محاضرات")
+        verbose_name_plural = _("مشرفو المحاضرات")
+        ordering            = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.full_name} — مشرف محاضرات"
+
+    def get_assigned_course_ids(self):
+        """يُعيد قائمة بمعرّفات الكورسات المخصصة لهذا المشرف."""
+        return list(self.assigned_courses.values_list("id", flat=True))

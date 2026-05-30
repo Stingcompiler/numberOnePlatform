@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from .models import CustomUser, StudentProfile, TeacherProfile, Supervisor, StudentRequest, NewStudentRegistration, RegistrationCondition
+from .models import CustomUser, StudentProfile, TeacherProfile, Supervisor, StudentRequest, NewStudentRegistration, RegistrationCondition, LectureSupervisorProfile
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -383,3 +383,82 @@ class RegistrationConditionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. LectureSupervisorProfile
+# ─────────────────────────────────────────────────────────────────────────────
+
+class LectureSupervisorProfileSerializer(serializers.ModelSerializer):
+    """
+    سيريالايزر مشرف المحاضرات — للقراءة والتعديل من لوحة التحكم.
+    يتضمن بيانات المستخدم المرتبط به nested وقائمة الكورسات المخصصة.
+    """
+
+    user = UserDetailSerializer(read_only=True)
+    assigned_courses_detail = serializers.SerializerMethodField(read_only=True)
+    assigned_courses = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=__import__("academic.models", fromlist=["Course"]).Course.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = LectureSupervisorProfile
+        fields = [
+            "id", "user",
+            "assigned_courses", "assigned_courses_detail",
+            "notes", "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "user", "created_at", "updated_at", "assigned_courses_detail"]
+
+    def get_assigned_courses_detail(self, obj):
+        """\u064a\u064f\u0639\u064a\u062f \u0642\u0627\u0626\u0645\u0629 \u0645\u0628\u0633\u0637\u0629 \u0628\u0627\u0644\u0643\u0648\u0631\u0633\u0627\u062a \u0627\u0644\u0645\u062e\u0635\u0635\u0629 \u0645\u0639 \u0627\u0633\u0645 \u0627\u0644\u0643\u0648\u0631\u0633 \u0648\u0645\u0639\u0631\u0641\u0647."""
+        return [
+            {
+                "id": c.id,
+                "name": c.name,
+                "grade": str(c.grade),
+            }
+            for c in obj.assigned_courses.select_related("grade", "grade__level")
+        ]
+
+
+class LectureSupervisorCreateSerializer(serializers.Serializer):
+    """إنشاء حساب مشرف محاضرات مع ملفه الشخصي دفعة واحدة."""
+
+    # حقول CustomUser
+    username      = serializers.CharField(max_length=150)
+    full_name     = serializers.CharField(max_length=150)
+    password      = serializers.CharField(min_length=6, write_only=True)
+    email         = serializers.EmailField(required=False, allow_blank=True)
+    phone         = serializers.CharField(max_length=20, required=False, allow_blank=True)
+
+    # حقول LectureSupervisorProfile
+    assigned_courses = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=__import__("academic.models", fromlist=["Course"]).Course.objects.all(),
+        required=False,
+    )
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_username(self, value):
+        if CustomUser.objects.filter(username=value).exists():
+            raise serializers.ValidationError(_("اسم المستخدم مسجّل مسبقاً."))
+        return value
+
+    def create(self, validated_data):
+        courses = validated_data.pop("assigned_courses", [])
+        user_data = {
+            "username":  validated_data.pop("username"),
+            "full_name": validated_data.pop("full_name"),
+            "email":     validated_data.pop("email", ""),
+            "phone":     validated_data.pop("phone", ""),
+            "role":      CustomUser.Roles.LECTURE_SUPERVISOR,
+            "is_staff":  False,
+        }
+        password = validated_data.pop("password")
+        user = CustomUser.objects.create_user(password=password, **user_data)
+        profile = LectureSupervisorProfile.objects.create(user=user, **validated_data)
+        if courses:
+            profile.assigned_courses.set(courses)
+        return user

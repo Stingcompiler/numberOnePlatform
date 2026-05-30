@@ -52,6 +52,9 @@ const BackupPage = lazy(() => import('./pages/dashboard/BackupPage'))
 const StudentPhoneDataPage = lazy(() => import('./pages/dashboard/StudentPhoneDataPage'))
 const RegistrationRequestDetailPage = lazy(() => import('./pages/dashboard/RegistrationRequestDetailPage'))
 const RegistrationConditionsPage = lazy(() => import('./pages/dashboard/RegistrationConditionsPage'))
+const LectureSupervisorsPage      = lazy(() => import('./pages/dashboard/LectureSupervisorsPage'))
+const LectureSupervisorDetailPage = lazy(() => import('./pages/dashboard/LectureSupervisorDetailPage'))
+const ProfilePage                 = lazy(() => import('./pages/dashboard/ProfilePage'))
 
 /* ── Page Loader ──────────────────────────────────────────────── */
 const PageLoader = () => (
@@ -91,9 +94,10 @@ function DPage({ component: Component, roles }) {
 }
 
 /* ── الأدوار ─────────────────────────────────────────────────── */
-const ADMIN_ROLES = ['admin', 'manager']
-const ALL_STAFF = ['admin', 'manager', 'teacher']
-const STUDENT_ONLY = ['student']
+const ADMIN_ROLES              = ['admin', 'manager']
+const ALL_STAFF                = ['admin', 'manager', 'teacher']
+const LECTURE_CONTENT_ROLES    = ['admin', 'manager', 'teacher', 'lecture_supervisor']
+const STUDENT_ONLY             = ['student']
 
 function AppRoutes() {
   return (
@@ -139,6 +143,17 @@ function AppRoutes() {
       <Route path="/dashboard/registration-conditions"
         element={<DPage component={RegistrationConditionsPage} roles={ADMIN_ROLES} />}
       />
+      <Route path="/dashboard/profile"
+        element={<DPage component={ProfilePage} />}
+      />
+
+      {/* ── مشرفو المحاضرات (إدارة المدير) ────────────────────── */}
+      <Route path="/dashboard/lecture-supervisors"
+        element={<DPage component={LectureSupervisorsPage} roles={ADMIN_ROLES} />}
+      />
+      <Route path="/dashboard/lecture-supervisors/:id"
+        element={<DPage component={LectureSupervisorDetailPage} roles={ADMIN_ROLES} />}
+      />
 
       {/* ── المالية والتقارير ─────────────────────────────────── */}
       <Route path="/dashboard/finance"
@@ -165,10 +180,10 @@ function AppRoutes() {
         element={<DPage component={UnitDetailsPage} roles={ALL_STAFF} />}
       />
       <Route path="/dashboard/academic/lessons"
-        element={<DPage component={LessonsExercisesPage} roles={ALL_STAFF} />}
+        element={<DPage component={LessonsExercisesPage} roles={LECTURE_CONTENT_ROLES} />}
       />
       <Route path="/dashboard/academic/lessons/:id"
-        element={<DPage component={LectureDetailsPage} roles={ALL_STAFF} />}
+        element={<DPage component={LectureDetailsPage} roles={LECTURE_CONTENT_ROLES} />}
       />
       <Route path="/dashboard/academic/submissions"
         element={<DPage component={AllSubmissionsPage} roles={ALL_STAFF} />}

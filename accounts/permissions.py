@@ -85,3 +85,77 @@ class IsOwnerStudentOrAdmin(BasePermission):
         if hasattr(obj, "user"):
             return obj.user == request.user
         return obj == request.user
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# صلاحيات مشرف المحاضرات
+# ─────────────────────────────────────────────────────────────────────────────
+
+class IsLectureSupervisor(BasePermission):
+    """مشرف المحاضرات فحسب."""
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and request.user.role == CustomUser.Roles.LECTURE_SUPERVISOR
+        )
+
+
+class IsAdminManagerOrLectureSupervisor(BasePermission):
+    """
+    المدير أو مدير النظام أو مشرف المحاضرات.
+    يُستخدَم لنقاط نهاية المحاضرات (قراءة وكتابة).
+    """
+
+    ALLOWED_ROLES = (
+        CustomUser.Roles.ADMIN,
+        CustomUser.Roles.MANAGER,
+        CustomUser.Roles.LECTURE_SUPERVISOR,
+    )
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and request.user.role in self.ALLOWED_ROLES
+        )
+
+
+class LectureWritePermission(BasePermission):
+    """
+    صلاحية الكتابة على المحاضرات:
+    - القراءة (GET/HEAD/OPTIONS): مدير، أستاذ، مشرف محاضرات
+    - الإنشاء/التعديل (POST/PATCH/PUT): مدير + مشرف محاضرات
+    - الحذف (DELETE): مدير فقط (admin/manager)
+
+    ملاحظة: يُطبَّق فلتر الكورسات المخصصة في get_queryset() بالـ View.
+    """
+
+    WRITE_ROLES = (
+        CustomUser.Roles.ADMIN,
+        CustomUser.Roles.MANAGER,
+        CustomUser.Roles.LECTURE_SUPERVISOR,
+    )
+
+    DELETE_ROLES = (
+        CustomUser.Roles.ADMIN,
+        CustomUser.Roles.MANAGER,
+    )
+
+    READ_ROLES = (
+        CustomUser.Roles.ADMIN,
+        CustomUser.Roles.MANAGER,
+        CustomUser.Roles.TEACHER,
+        CustomUser.Roles.LECTURE_SUPERVISOR,
+    )
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.method in SAFE_METHODS:
+            return request.user.role in self.READ_ROLES
+        if request.method == "DELETE":
+            return request.user.role in self.DELETE_ROLES
+        # POST / PUT / PATCH
+        return request.user.role in self.WRITE_ROLES
