@@ -310,78 +310,154 @@ export default function LectureSupervisorsPage() {
 
       {/* ══ Modal: إنشاء مشرف ══════════════════════════════════ */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-900/80 backdrop-blur-sm" dir="rtl">
-          <div className="glass-card-strong w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl">
-            <div className="flex items-center justify-between p-5 border-b border-white/10">
-              <h2 className="text-white font-cairo font-bold text-base flex items-center gap-2">
-                <UserCog size={18} className="text-brand-blue" /> إضافة مشرف محاضرات
-              </h2>
-              <button onClick={() => setShowCreate(false)} className="btn-ghost p-1.5 rounded-xl">
-                <X size={16} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-900/85 backdrop-blur-md" dir="rtl">
+          <div className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto custom-scrollbar rounded-2xl shadow-2xl border border-white/10"
+            style={{ background: 'rgba(13,17,23,0.97)', backdropFilter: 'blur(32px)' }}>
+
+            {/* ── رأس الـ Modal ── */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-white/08"
+              style={{ background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(20px)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-blue to-purple-600 flex items-center justify-center shadow-lg">
+                  <UserCog size={17} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-white font-cairo font-bold text-base">إضافة مشرف محاضرات</h2>
+                  <p className="text-white/30 text-[11px]">سيُنشأ حساب جديد بصلاحيات محدودة</p>
+                </div>
+              </div>
+              <button onClick={() => { setShowCreate(false); setForm(INITIAL_FORM) }}
+                className="w-8 h-8 rounded-xl bg-white/05 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all">
+                <X size={15} />
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label-field">الاسم الكامل *</label>
-                  <input required value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} className="input-field w-full text-sm" placeholder="أحمد علي..." />
+            <form onSubmit={handleCreate} className="p-6 space-y-6">
+
+              {/* ── قسم 1: معلومات الحساب ── */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-1 h-4 rounded-full bg-brand-blue" />
+                  <span className="text-white/50 text-xs font-semibold uppercase tracking-widest">معلومات الحساب</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label-field">الاسم الكامل <span className="text-brand-red/70">*</span></label>
+                    <input required value={form.full_name}
+                      onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
+                      className="input-field" placeholder="أحمد محمد علي" />
+                  </div>
+                  <div>
+                    <label className="label-field">اسم المستخدم <span className="text-brand-red/70">*</span></label>
+                    <input required value={form.username}
+                      onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
+                      className="input-field" placeholder="ahmed.ali" dir="ltr" />
+                  </div>
                 </div>
                 <div>
-                  <label className="label-field">اسم المستخدم *</label>
-                  <input required value={form.username} onChange={e => setForm(p => ({ ...p, username: e.target.value }))} className="input-field w-full text-sm" placeholder="ahmed.ali" />
+                  <label className="label-field">كلمة المرور <span className="text-brand-red/70">*</span></label>
+                  <input required type="password" value={form.password} minLength={6}
+                    onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                    className="input-field" placeholder="6 أحرف على الأقل" />
                 </div>
-              </div>
-              <div>
-                <label className="label-field">كلمة المرور *</label>
-                <input required type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="input-field w-full text-sm" placeholder="6 أحرف على الأقل" minLength={6} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label-field">البريد الإلكتروني</label>
-                  <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="input-field w-full text-sm" placeholder="example@mail.com" />
-                </div>
-                <div>
-                  <label className="label-field">رقم الهاتف</label>
-                  <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="input-field w-full text-sm" placeholder="07xx..." />
-                </div>
-              </div>
-              <div>
-                <label className="label-field">ملاحظات</label>
-                <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} className="input-field w-full text-sm resize-none" rows={2} placeholder="ملاحظات اختيارية..." />
               </div>
 
-              {/* الكورسات المخصصة */}
-              <div>
-                <label className="label-field mb-2 flex items-center gap-1.5">
-                  <BookOpen size={12} /> الكورسات المخصصة
+              {/* ── فاصل ── */}
+              <div className="h-px bg-gradient-to-r from-transparent via-white/08 to-transparent" />
+
+              {/* ── قسم 2: بيانات التواصل ── */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-1 h-4 rounded-full bg-purple-500" />
+                  <span className="text-white/50 text-xs font-semibold uppercase tracking-widest">بيانات التواصل</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label-field">البريد الإلكتروني</label>
+                    <input type="email" value={form.email}
+                      onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                      className="input-field" placeholder="example@mail.com" dir="ltr" />
+                  </div>
+                  <div>
+                    <label className="label-field">رقم الهاتف</label>
+                    <input value={form.phone}
+                      onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
+                      className="input-field" placeholder="07xx ..." />
+                  </div>
+                </div>
+                <div>
+                  <label className="label-field">ملاحظات</label>
+                  <textarea value={form.notes} rows={2}
+                    onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
+                    className="input-field resize-none" placeholder="ملاحظات اختيارية..." />
+                </div>
+              </div>
+
+              {/* ── فاصل ── */}
+              <div className="h-px bg-gradient-to-r from-transparent via-white/08 to-transparent" />
+
+              {/* ── قسم 3: الكورسات المخصصة ── */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-4 rounded-full bg-emerald-500" />
+                    <span className="text-white/50 text-xs font-semibold uppercase tracking-widest">الكورسات المخصصة</span>
+                  </div>
                   {form.assigned_courses.length > 0 && (
-                    <span className="badge bg-brand-blue/20 text-brand-blue border border-brand-blue/30 text-[11px] px-2">{form.assigned_courses.length} محدد</span>
+                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                      style={{ background: 'rgba(26,86,219,0.15)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.25)' }}>
+                      {form.assigned_courses.length} محدد
+                    </span>
                   )}
-                </label>
-                <div className="max-h-40 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-1.5 p-1">
-                  {courses.map(c => {
-                    const selected = form.assigned_courses.includes(c.id)
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => toggleCourse(c.id)}
-                        className={`text-right px-3 py-2 rounded-xl text-xs transition-all border ${selected ? 'bg-brand-blue/20 border-brand-blue/40 text-brand-blue' : 'bg-white/04 border-white/08 text-white/60 hover:bg-white/08'}`}
-                      >
-                        {c.name}
-                      </button>
-                    )
-                  })}
+                </div>
+                <div className="rounded-xl overflow-hidden border border-white/08"
+                  style={{ background: 'rgba(255,255,255,0.025)' }}>
+                  <div className="max-h-44 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-px p-1">
+                    {courses.map(c => {
+                      const selected = form.assigned_courses.includes(c.id)
+                      return (
+                        <button key={c.id} type="button"
+                          onClick={() => toggleCourse(c.id)}
+                          className={`text-right px-3 py-2.5 rounded-lg text-xs transition-all m-0.5 ${
+                            selected
+                              ? 'text-white font-medium'
+                              : 'text-white/50 hover:text-white/80'
+                          }`}
+                          style={selected ? {
+                            background: 'rgba(26,86,219,0.20)',
+                            border: '1px solid rgba(96,165,250,0.30)',
+                            boxShadow: '0 0 12px rgba(26,86,219,0.15)'
+                          } : {
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid transparent',
+                          }}>
+                          {selected && <span className="text-blue-400 ml-1">✓</span>}
+                          {c.name}
+                        </button>
+                      )
+                    })}
+                    {courses.length === 0 && (
+                      <div className="col-span-2 py-6 text-center text-white/20 text-xs">لا توجد كورسات</div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={creating} className="btn-primary flex-1 flex items-center justify-center gap-2 text-sm">
+              {/* ── أزرار ── */}
+              <div className="flex gap-3 pt-1">
+                <button type="submit" disabled={creating}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white transition-all"
+                  style={{ background: creating ? 'rgba(192,57,43,0.5)' : 'linear-gradient(135deg,#C0392B,#a93226)', boxShadow: creating ? 'none' : '0 4px 20px rgba(192,57,43,0.35)' }}>
                   {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                   {creating ? 'جارٍ الإنشاء...' : 'إنشاء الحساب'}
                 </button>
-                <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary flex-1 text-sm">إلغاء</button>
+                <button type="button" onClick={() => { setShowCreate(false); setForm(INITIAL_FORM) }}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.6)' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.09)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
+                  إلغاء
+                </button>
               </div>
             </form>
           </div>

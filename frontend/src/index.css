@@ -307,6 +307,54 @@
 
   /* ── stat-card (dashboard) ──────────────────────────────────────── */
   .stat-card { @apply glass-card p-5 flex flex-col gap-2; }
+
+  /* ── حقل الإدخال الموحد للـ Dashboard (dark glass) ──────────────── */
+  .input-field {
+    @apply w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none transition-all duration-300;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: rgba(255, 255, 255, 0.90);
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+  }
+  .input-field::placeholder {
+    color: rgba(255, 255, 255, 0.28);
+  }
+  .input-field:focus {
+    background: rgba(26, 86, 219, 0.07);
+    border-color: rgba(26, 86, 219, 0.55);
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12), inset 0 1px 0 rgba(255,255,255,0.04);
+    outline: none;
+  }
+  .input-field:hover:not(:focus) {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+  /* قوائم منسدلة */
+  .input-field option {
+    background-color: #131A27;
+    color: #ffffff;
+  }
+
+  /* ── تسمية الحقل ────────────────────────────────────────────────── */
+  .label-field {
+    @apply block text-xs font-semibold mb-1.5;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.02em;
+  }
+
+  /* ── زر الحذف ───────────────────────────────────────────────────── */
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-cairo font-semibold text-sm;
+    @apply text-white transition-all duration-300 cursor-pointer;
+    background: linear-gradient(135deg, #C0392B, #96281B);
+    box-shadow: 0 4px 20px rgba(192, 57, 43, 0.30);
+  }
+  .btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 28px rgba(192, 57, 43, 0.50);
+    filter: brightness(1.08);
+  }
+  .btn-danger:disabled { opacity: 0.55; transform: none; cursor: not-allowed; }
 }
 
 /* ══════════════════════════════════════════════════════════════════
