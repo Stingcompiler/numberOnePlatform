@@ -301,8 +301,195 @@ function AdminDashboard() {
   )
 }
 
+/* ─ واجهة إحصائيات مشرف الكورسات ─────────────────────────────── */
+function CoursesSupervisorDashboard() {
+  const { user } = useAuth()
+  const [courses, setCourses]     = useState([])
+  const [lessons, setLessons]     = useState([])
+  const [levels, setLevels]       = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [activeLevel, setActiveLevel] = useState(null)
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/academic/courses/').catch(() => null),
+      api.get('/academic/lessons/').catch(() => null),
+      api.get('/academic/levels/').catch(() => null),
+    ]).then(([cRes, lRes, lvRes]) => {
+      setCourses(cRes?.data?.results || cRes?.data || [])
+      setLessons(lRes?.data?.results || lRes?.data || [])
+      setLevels(lvRes?.data?.results || lvRes?.data || [])
+    }).finally(() => setLoading(false))
+  }, [])
+
+  const filteredCourses = activeLevel
+    ? courses.filter(c => c.grade_level_id === activeLevel || c.level_id === activeLevel)
+    : courses
+
+  return (
+    <div className="space-y-6 animate-fade-in" dir="rtl">
+      {/* الرأس */}
+      <div className="glass-card p-6 bg-gradient-to-r from-brand-blue/10 to-purple-500/5 border-brand-blue/15">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-blue/30 to-purple-500/30 border border-brand-blue/20 flex items-center justify-center shrink-0">
+            <BookOpen size={24} className="text-brand-blue" />
+          </div>
+          <div>
+            <h1 className="font-cairo font-bold text-white text-2xl">
+              أهلاً، {user?.full_name?.split(' ')[0] || 'مشرف'} 👋
+            </h1>
+            <p className="text-white/50 text-sm mt-0.5 flex items-center gap-1">
+              <Clock size={12} />
+              {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* الإحصائيات */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="إجمالي الكورسات"
+          value={loading ? null : courses.length}
+          icon={BookOpen} color="blue" loading={loading}
+          href="/dashboard/academic/courses"
+        />
+        <StatCard
+          label="إجمالي المحاضرات"
+          value={loading ? null : lessons.length}
+          icon={TrendingUp} color="cyan" loading={loading}
+          href="/dashboard/academic/lessons"
+        />
+        <StatCard
+          label="المراحل الدراسية"
+          value={loading ? null : levels.length}
+          icon={BarChart3} color="amber" loading={loading}
+        />
+        <StatCard
+          label="الكورسات النشطة"
+          value={loading ? null : courses.filter(c => c.is_active !== false).length}
+          icon={CheckCircle} color="red" loading={loading}
+        />
+      </div>
+
+      {/* وصول سريع */}
+      <div>
+        <h2 className="font-cairo font-semibold text-white/70 text-sm mb-3">وصول سريع</h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <QuickLink label="جميع الكورسات" desc="تصفح وعرض محتوى الكورسات" icon={BookOpen} href="/dashboard/academic/courses" color="blue" />
+          <QuickLink label="إدارة المحاضرات" desc="إضافة وتعديل المحاضرات" icon={TrendingUp} href="/dashboard/academic/lessons" color="cyan" />
+        </div>
+      </div>
+
+      {/* فلترة حسب المرحلة */}
+      {levels.length > 0 && (
+        <div>
+          <h2 className="font-cairo font-semibold text-white/70 text-sm mb-3 flex items-center gap-2">
+            <BarChart3 size={16} className="text-brand-blue" /> فلترة حسب المرحلة
+          </h2>
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button
+              onClick={() => setActiveLevel(null)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${!activeLevel ? 'bg-brand-blue text-white' : 'glass-card-strong text-white/60 hover:text-white'}`}
+            >
+              الكل ({courses.length})
+            </button>
+            {levels.map(lv => {
+              const cnt = courses.filter(c => c.grade_level_id === lv.id || c.level_id === lv.id).length
+              return (
+                <button
+                  key={lv.id}
+                  onClick={() => setActiveLevel(activeLevel === lv.id ? null : lv.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${activeLevel === lv.id ? 'bg-brand-blue text-white' : 'glass-card-strong text-white/60 hover:text-white'}`}
+                >
+                  {lv.name} ({cnt})
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* الكورسات الأخيرة */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-cairo font-semibold text-white/70 text-sm flex items-center gap-2">
+            <BookOpen size={16} className="text-brand-blue" /> الكورسات
+          </h2>
+          <Link to="/dashboard/academic/courses" className="text-brand-blue text-xs hover:underline">عرض الكل</Link>
+        </div>
+        {loading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map(i => <div key={i} className="skeleton h-24 rounded-2xl" />)}
+          </div>
+        ) : filteredCourses.length === 0 ? (
+          <div className="glass-card p-8 text-center text-white/40">
+            <BookOpen size={36} className="mx-auto mb-3 opacity-30" />
+            <p>لا توجد كورسات</p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredCourses.slice(0, 6).map(course => (
+              <Link key={course.id} to={`/dashboard/academic/courses/${course.id}`}
+                className="glass-card p-4 group hover:border-brand-blue/30 transition-all">
+                {course.thumbnail && (
+                  <img src={`/media/${course.thumbnail}`} alt={course.name}
+                    className="w-full h-24 object-cover rounded-xl mb-3" />
+                )}
+                <h3 className="font-cairo font-semibold text-white text-sm group-hover:text-brand-blue transition-colors">
+                  {course.name}
+                </h3>
+                <p className="text-white/40 text-xs mt-1">{course.grade_name || course.grade || '—'}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-white/30 text-[11px]">
+                    {course.lessons_count ?? course.units_count ?? 0} محاضرة
+                  </span>
+                  <ArrowLeft size={12} className="text-white/20 group-hover:text-brand-blue transition-colors" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* آخر المحاضرات المضافة */}
+      {lessons.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-cairo font-semibold text-white/70 text-sm flex items-center gap-2">
+              <TrendingUp size={16} className="text-neon-cyan" /> آخر المحاضرات المضافة
+            </h2>
+            <Link to="/dashboard/academic/lessons" className="text-brand-blue text-xs hover:underline">عرض الكل</Link>
+          </div>
+          <div className="space-y-2">
+            {lessons.slice(0, 5).map(lesson => (
+              <Link key={lesson.id} to={`/dashboard/academic/lessons/${lesson.id}`}
+                className="glass-card p-4 flex items-center gap-3 group hover:border-brand-blue/20 transition-all">
+                <div className="w-8 h-8 rounded-xl bg-brand-blue/10 flex items-center justify-center shrink-0">
+                  <TrendingUp size={14} className="text-brand-blue" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-white/90 text-sm font-medium truncate group-hover:text-brand-blue transition-colors">
+                    {lesson.title || lesson.name}
+                  </p>
+                  <p className="text-white/30 text-xs mt-0.5">{lesson.course_name || lesson.unit_name || '—'}</p>
+                </div>
+                <ArrowLeft size={14} className="text-white/20 group-hover:text-brand-blue transition-colors shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─ الصادر الرئيسي ────────────────────────────────────────────── */
 export default function DashboardHome() {
-  const { isStudent } = useAuth()
-  return isStudent ? <StudentDashboard /> : <AdminDashboard />
+  const { isStudent, isLectureSupervisor } = useAuth()
+  return isStudent
+    ? <StudentDashboard />
+    : isLectureSupervisor
+    ? <CoursesSupervisorDashboard />
+    : <AdminDashboard />
 }

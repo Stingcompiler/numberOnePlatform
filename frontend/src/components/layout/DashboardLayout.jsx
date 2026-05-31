@@ -45,7 +45,7 @@ const ADMIN_NAV_GROUPS = [
       { label: 'شروط التسجيل',    icon: ShieldCheck,    href: '/dashboard/registration-conditions' },
       { label: 'الأساتذة',         icon: GraduationCap,  href: '/dashboard/teachers' },
       { label: 'المشرفات',         icon: UserCheck,      href: '/dashboard/supervisors' },
-      { label: 'مشرفو المحاضرات', icon: UserCog,        href: '/dashboard/lecture-supervisors' },
+      { label: 'مشرفو الكورسات',  icon: UserCog,        href: '/dashboard/lecture-supervisors' },
       { label: 'بطاقات الكادر',    icon: LayoutList,     href: '/dashboard/staff' },
     ],
   },
@@ -114,7 +114,7 @@ const STUDENT_NAV_GROUPS = [
   },
 ]
 
-const LECTURE_SUPERVISOR_NAV_GROUPS = [
+const COURSES_SUPERVISOR_NAV_GROUPS = [
   {
     group: 'الرئيسية',
     items: [
@@ -122,15 +122,10 @@ const LECTURE_SUPERVISOR_NAV_GROUPS = [
     ],
   },
   {
-    group: 'المحاضرات',
+    group: 'الكورسات والمحاضرات',
     items: [
-      { label: 'المحاضرات المخصصة', icon: Play,       href: '/dashboard/academic/lessons' },
-    ],
-  },
-  {
-    group: 'حسابي',
-    items: [
-      { label: 'ملفي الشخصي', icon: User, href: '/dashboard/profile' },
+      { label: 'جميع الكورسات', icon: BookMarked,    href: '/dashboard/academic/courses' },
+      { label: 'إدارة المحاضرات', icon: Play,          href: '/dashboard/academic/lessons' },
     ],
   },
 ]
@@ -357,7 +352,7 @@ export default function DashboardLayout({ children }) {
     : isTeacher
     ? TEACHER_NAV_GROUPS
     : isLectureSupervisor
-    ? LECTURE_SUPERVISOR_NAV_GROUPS
+    ? COURSES_SUPERVISOR_NAV_GROUPS
     : ADMIN_NAV_GROUPS
 
   const handleLogout = async () => {
@@ -397,27 +392,44 @@ export default function DashboardLayout({ children }) {
         {/* معلومات المستخدم + تسجيل الخروج */}
         <div className="px-3 py-3 border-t border-white/08 space-y-2">
           {/* بطاقة المستخدم — قابلة للنقر للملف الشخصي */}
-          <NavLink
-            to="/dashboard/profile"
-            onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-2 py-2 rounded-xl transition-all ${
-                isActive ? 'bg-brand-blue/15 border border-brand-blue/20' : 'bg-white/04 hover:bg-white/08'
-              }`
-            }
-          >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red/30 to-brand-blue/30 flex items-center justify-center border border-white/10 shrink-0 overflow-hidden">
-              {user?.avatar
-                ? <img src={`/media/${user.avatar}`} alt="" className="w-8 h-8 object-cover" />
-                : <span className="text-white text-xs font-bold">{user?.full_name?.charAt(0) || 'U'}</span>
+          {isLectureSupervisor ? (
+            /* مشرف الكورسات: بطاقة غير قابلة للنقر (الملف للعرض فقط) */
+            <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-white/04">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red/30 to-brand-blue/30 flex items-center justify-center border border-white/10 shrink-0 overflow-hidden">
+                {user?.avatar
+                  ? <img src={`/media/${user.avatar}`} alt="" className="w-8 h-8 object-cover" />
+                  : <span className="text-white text-xs font-bold">{user?.full_name?.charAt(0) || 'U'}</span>
+                }
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-white text-xs font-semibold truncate">{user?.full_name}</p>
+                <p className="text-white/30 text-[11px] truncate">مشرف الكورسات</p>
+              </div>
+            </div>
+          ) : (
+            <NavLink
+              to="/dashboard/profile"
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-2 py-2 rounded-xl transition-all ${
+                  isActive ? 'bg-brand-blue/15 border border-brand-blue/20' : 'bg-white/04 hover:bg-white/08'
+                }`
               }
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-white text-xs font-semibold truncate">{user?.full_name}</p>
-              <p className="text-white/30 text-[11px] truncate">{user?.phone || user?.role}</p>
-            </div>
-            <User size={13} className="text-white/20 shrink-0" />
-          </NavLink>
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red/30 to-brand-blue/30 flex items-center justify-center border border-white/10 shrink-0 overflow-hidden">
+                {user?.avatar
+                  ? <img src={`/media/${user.avatar}`} alt="" className="w-8 h-8 object-cover" />
+                  : <span className="text-white text-xs font-bold">{user?.full_name?.charAt(0) || 'U'}</span>
+                }
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-white text-xs font-semibold truncate">{user?.full_name}</p>
+                <p className="text-white/30 text-[11px] truncate">{user?.phone || user?.role}</p>
+              </div>
+              <User size={13} className="text-white/20 shrink-0" />
+            </NavLink>
+          )}
+
           {/* زر الخروج */}
           <button
             onClick={handleLogout}
@@ -499,7 +511,9 @@ export default function DashboardLayout({ children }) {
                 <p className="text-white text-xs font-semibold leading-tight max-w-[110px] truncate">
                   {user?.full_name}
                 </p>
-                <p className="text-white/30 text-[10px] leading-tight capitalize">{user?.role}</p>
+                <p className="text-white/30 text-[10px] leading-tight capitalize">
+                  {user?.role === 'lecture_supervisor' ? 'مشرف الكورسات' : user?.role}
+                </p>
               </div>
             </div>
           </div>

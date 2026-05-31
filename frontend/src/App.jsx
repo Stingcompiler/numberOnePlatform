@@ -97,6 +97,7 @@ function DPage({ component: Component, roles }) {
 const ADMIN_ROLES              = ['admin', 'manager']
 const ALL_STAFF                = ['admin', 'manager', 'teacher']
 const LECTURE_CONTENT_ROLES    = ['admin', 'manager', 'teacher', 'lecture_supervisor']
+const COURSES_SUPERVISOR_ROLES = ['lecture_supervisor']
 const STUDENT_ONLY             = ['student']
 
 function AppRoutes() {
@@ -171,13 +172,13 @@ function AppRoutes() {
         element={<DPage component={GradeDetailsPage} roles={ALL_STAFF} />}
       />
       <Route path="/dashboard/academic/courses"
-        element={<DPage component={CoursesUnitsPage} roles={ALL_STAFF} />}
+        element={<DPage component={CoursesUnitsPage} roles={LECTURE_CONTENT_ROLES} />}
       />
       <Route path="/dashboard/academic/courses/:id"
-        element={<DPage component={CourseDetailsPage} roles={ALL_STAFF} />}
+        element={<DPage component={CourseDetailsPage} roles={LECTURE_CONTENT_ROLES} />}
       />
       <Route path="/dashboard/academic/units/:id"
-        element={<DPage component={UnitDetailsPage} roles={ALL_STAFF} />}
+        element={<DPage component={UnitDetailsPage} roles={LECTURE_CONTENT_ROLES} />}
       />
       <Route path="/dashboard/academic/lessons"
         element={<DPage component={LessonsExercisesPage} roles={LECTURE_CONTENT_ROLES} />}

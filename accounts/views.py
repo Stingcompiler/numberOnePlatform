@@ -863,21 +863,17 @@ class LectureSupervisorMeView(APIView):
         return Response(LectureSupervisorProfileSerializer(profile).data)
 
     def patch(self, request):
-        """يتيح لمشرف المحاضرات تحديث بياناته الأساسية فقط (phone, email, full_name, avatar)."""
+        """مشرف الكورسات لا يمكنه تعديل بياناته بنفسه. فقط المدير يستطيع تحديثها."""
         if request.user.role != CustomUser.Roles.LECTURE_SUPERVISOR:
             return Response(
-                {"detail": _("غير مصرح بهذا الإجراء.")},
+                {"detail": _("\u063a\u064a\u0631 \u0645\u0635\u0631\u062d \u0628\u0647\u0630\u0627 \u0627\u0644\u0625\u062c\u0631\u0627\u0621.")},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        allowed_fields = {"full_name", "email", "phone", "avatar"}
-        user_data = {k: v for k, v in request.data.items() if k in allowed_fields}
-        if user_data:
-            user_ser = UserDetailSerializer(
-                request.user, data=user_data, partial=True
-            )
-            user_ser.is_valid(raise_exception=True)
-            user_ser.save()
-        return Response(UserDetailSerializer(request.user).data)
+        # Block self-editing for Courses Supervisors
+        return Response(
+            {"detail": _("لا يمكنك تعديل بياناتك الشخصية. تواصل مع مدير النظام لتعديل بياناتك.")},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
 
 class LectureSupervisorToggleActiveView(APIView):

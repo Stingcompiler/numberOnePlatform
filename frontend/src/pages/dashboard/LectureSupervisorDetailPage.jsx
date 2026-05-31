@@ -161,7 +161,7 @@ export default function LectureSupervisorDetailPage() {
   return (
     <>
       <Helmet>
-        <title>{user.full_name} — مشرف محاضرات</title>
+        <title>{user.full_name} — مشرف كورسات</title>
       </Helmet>
 
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
@@ -179,7 +179,7 @@ export default function LectureSupervisorDetailPage() {
             </div>
             <div>
               <h1 className="text-white font-cairo font-bold text-xl">{user.full_name}</h1>
-              <p className="text-white/40 text-xs">ملف مشرف المحاضرات</p>
+              <p className="text-white/40 text-xs">ملف مشرف الكورسات</p>
             </div>
           </div>
           <div className="mr-auto flex items-center gap-2 flex-wrap">
@@ -218,7 +218,7 @@ export default function LectureSupervisorDetailPage() {
                 </div>
                 <h2 className="text-white font-bold text-lg">{user.full_name}</h2>
                 <p className="text-white/40 text-sm">@{user.username}</p>
-                <span className="mt-2 bg-brand-blue/15 border border-brand-blue/25 text-brand-blue text-xs px-3 py-1 rounded-full">مشرف محاضرات</span>
+                <span className="mt-2 bg-brand-blue/15 border border-brand-blue/25 text-brand-blue text-xs px-3 py-1 rounded-full">مشرف كورسات</span>
               </div>
 
               {/* البيانات */}

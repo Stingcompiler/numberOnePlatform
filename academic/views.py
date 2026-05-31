@@ -15,7 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsAdminOrManager, IsAdminOrReadOnly, IsStudent, LectureWritePermission
+from accounts.permissions import IsAdminOrManager, IsAdminOrReadOnly, IsStudent, LectureWritePermission, IsLectureSupervisor
 from .models import (
     Level, Grade, Course, Unit, Lesson,
     Exercise, Question, Choice,
@@ -110,7 +110,17 @@ class GradeDetailView(generics.RetrieveUpdateDestroyAPIView):
 class CourseListCreateView(generics.ListCreateAPIView):
     """GET /api/academic/courses/ | POST"""
 
-    permission_classes = [IsAdminOrReadOnly]
+    def get_permissions(self):
+        """
+        GET: مدير + أستاذ + مشرف الكورسات (read-only)
+        POST/PATCH/DELETE: مدير فقط
+        """
+        from rest_framework.permissions import IsAuthenticated
+        from accounts.models import CustomUser
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            # All authenticated staff (including lecture_supervisor) can read
+            return [IsAuthenticated()]
+        return [IsAdminOrReadOnly()]
 
     def get_queryset(self):
         qs = Course.objects.select_related("grade__level", "teacher").prefetch_related("units")
@@ -139,7 +149,16 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
         "units__lessons"
     )
     serializer_class   = CourseSerializer
-    permission_classes = [IsAdminOrReadOnly]
+
+    def get_permissions(self):
+        """
+        GET: جميع المصادق عليهم (شامل مشرف الكورسات)
+        POST/PATCH/DELETE: مدير فقط
+        """
+        from rest_framework.permissions import IsAuthenticated
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return [IsAuthenticated()]
+        return [IsAdminOrReadOnly()]
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
@@ -199,33 +218,11 @@ class LessonListCreateView(generics.ListCreateAPIView):
         if unit_id:
             qs = qs.filter(unit_id=unit_id)
 
-        # مشرف المحاضرات: يُفلتر حسب الكورسات المخصصة له فقط
-        user = self.request.user
-        if user.role == CustomUser.Roles.LECTURE_SUPERVISOR:
-            try:
-                assigned_ids = user.lecture_supervisor_profile.get_assigned_course_ids()
-                qs = qs.filter(unit__course_id__in=assigned_ids)
-            except Exception:
-                return qs.none()
-
+        # مشرف الكورسات: يرى جميع المحاضرات (بدون فلتر)
         return qs.order_by("display_order")
 
     def create(self, request, *args, **kwargs):
-        """عند الإنشاء: مشرف المحاضرات يُتحقَّق من أن الـ unit ينتمي لكورس مخصص له."""
-        from accounts.models import CustomUser
-        if request.user.role == CustomUser.Roles.LECTURE_SUPERVISOR:
-            unit_id = request.data.get("unit")
-            if unit_id:
-                try:
-                    unit = Unit.objects.select_related("course").get(pk=unit_id)
-                    assigned_ids = request.user.lecture_supervisor_profile.get_assigned_course_ids()
-                    if unit.course_id not in assigned_ids:
-                        return Response(
-                            {"detail": _("لا تملك صلاحية إضافة محاضرات لهذا الكورس.")},
-                            status=status.HTTP_403_FORBIDDEN,
-                        )
-                except Unit.DoesNotExist:
-                    pass
+        """\u0645شرف الكورسات يستطيع إضافة محاضرات لأي كورس في النظام."""
         return super().create(request, *args, **kwargs)
 
     def get_serializer_class(self):
@@ -248,21 +245,8 @@ class LessonDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [LectureWritePermission]
 
     def get_object(self):
-        """مشرف المحاضرات: يتحقق أن المحاضرة تنتمي لكورس مخصص له."""
-        from accounts.models import CustomUser
-        obj = super().get_object()
-        user = self.request.user
-        if user.role == CustomUser.Roles.LECTURE_SUPERVISOR:
-            try:
-                assigned_ids = user.lecture_supervisor_profile.get_assigned_course_ids()
-                if obj.unit.course_id not in assigned_ids:
-                    from rest_framework.exceptions import PermissionDenied
-                    raise PermissionDenied(_("لا تملك صلاحية الوصول لهذه المحاضرة."))
-            except Exception as exc:
-                from rest_framework.exceptions import PermissionDenied
-                if isinstance(exc, PermissionDenied):
-                    raise
-        return obj
+        """مشرف الكورسات يستطيع الوصول لأي محاضرة في النظام."""
+        return super().get_object()
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True

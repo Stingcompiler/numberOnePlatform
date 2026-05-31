@@ -9,8 +9,8 @@ accounts/models.py
   - StudentProfile: الملف الشخصي الكامل للطالب شاملاً ربط الجهاز (Device Binding).
   - TeacherProfile: الملف الشخصي للأستاذ/المدرّس.
   - Supervisor   : جدول المشرفات (بدون صلاحيات دخول – مرجع إداري فقط).
-================================================================================
-"""
+  - LectureSupervisorProfile: ملف مشرف الكورسات (محدود الصلاحيات).
+================================================================================"""
 
 import uuid
 
@@ -70,7 +70,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         TEACHER            = "teacher",            _("أستاذ")
         ADMIN              = "admin",              _("مدير النظام")
         MANAGER            = "manager",            _("مدير")
-        LECTURE_SUPERVISOR = "lecture_supervisor", _("مشرف محاضرات")
+        LECTURE_SUPERVISOR = "lecture_supervisor", _("مشرف الكورسات")
 
     # ── الحقول الأساسية ──────────────────────────────────────────────────────
     id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -546,19 +546,20 @@ class RegistrationCondition(models.Model):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 10. LectureSupervisorProfile – ملف مشرف المحاضرات
+# 10. LectureSupervisorProfile – ملف مشرف الكورسات
 # ─────────────────────────────────────────────────────────────────────────────
 
 class LectureSupervisorProfile(models.Model):
     """
-    الملف الشخصي لمشرف المحاضرات.
+    الملف الشخصي لمشرف الكورسات.
 
-    مشرف المحاضرات هو عضو كادر محدود الصلاحيات يساعد المدير
-    في إدارة محتوى المحاضرات (إضافة وتعديل وعرض) للكورسات المخصصة له.
+    مشرف الكورسات هو عضو كادر محدود الصلاحيات يساعد المدير
+    في إدارة محتوى المحاضرات (إضافة وتعديل وعرض) لجميع الكورسات في النظام.
 
     الصلاحيات:
-      - يستطيع: إضافة وتعديل وعرض المحاضرات للكورسات المخصصة.
-      - لا يستطيع: حذف محاضرات، إدارة مستخدمين، الوصول للإعدادات أو المالية.
+      - يستطيع: تصفح جميع الكورسات، إضافة وتعديل وعرض المحاضرات لأي كورس.
+      - لا يستطيع: إنشاء/تعديل/حذف الكورسات، حذف محاضرات، إدارة مستخدمين،
+                   الوصول للإعدادات أو المالية، تعديل بياناته الشخصية.
     """
 
     user = models.OneToOneField(
@@ -580,12 +581,12 @@ class LectureSupervisorProfile(models.Model):
     updated_at = models.DateTimeField(_("آخر تحديث"), auto_now=True)
 
     class Meta:
-        verbose_name        = _("مشرف محاضرات")
-        verbose_name_plural = _("مشرفو المحاضرات")
+        verbose_name        = _("مشرف الكورسات")
+        verbose_name_plural = _("مشرفو الكورسات")
         ordering            = ["-created_at"]
 
     def __str__(self):
-        return f"{self.user.full_name} — مشرف محاضرات"
+        return f"{self.user.full_name} — مشرف الكورسات"
 
     def get_assigned_course_ids(self):
         """يُعيد قائمة بمعرّفات الكورسات المخصصة لهذا المشرف."""

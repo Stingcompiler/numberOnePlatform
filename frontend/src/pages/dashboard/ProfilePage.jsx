@@ -50,7 +50,7 @@ const ROLE_META = {
   admin:              { label: 'مدير النظام',   color: 'from-purple-500 to-brand-blue' },
   manager:            { label: 'مدير',           color: 'from-brand-blue to-cyan-500' },
   teacher:            { label: 'أستاذ',          color: 'from-amber-500 to-orange-500' },
-  lecture_supervisor: { label: 'مشرف محاضرات', color: 'from-brand-blue to-purple-500' },
+  lecture_supervisor: { label: 'مشرف الكورسات', color: 'from-brand-blue to-purple-500' },
   student:            { label: 'طالب',           color: 'from-emerald-500 to-teal-500' },
 }
 
@@ -202,20 +202,30 @@ export default function ProfilePage() {
               <h2 className="text-white font-semibold flex items-center gap-2">
                 <User size={15} className="text-brand-blue" /> البيانات الشخصية
               </h2>
-              {!editing && (
+              {/* مشرف الكورسات لا يملك زر التعديل */}
+              {!editing && !isLectureSupervisor && (
                 <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 text-xs text-brand-blue/70 hover:text-brand-blue transition-colors">
                   <Edit3 size={13} /> تعديل
                 </button>
               )}
             </div>
 
-            {!editing ? (
+            {/* عرض البيانات — دائماً للمشرف، أو عند عدم التعديل */}
+            {(!editing || isLectureSupervisor) ? (
               <div>
                 <InfoRow icon={User}     label="الاسم الكامل"        value={user.full_name} />
                 <InfoRow icon={Badge}    label="اسم المستخدم"         value={`@${user.username}`} />
                 <InfoRow icon={Phone}    label="رقم الهاتف"           value={user.phone} />
                 <InfoRow icon={Mail}     label="البريد الإلكتروني"   value={user.email} />
                 <InfoRow icon={Calendar} label="تاريخ الانضمام"      value={new Date(user.date_joined).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })} />
+                {isLectureSupervisor && (
+                  <div className="mt-4 flex items-start gap-3 px-3 py-3 rounded-xl bg-amber-500/05 border border-amber-500/15">
+                    <ShieldCheck size={16} className="text-amber-400 mt-0.5 shrink-0" />
+                    <p className="text-amber-400/80 text-xs leading-relaxed">
+                      حسابك مُدار من قِبَل مدير النظام. لتعديل بياناتك تواصل معه مباشرةً.
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
@@ -245,10 +255,12 @@ export default function ProfilePage() {
             )}
           </div>
 
+
           {/* ── اللوحة الجانبية ── */}
           <div className="lg:col-span-2 space-y-4">
 
-            {/* كلمة المرور */}
+            {/* كلمة المرور — مخفية لمشرف الكورسات */}
+            {!isLectureSupervisor && (
             <div className="glass-card p-5">
               <h3 className="text-white font-semibold text-sm flex items-center gap-2 mb-4">
                 <Lock size={14} className="text-brand-blue" /> الأمان وكلمة المرور
@@ -298,6 +310,7 @@ export default function ProfilePage() {
                 </form>
               )}
             </div>
+            )}
 
             {/* مشرف المحاضرات: الكورسات المخصصة */}
             {isLectureSupervisor && (

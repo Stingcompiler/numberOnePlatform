@@ -16,7 +16,7 @@ import {
 import api from '../../api/axiosInstance'
 
 /* ── helpers ───────────────────────────────────────────── */
-const ROLE_LABEL = { lecture_supervisor: 'مشرف محاضرات' }
+const ROLE_LABEL = { lecture_supervisor: 'مشرف كورسات' }
 
 const INITIAL_FORM = {
   username: '', full_name: '', password: '', email: '', phone: '',
@@ -216,8 +216,8 @@ export default function LectureSupervisorsPage() {
   return (
     <>
       <Helmet>
-        <title>مشرفو المحاضرات — نمبر ون</title>
-        <meta name="description" content="إدارة حسابات مشرفي المحاضرات في النظام" />
+        <title>مشرفو الكورسات — نمبر ون</title>
+        <meta name="description" content="إدارة حسابات مشرفي الكورسات في النظام" />
       </Helmet>
 
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
@@ -231,8 +231,8 @@ export default function LectureSupervisorsPage() {
               <UserCog size={18} className="text-white" />
             </div>
             <div>
-              <h1 className="text-white font-cairo font-bold text-xl">مشرفو المحاضرات</h1>
-              <p className="text-white/40 text-xs">إدارة حسابات مشرفي المحاضرات</p>
+              <h1 className="text-white font-cairo font-bold text-xl">مشرفو الكورسات</h1>
+              <p className="text-white/40 text-xs">إدارة حسابات مشرفي الكورسات</p>
             </div>
           </div>
           <button
@@ -290,7 +290,7 @@ export default function LectureSupervisorsPage() {
         ) : profiles.length === 0 ? (
           <div className="glass-card p-12 text-center">
             <Users size={40} className="mx-auto text-white/20 mb-3" />
-            <p className="text-white/40 font-medium">لا يوجد مشرفو محاضرات</p>
+            <p className="text-white/40 font-medium">لا يوجد مشرفو كورسات</p>
             <p className="text-white/20 text-sm mt-1">اضغط على "إضافة مشرف" لإنشاء أول حساب</p>
           </div>
         ) : (
@@ -322,7 +322,7 @@ export default function LectureSupervisorsPage() {
                   <UserCog size={17} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-white font-cairo font-bold text-base">إضافة مشرف محاضرات</h2>
+                  <h2 className="text-white font-cairo font-bold text-base">إضافة مشرف كورسات</h2>
                   <p className="text-white/30 text-[11px]">سيُنشأ حساب جديد بصلاحيات محدودة</p>
                 </div>
               </div>

@@ -92,7 +92,7 @@ class IsOwnerStudentOrAdmin(BasePermission):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class IsLectureSupervisor(BasePermission):
-    """مشرف المحاضرات فحسب."""
+    """مشرف الكورسات فحسب."""
 
     def has_permission(self, request, view):
         return bool(
@@ -104,7 +104,7 @@ class IsLectureSupervisor(BasePermission):
 
 class IsAdminManagerOrLectureSupervisor(BasePermission):
     """
-    المدير أو مدير النظام أو مشرف المحاضرات.
+    المدير أو مدير النظام أو مشرف الكورسات.
     يُستخدَم لنقاط نهاية المحاضرات (قراءة وكتابة).
     """
 
@@ -125,11 +125,9 @@ class IsAdminManagerOrLectureSupervisor(BasePermission):
 class LectureWritePermission(BasePermission):
     """
     صلاحية الكتابة على المحاضرات:
-    - القراءة (GET/HEAD/OPTIONS): مدير، أستاذ، مشرف محاضرات
-    - الإنشاء/التعديل (POST/PATCH/PUT): مدير + مشرف محاضرات
+    - القراءة (GET/HEAD/OPTIONS): مدير، أستاذ، مشرف الكورسات
+    - الإنشاء/التعديل (POST/PATCH/PUT): مدير + مشرف الكورسات
     - الحذف (DELETE): مدير فقط (admin/manager)
-
-    ملاحظة: يُطبَّق فلتر الكورسات المخصصة في get_queryset() بالـ View.
     """
 
     WRITE_ROLES = (
