@@ -5,6 +5,8 @@ import {
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
 import Pagination from '../../components/ui/Pagination'
+import { useAuth } from '../../context/AuthContext'
+
 
 /* ═══════════════════════════════════════════════════════════════════
    نافذة إنشاء/تعديل عامة (Generic Modal)
@@ -87,7 +89,7 @@ function ItemModal({ title, fields, initialData = {}, endpoint, onClose, onSaved
 export default function CourseDetailsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-
+  const { isLectureSupervisor } = useAuth()
   const [course, setCourse] = useState(null)
   const [units, setUnits] = useState([])
   const [teachers, setTeachers] = useState([])
@@ -211,14 +213,16 @@ export default function CourseDetailsPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto mt-4 md:mt-0">
-          <button onClick={() => setModal('edit_course')} className="btn-secondary flex-1 md:flex-none justify-center">
-            <Pencil size={14} className="mr-1" /> تعديل
-          </button>
-          <button onClick={handleDeleteCourse} className="btn-secondary flex-1 md:flex-none justify-center bg-brand-red/10 text-brand-red hover:bg-brand-red/20 border-brand-red/20">
-            <Trash2 size={14} className="mr-1" /> حذف
-          </button>
-        </div>
+        {!isLectureSupervisor && (
+          <div className="flex items-center gap-2 w-full md:w-auto mt-4 md:mt-0">
+            <button onClick={() => setModal('edit_course')} className="btn-secondary flex-1 md:flex-none justify-center">
+              <Pencil size={14} className="mr-1" /> تعديل
+            </button>
+            <button onClick={handleDeleteCourse} className="btn-secondary flex-1 md:flex-none justify-center bg-brand-red/10 text-brand-red hover:bg-brand-red/20 border-brand-red/20">
+              <Trash2 size={14} className="mr-1" /> حذف
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Units Section */}
@@ -227,9 +231,11 @@ export default function CourseDetailsPage() {
           <h2 className="font-cairo font-bold text-white text-lg flex items-center gap-2">
             <BookMarked size={18} className="text-brand-blue" /> وحدات الكورس
           </h2>
-          <button onClick={() => setModal('unit')} className="btn-primary py-1.5 px-4 text-sm">
-            <Plus size={14} /> وحدة جديدة
-          </button>
+          {!isLectureSupervisor && (
+            <button onClick={() => setModal('unit')} className="btn-primary py-1.5 px-4 text-sm">
+              <Plus size={14} /> وحدة جديدة
+            </button>
+          )}
         </div>
 
         {units.length === 0 ? (
@@ -255,10 +261,12 @@ export default function CourseDetailsPage() {
                     >
                       التفاصيل <ArrowLeft size={12} />
                     </button>
-                    <button onClick={() => deleteUnit(unit.id)}
-                      className="btn-ghost p-1.5 text-brand-red hover:bg-brand-red/10 rounded-md">
-                      <Trash2 size={14} />
-                    </button>
+                    {!isLectureSupervisor && (
+                      <button onClick={() => deleteUnit(unit.id)}
+                        className="btn-ghost p-1.5 text-brand-red hover:bg-brand-red/10 rounded-md">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

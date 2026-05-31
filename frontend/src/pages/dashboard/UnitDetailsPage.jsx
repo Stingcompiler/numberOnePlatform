@@ -6,6 +6,8 @@ import {
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
 import Pagination from '../../components/ui/Pagination'
+import { useAuth } from '../../context/AuthContext'
+
 
 /* ═══════════════════════════════════════════════════════════════════
    Generic Modal — supports text, textarea, select, checkbox, file
@@ -293,6 +295,7 @@ function ExerciseManager({ lessonId, lessonTitle, exerciseData, onClose, onSaved
 export default function UnitDetailsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { isLectureSupervisor } = useAuth()
 
   const [unit, setUnit]   = useState(null)
   const [lessons, setLessons] = useState([])
@@ -385,14 +388,16 @@ export default function UnitDetailsPage() {
             <p className="text-white/40 text-sm">الترتيب: {unit.display_order} · {lessons.length} محاضرة</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <button onClick={() => setModal('edit_unit')} className="btn-secondary flex-1 md:flex-none justify-center">
-            <Pencil size={14} className="mr-1" /> تعديل
-          </button>
-          <button onClick={handleDeleteUnit} className="btn-secondary flex-1 md:flex-none justify-center bg-brand-red/10 text-brand-red hover:bg-brand-red/20 border-brand-red/20">
-            <Trash2 size={14} className="mr-1" /> حذف
-          </button>
-        </div>
+        {!isLectureSupervisor && (
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <button onClick={() => setModal('edit_unit')} className="btn-secondary flex-1 md:flex-none justify-center">
+              <Pencil size={14} className="mr-1" /> تعديل
+            </button>
+            <button onClick={handleDeleteUnit} className="btn-secondary flex-1 md:flex-none justify-center bg-brand-red/10 text-brand-red hover:bg-brand-red/20 border-brand-red/20">
+              <Trash2 size={14} className="mr-1" /> حذف
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Lessons */}

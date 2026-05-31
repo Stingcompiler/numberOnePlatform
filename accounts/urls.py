@@ -59,10 +59,9 @@ urlpatterns = [
     path("registration-conditions/",           AdminRegistrationConditionsListCreateView.as_view(), name="reg-conditions-list"),
     path("registration-conditions/<int:pk>/",  AdminRegistrationConditionDetailView.as_view(), name="reg-conditions-detail"),
 
-    # ── مشرفو المحاضرات ───────────────────────────────────────────────────────
     path("lecture-supervisors/",                              LectureSupervisorListCreateView.as_view(),  name="lecture-supervisor-list"),
     path("lecture-supervisors/me/",                           LectureSupervisorMeView.as_view(),          name="lecture-supervisor-me"),
-    path("lecture-supervisors/<uuid:pk>/",                    LectureSupervisorDetailView.as_view(),      name="lecture-supervisor-detail"),
-    path("lecture-supervisors/<uuid:pk>/toggle-active/",      LectureSupervisorToggleActiveView.as_view(), name="lecture-supervisor-toggle"),
+    path("lecture-supervisors/<int:pk>/",                    LectureSupervisorDetailView.as_view(),      name="lecture-supervisor-detail"),
+    path("lecture-supervisors/<int:pk>/toggle-active/",      LectureSupervisorToggleActiveView.as_view(), name="lecture-supervisor-toggle"),
 ]
 

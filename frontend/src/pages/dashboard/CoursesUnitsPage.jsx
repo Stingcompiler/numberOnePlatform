@@ -6,6 +6,8 @@ import {
 import api from '../../api/axiosInstance'
 import { useNavigate } from 'react-router-dom'
 import Pagination from '../../components/ui/Pagination'
+import { useAuth } from '../../context/AuthContext'
+
 
 /* ═══════════════════════════════════════════════════════════════════
    نافذة إنشاء/تعديل عامة (Generic Modal)
@@ -122,6 +124,7 @@ function CourseCard({ course, onManage }) {
    ═══════════════════════════════════════════════════════════════════ */
 export default function CoursesUnitsPage() {
   const navigate = useNavigate()
+  const { isLectureSupervisor } = useAuth()
   const [grades, setGrades] = useState([])
   const [teachers, setTeachers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -234,10 +237,12 @@ export default function CoursesUnitsPage() {
                     : <ChevronLeft size={16} className="text-white/40 mr-auto" />
                   }
                 </button>
-                <button onClick={() => { setCtx({ gradeId: grade.id }); setModal('course') }}
-                  className="btn-ghost p-2 text-brand-blue text-xs flex items-center gap-1 shrink-0">
-                  <Plus size={13} /> إدراج كورس
-                </button>
+                {!isLectureSupervisor && (
+                  <button onClick={() => { setCtx({ gradeId: grade.id }); setModal('course') }}
+                    className="btn-ghost p-2 text-brand-blue text-xs flex items-center gap-1 shrink-0">
+                    <Plus size={13} /> إدراج كورس
+                  </button>
+                )}
               </div>
 
               {open[grade.id] && (

@@ -52,7 +52,6 @@ export default function LectureSupervisorDetailPage() {
 
   const [profile, setProfile]         = useState(null)
   const [loading, setLoading]         = useState(true)
-  const [allCourses, setAllCourses]   = useState([])
   const [toast, setToast]             = useState(null)
   const [editing, setEditing]         = useState(false)
   const [editForm, setEditForm]       = useState({})
@@ -60,7 +59,6 @@ export default function LectureSupervisorDetailPage() {
   const [toggling, setToggling]       = useState(false)
   const [showDelete, setShowDelete]   = useState(false)
   const [deleting, setDeleting]       = useState(false)
-  const [courseSearch, setCourseSearch] = useState('')
 
   const notify = (msg, type = 'success') => setToast({ msg, type })
 
@@ -80,14 +78,7 @@ export default function LectureSupervisorDetailPage() {
     finally { setLoading(false) }
   }, [id])
 
-  const fetchCourses = useCallback(async () => {
-    try {
-      const { data } = await api.get('/academic/courses/')
-      setAllCourses(Array.isArray(data) ? data : data.results || [])
-    } catch { /* صامت */ }
-  }, [])
-
-  useEffect(() => { fetchProfile(); fetchCourses() }, [fetchProfile, fetchCourses])
+  useEffect(() => { fetchProfile() }, [fetchProfile])
 
   /* ── حفظ التعديلات ──────────────────────────────────────── */
   const handleSave = async () => {
@@ -123,19 +114,6 @@ export default function LectureSupervisorDetailPage() {
     finally { setDeleting(false) }
   }
 
-  /* ── إضافة / إزالة كورس ─────────────────────────────────── */
-  const handleAssignCourse = async (courseId, assign) => {
-    if (!profile) return
-    const current = profile.assigned_courses || []
-    const next = assign
-      ? [...current, courseId]
-      : current.filter(c => c !== courseId)
-    try {
-      await api.patch(`/lecture-supervisors/${id}/`, { assigned_courses: next })
-      notify(assign ? 'تم تعيين الكورس ✓' : 'تم إلغاء تعيين الكورس')
-      fetchProfile()
-    } catch { notify('فشل تحديث الكورسات', 'error') }
-  }
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -152,11 +130,6 @@ export default function LectureSupervisorDetailPage() {
 
   const user = profile.user
   const isActive = user.is_active
-  const assignedIds = profile.assigned_courses || []
-
-  const filteredCourses = allCourses.filter(c =>
-    c.name.toLowerCase().includes(courseSearch.toLowerCase())
-  )
 
   return (
     <>
@@ -203,127 +176,74 @@ export default function LectureSupervisorDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-          {/* ── الملف الشخصي ── */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="glass-card p-5">
-              {/* صورة + اسم */}
-              <div className="flex flex-col items-center text-center mb-5">
-                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-brand-blue/30 to-purple-500/30 border-2 border-brand-blue/20 flex items-center justify-center text-white text-3xl font-bold mb-3 overflow-hidden">
-                  {user.avatar
-                    ? <img src={user.avatar.startsWith('http') ? user.avatar : `/media/${user.avatar}`} alt="" className="w-20 h-20 object-cover" />
-                    : user.full_name?.charAt(0)
-                  }
-                </div>
-                <h2 className="text-white font-bold text-lg">{user.full_name}</h2>
-                <p className="text-white/40 text-sm">@{user.username}</p>
-                <span className="mt-2 bg-brand-blue/15 border border-brand-blue/25 text-brand-blue text-xs px-3 py-1 rounded-full">مشرف كورسات</span>
+        <div className="max-w-2xl mx-auto w-full space-y-4">
+          <div className="glass-card p-6">
+            {/* صورة + اسم */}
+            <div className="flex flex-col items-center text-center mb-5">
+              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-brand-blue/30 to-purple-500/30 border-2 border-brand-blue/20 flex items-center justify-center text-white text-3xl font-bold mb-3 overflow-hidden">
+                {user.avatar
+                  ? <img src={user.avatar.startsWith('http') ? user.avatar : `/media/${user.avatar}`} alt="" className="w-20 h-20 object-cover" />
+                  : user.full_name?.charAt(0)
+                }
               </div>
+              <h2 className="text-white font-bold text-lg">{user.full_name}</h2>
+              <p className="text-white/40 text-sm">@{user.username}</p>
+              <span className="mt-2 bg-brand-blue/15 border border-brand-blue/25 text-brand-blue text-xs px-3 py-1 rounded-full">مشرف كورسات</span>
+            </div>
 
-              {/* البيانات */}
-              <div>
-                <InfoRow icon={User} label="اسم المستخدم" value={user.username} />
-                <InfoRow icon={Phone} label="الهاتف" value={user.phone} />
-                <InfoRow icon={Mail} label="البريد الإلكتروني" value={user.email} />
-                <InfoRow icon={Calendar} label="تاريخ الانضمام" value={new Date(user.date_joined).toLocaleDateString('ar-SA')} />
-                <InfoRow icon={BookMarked} label="الكورسات المخصصة" value={`${assignedIds.length} كورس`} />
-              </div>
+            {/* البيانات */}
+            <div>
+              <InfoRow icon={User} label="اسم المستخدم" value={user.username} />
+              <InfoRow icon={Phone} label="الهاتف" value={user.phone} />
+              <InfoRow icon={Mail} label="البريد الإلكتروني" value={user.email} />
+              <InfoRow icon={Calendar} label="تاريخ الانضمام" value={new Date(user.date_joined).toLocaleDateString('ar-SA')} />
+            </div>
 
-              {/* تعديل */}
-              <div className="mt-4 pt-4 border-t border-white/08">
-                {!editing ? (
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="btn-secondary w-full flex items-center justify-center gap-2 text-sm"
-                  >
-                    <Edit3 size={14} /> تعديل البيانات
-                  </button>
-                ) : (
-                  <div className="space-y-3">
-                    <h4 className="text-white/60 text-xs font-medium">تعديل البيانات</h4>
-                    {[
-                      { key: 'full_name', label: 'الاسم الكامل', type: 'text' },
-                      { key: 'email', label: 'البريد الإلكتروني', type: 'email' },
-                      { key: 'phone', label: 'الهاتف', type: 'text' },
-                    ].map(f => (
-                      <div key={f.key}>
-                        <label className="label-field">{f.label}</label>
-                        <input
-                          type={f.type}
-                          value={editForm[f.key] || ''}
-                          onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
-                          className="input-field w-full text-sm"
-                        />
-                      </div>
-                    ))}
-                    <div>
-                      <label className="label-field">ملاحظات</label>
-                      <textarea
-                        value={editForm.notes || ''}
-                        onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))}
-                        className="input-field w-full text-sm resize-none"
-                        rows={2}
+            {/* تعديل */}
+            <div className="mt-4 pt-4 border-t border-white/08">
+              {!editing ? (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="btn-secondary w-full flex items-center justify-center gap-2 text-sm"
+                >
+                  <Edit3 size={14} /> تعديل البيانات
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <h4 className="text-white/60 text-xs font-medium">تعديل البيانات</h4>
+                  {[
+                    { key: 'full_name', label: 'الاسم الكامل', type: 'text' },
+                    { key: 'email', label: 'البريد الإلكتروني', type: 'email' },
+                    { key: 'phone', label: 'الهاتف', type: 'text' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="label-field">{f.label}</label>
+                      <input
+                        type={f.type}
+                        value={editForm[f.key] || ''}
+                        onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
+                        className="input-field w-full text-sm"
                       />
                     </div>
-                    <div className="flex gap-2">
-                      <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-1.5 text-sm">
-                        {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                        {saving ? 'حفظ...' : 'حفظ'}
-                      </button>
-                      <button onClick={() => setEditing(false)} className="btn-secondary flex-1 text-sm">إلغاء</button>
-                    </div>
+                  ))}
+                  <div>
+                    <label className="label-field">ملاحظات</label>
+                    <textarea
+                      value={editForm.notes || ''}
+                      onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))}
+                      className="input-field w-full text-sm resize-none"
+                      rows={2}
+                    />
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ── إدارة الكورسات ── */}
-          <div className="lg:col-span-2">
-            <div className="glass-card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-semibold flex items-center gap-2">
-                  <BookOpen size={16} className="text-brand-blue" />
-                  الكورسات المخصصة
-                </h3>
-                <span className="badge bg-brand-blue/15 text-brand-blue border border-brand-blue/25 text-xs px-2 py-0.5">{assignedIds.length} كورس</span>
-              </div>
-
-              {/* بحث */}
-              <input
-                type="text"
-                placeholder="بحث في الكورسات..."
-                value={courseSearch}
-                onChange={e => setCourseSearch(e.target.value)}
-                className="input-field w-full text-sm mb-4"
-              />
-
-              {/* قائمة الكورسات */}
-              <div className="space-y-2 max-h-[480px] overflow-y-auto custom-scrollbar">
-                {filteredCourses.length === 0 ? (
-                  <p className="text-white/30 text-sm text-center py-6">لا توجد كورسات</p>
-                ) : filteredCourses.map(course => {
-                  const isAssigned = assignedIds.includes(course.id)
-                  return (
-                    <div
-                      key={course.id}
-                      className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${isAssigned ? 'bg-brand-blue/08 border-brand-blue/20' : 'bg-white/03 border-white/06 hover:bg-white/05'}`}
-                    >
-                      <div>
-                        <p className={`text-sm font-medium ${isAssigned ? 'text-white' : 'text-white/70'}`}>{course.name}</p>
-                        <p className="text-white/30 text-xs mt-0.5">{course.grade || '—'}</p>
-                      </div>
-                      <button
-                        onClick={() => handleAssignCourse(course.id, !isAssigned)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${isAssigned ? 'bg-brand-red/10 hover:bg-brand-red/20 text-brand-red' : 'bg-brand-blue/10 hover:bg-brand-blue/20 text-brand-blue'}`}
-                      >
-                        {isAssigned ? <><Minus size={12} /> إلغاء التعيين</> : <><Plus size={12} /> تعيين</>}
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-1.5 text-sm">
+                      {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                      {saving ? 'حفظ...' : 'حفظ'}
+                    </button>
+                    <button onClick={() => setEditing(false)} className="btn-secondary flex-1 text-sm">إلغاء</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

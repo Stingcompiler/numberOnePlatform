@@ -802,7 +802,7 @@ class LectureSupervisorListCreateView(generics.ListCreateAPIView):
 
 
 class LectureSupervisorDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """GET / PATCH / DELETE /api/lecture-supervisors/<uuid>/ — المدير فقط"""
+    """GET / PATCH / DELETE /api/lecture-supervisors/<id>/ — المدير فقط"""
 
     permission_classes = [IsAdminOrManager]
     queryset = LectureSupervisorProfile.objects.select_related("user").prefetch_related(
@@ -877,7 +877,7 @@ class LectureSupervisorMeView(APIView):
 
 
 class LectureSupervisorToggleActiveView(APIView):
-    """POST /api/lecture-supervisors/<uuid>/toggle-active/ — تفعيل أو تعطيل حساب مشرف"""
+    """POST /api/lecture-supervisors/<id>/toggle-active/ — تفعيل أو تعطيل حساب مشرف"""
 
     permission_classes = [IsAdminOrManager]
 

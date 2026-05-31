@@ -65,24 +65,6 @@ function SupervisorCard({ profile, onToggle, onDelete, onView }) {
         </div>
       </div>
 
-      {/* الكورسات المخصصة */}
-      <div>
-        <p className="text-white/30 text-[11px] font-medium mb-2 flex items-center gap-1">
-          <BookOpen size={11} /> الكورسات المخصصة ({courses.length})
-        </p>
-        {courses.length === 0 ? (
-          <p className="text-white/20 text-xs italic">لا توجد كورسات مخصصة</p>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {courses.slice(0, 4).map(c => (
-              <span key={c.id} className="bg-brand-blue/10 border border-brand-blue/20 text-brand-blue/80 text-[11px] px-2 py-0.5 rounded-lg">{c.name}</span>
-            ))}
-            {courses.length > 4 && (
-              <span className="bg-white/05 border border-white/10 text-white/40 text-[11px] px-2 py-0.5 rounded-lg">+{courses.length - 4} أخرى</span>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2 pt-1 border-t border-white/06">
@@ -120,7 +102,6 @@ export default function LectureSupervisorsPage() {
   const [loading, setLoading]     = useState(true)
   const [search, setSearch]       = useState('')
   const [filter, setFilter]       = useState('all') // all | active | inactive
-  const [courses, setCourses]     = useState([])
   const [toast, setToast]         = useState(null)
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm]           = useState(INITIAL_FORM)
@@ -144,15 +125,7 @@ export default function LectureSupervisorsPage() {
     finally { setLoading(false) }
   }, [search, filter])
 
-  const fetchCourses = useCallback(async () => {
-    try {
-      const { data } = await api.get('/academic/courses/')
-      setCourses(Array.isArray(data) ? data : data.results || [])
-    } catch { /* صامت */ }
-  }, [])
-
   useEffect(() => { fetchProfiles() }, [fetchProfiles])
-  useEffect(() => { fetchCourses() }, [fetchCourses])
 
   /* ── إنشاء مشرف جديد ────────────────────────────────────── */
   const handleCreate = async (e) => {
@@ -161,7 +134,7 @@ export default function LectureSupervisorsPage() {
     try {
       await api.post('/lecture-supervisors/', {
         ...form,
-        assigned_courses: form.assigned_courses.map(Number),
+        assigned_courses: [],
       })
       notify('تم إنشاء الحساب بنجاح ✓')
       setShowCreate(false)
@@ -197,15 +170,7 @@ export default function LectureSupervisorsPage() {
     finally { setDeleting(false) }
   }
 
-  /* ── إضافة / إزالة كورس من النموذج ──────────────────────── */
-  const toggleCourse = (id) => {
-    setForm(prev => ({
-      ...prev,
-      assigned_courses: prev.assigned_courses.includes(id)
-        ? prev.assigned_courses.filter(c => c !== id)
-        : [...prev.assigned_courses, id],
-    }))
-  }
+
 
   const stats = {
     total: profiles.length,
@@ -395,53 +360,6 @@ export default function LectureSupervisorsPage() {
 
               {/* ── فاصل ── */}
               <div className="h-px bg-gradient-to-r from-transparent via-white/08 to-transparent" />
-
-              {/* ── قسم 3: الكورسات المخصصة ── */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1 h-4 rounded-full bg-emerald-500" />
-                    <span className="text-white/50 text-xs font-semibold uppercase tracking-widest">الكورسات المخصصة</span>
-                  </div>
-                  {form.assigned_courses.length > 0 && (
-                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                      style={{ background: 'rgba(26,86,219,0.15)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.25)' }}>
-                      {form.assigned_courses.length} محدد
-                    </span>
-                  )}
-                </div>
-                <div className="rounded-xl overflow-hidden border border-white/08"
-                  style={{ background: 'rgba(255,255,255,0.025)' }}>
-                  <div className="max-h-44 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-px p-1">
-                    {courses.map(c => {
-                      const selected = form.assigned_courses.includes(c.id)
-                      return (
-                        <button key={c.id} type="button"
-                          onClick={() => toggleCourse(c.id)}
-                          className={`text-right px-3 py-2.5 rounded-lg text-xs transition-all m-0.5 ${
-                            selected
-                              ? 'text-white font-medium'
-                              : 'text-white/50 hover:text-white/80'
-                          }`}
-                          style={selected ? {
-                            background: 'rgba(26,86,219,0.20)',
-                            border: '1px solid rgba(96,165,250,0.30)',
-                            boxShadow: '0 0 12px rgba(26,86,219,0.15)'
-                          } : {
-                            background: 'rgba(255,255,255,0.03)',
-                            border: '1px solid transparent',
-                          }}>
-                          {selected && <span className="text-blue-400 ml-1">✓</span>}
-                          {c.name}
-                        </button>
-                      )
-                    })}
-                    {courses.length === 0 && (
-                      <div className="col-span-2 py-6 text-center text-white/20 text-xs">لا توجد كورسات</div>
-                    )}
-                  </div>
-                </div>
-              </div>
 
               {/* ── أزرار ── */}
               <div className="flex gap-3 pt-1">
