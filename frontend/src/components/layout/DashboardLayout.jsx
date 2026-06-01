@@ -18,6 +18,7 @@ import {
   BookMarked, ClipboardList, Link2, LayoutList, TrendingUp,
   Play, ShieldCheck, UserPlus, FileCheck, HardDrive,
   ChevronLeft, Mail, MailOpen, Loader2, Layers, UserCog,
+  KeyRound,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axiosInstance'
@@ -46,6 +47,7 @@ const ADMIN_NAV_GROUPS = [
       { label: 'الأساتذة',         icon: GraduationCap,  href: '/dashboard/teachers' },
       { label: 'المشرفات',         icon: UserCheck,      href: '/dashboard/supervisors' },
       { label: 'مشرفو الكورسات',  icon: UserCog,        href: '/dashboard/lecture-supervisors' },
+      { label: 'إدارة كلمات المرور', icon: KeyRound,       href: '/dashboard/password-management' },
       { label: 'بطاقات الكادر',    icon: LayoutList,     href: '/dashboard/staff' },
     ],
   },

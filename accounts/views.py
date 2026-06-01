@@ -25,6 +25,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import CustomUser, StudentProfile, TeacherProfile, Supervisor, StudentRequest, NewStudentRegistration, RegistrationCondition, LectureSupervisorProfile
 from .permissions import IsAdmin, IsAdminOrManager
 from .serializers import (
+    AdminResetPasswordSerializer,
     ChangePasswordSerializer,
     LoginSerializer,
     StudentCreateSerializer,
@@ -222,6 +223,26 @@ class ChangePasswordView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"detail": _("تم تغيير كلمة المرور بنجاح.")})
+
+
+class AdminResetPasswordView(APIView):
+    """
+    POST /api/admin/reset-password/
+    إعادة تعيين كلمة المرور لمستخدم (طالب أو مشرف كورسات) من قبل مدير النظام.
+    لا يتطلب كلمة المرور القديمة.
+    """
+
+    permission_classes = [IsAdminOrManager]
+
+    def post(self, request):
+        serializer = AdminResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        target_user = serializer.save()
+        return Response({
+            "detail": _("تم إعادة تعيين كلمة المرور بنجاح."),
+            "user_id": str(target_user.pk),
+            "full_name": target_user.full_name,
+        })
 
 
 # ─────────────────────────────────────────────────────────────────────────────

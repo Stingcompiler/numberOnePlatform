@@ -7,7 +7,7 @@ accounts/urls.py
 from django.urls import path
 from .views import (
     LoginView, LogoutView, TokenRefreshCookieView,
-    MeView, ChangePasswordView,
+    MeView, ChangePasswordView, AdminResetPasswordView,
     StudentListCreateView, StudentDetailView, StudentUnbindDeviceView,
     TeacherListCreateView, TeacherDetailView,
     SupervisorListCreateView, SupervisorDetailView,
@@ -27,6 +27,7 @@ urlpatterns = [
     path("auth/refresh/",         TokenRefreshCookieView.as_view(), name="auth-refresh"),
     path("auth/me/",              MeView.as_view(),                 name="auth-me"),
     path("auth/change-password/", ChangePasswordView.as_view(),     name="auth-change-password"),
+    path("admin/reset-password/", AdminResetPasswordView.as_view(),  name="admin-reset-password"),
 
     # ── الطلاب ───────────────────────────────────────────────────────────────
     path("students/",                          StudentListCreateView.as_view(),  name="student-list"),

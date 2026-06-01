@@ -55,6 +55,7 @@ const RegistrationConditionsPage = lazy(() => import('./pages/dashboard/Registra
 const LectureSupervisorsPage      = lazy(() => import('./pages/dashboard/LectureSupervisorsPage'))
 const LectureSupervisorDetailPage = lazy(() => import('./pages/dashboard/LectureSupervisorDetailPage'))
 const ProfilePage                 = lazy(() => import('./pages/dashboard/ProfilePage'))
+const PasswordManagementPage      = lazy(() => import('./pages/dashboard/PasswordManagementPage'))
 
 /* ── Page Loader ──────────────────────────────────────────────── */
 const PageLoader = () => (
@@ -146,6 +147,9 @@ function AppRoutes() {
       />
       <Route path="/dashboard/profile"
         element={<DPage component={ProfilePage} />}
+      />
+      <Route path="/dashboard/password-management"
+        element={<DPage component={PasswordManagementPage} roles={ADMIN_ROLES} />}
       />
 
       {/* ── مشرفو المحاضرات (إدارة المدير) ────────────────────── */}

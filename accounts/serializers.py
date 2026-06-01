@@ -294,6 +294,43 @@ class ChangePasswordSerializer(serializers.Serializer):
         return user
 
 
+class AdminResetPasswordSerializer(serializers.Serializer):
+    """
+    إعادة تعيين كلمة المرور من قبل مدير النظام — لا يتطلب كلمة المرور القديمة.
+    مسموح فقط للأدوار: student, lecture_supervisor.
+    """
+
+    ALLOWED_ROLES = (CustomUser.Roles.STUDENT, CustomUser.Roles.LECTURE_SUPERVISOR)
+
+    user_id          = serializers.UUIDField()
+    new_password     = serializers.CharField(min_length=6, write_only=True)
+    confirm_password = serializers.CharField(min_length=6, write_only=True)
+
+    def validate_user_id(self, value):
+        try:
+            user = CustomUser.objects.get(pk=value)
+        except CustomUser.DoesNotExist:
+            raise serializers.ValidationError(_("المستخدم غير موجود."))
+        if user.role not in self.ALLOWED_ROLES:
+            raise serializers.ValidationError(
+                _("لا يمكن إعادة تعيين كلمة المرور لهذا الدور.")
+            )
+        return value
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": _("كلمتا المرور غير متطابقتين.")}
+            )
+        return attrs
+
+    def save(self):
+        user = CustomUser.objects.get(pk=self.validated_data["user_id"])
+        user.set_password(self.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return user
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 7. StudentRequest – طلبات تسجيل الطلاب
 # ─────────────────────────────────────────────────────────────────────────────
