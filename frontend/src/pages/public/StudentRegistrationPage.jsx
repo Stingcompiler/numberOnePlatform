@@ -75,11 +75,11 @@ export default function StudentRegistrationPage() {
 
   useEffect(() => {
     api.get('/registration-conditions/public/').then(r => setConditions(r.data.results || r.data)).catch(() => { })
-    api.get('/supervisors/public/').then(r => setSupervisors(r.data.results || r.data)).catch(() => { })
+    api.get('/supervisors/public/', { params: { page_size: 1000 } }).then(r => setSupervisors(r.data.results || r.data)).catch(() => { })
 
     const fetchAcademic = async () => {
-      const gradesData = await api.get('/academic/grades/?system_type=online')
-      const levelsData = await api.get('/academic/levels/?system_type=online')
+      const gradesData = await api.get('/academic/grades/', { params: { system_type: 'online', page_size: 1000 } })
+      const levelsData = await api.get('/academic/levels/', { params: { system_type: 'online', page_size: 1000 } })
       setLevels(levelsData.data.results || levelsData.data)
       setGrades(gradesData.data.results || gradesData.data)
 

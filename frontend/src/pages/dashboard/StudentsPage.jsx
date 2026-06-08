@@ -324,9 +324,9 @@ export default function StudentsPage() {
   // خيارات المراحل والفصول والمشرفات
   useEffect(() => {
     Promise.all([
-      api.get('/academic/levels/').catch(() => ({ data: [] })),
-      api.get('/academic/grades/').catch(() => ({ data: [] })),
-      api.get('/supervisors/').catch(() => ({ data: [] })),
+      api.get('/academic/levels/', { params: { page_size: 1000 } }).catch(() => ({ data: [] })),
+      api.get('/academic/grades/', { params: { page_size: 1000 } }).catch(() => ({ data: [] })),
+      api.get('/supervisors/', { params: { page_size: 1000 } }).catch(() => ({ data: [] })),
     ]).then(([l, g, s]) => {
       setLevels(l.data.results || l.data)
       setGrades(g.data.results || g.data)
