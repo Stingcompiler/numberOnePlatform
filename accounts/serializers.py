@@ -25,19 +25,97 @@ class UserMiniSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class StudentProfileMiniSerializer(serializers.ModelSerializer):
+    """سيريالايزر مصغر للملف الشخصي للطالب للاستخدام داخل UserDetailSerializer."""
+
+    system_type_display = serializers.CharField(
+        source="get_system_type_display", read_only=True
+    )
+    balance = serializers.SerializerMethodField(read_only=True)
+    enrolled_grade_id = serializers.IntegerField(
+        source="enrolled_grade.id", read_only=True, default=None
+    )
+    enrolled_grade_name = serializers.CharField(
+        source="enrolled_grade.name", read_only=True, default=None
+    )
+    enrolled_level_name = serializers.CharField(
+        source="enrolled_grade.level.name", read_only=True, default=None
+    )
+    supervisor_name = serializers.CharField(
+        source="supervisor.name", read_only=True, default=None
+    )
+
+    class Meta:
+        model = StudentProfile
+        fields = [
+            "id",
+            "guardian_name",
+            "guardian_phone",
+            "address",
+            "system_type",
+            "system_type_display",
+            "device_id",
+            "registered_at",
+            "notes",
+            "balance",
+            "enrolled_grade",
+            "enrolled_grade_id",
+            "enrolled_grade_name",
+            "enrolled_level_name",
+            "supervisor",
+            "supervisor_name",
+        ]
+        read_only_fields = [
+            "id",
+            "system_type_display",
+            "device_id",
+            "registered_at",
+            "balance",
+            "enrolled_grade_id",
+            "enrolled_grade_name",
+            "enrolled_level_name",
+            "supervisor_name",
+        ]
+
+    def get_balance(self, obj):
+        try:
+            return str(obj.financial_file.get_balance())
+        except Exception:
+            return "0.00"
+
+
 class UserDetailSerializer(serializers.ModelSerializer):
     """تفاصيل المستخدم الكاملة — للقراءة والتعديل من لوحة التحكم."""
 
     role_display = serializers.CharField(source="get_role_display", read_only=True)
+    student_profile = StudentProfileMiniSerializer(required=False, allow_null=True)
 
     class Meta:
         model  = CustomUser
         fields = [
             "id", "username", "phone", "full_name", "email", "avatar",
             "role", "role_display", "is_active", "date_joined",
+            "student_profile",
         ]
         read_only_fields = ["id", "date_joined", "role_display"]
         extra_kwargs = {"avatar": {"required": False}}
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop("student_profile", None)
+
+        # Update user fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Update profile fields
+        if instance.role == CustomUser.Roles.STUDENT and profile_data is not None:
+            profile, created = StudentProfile.objects.get_or_create(user=instance)
+            for attr, value in profile_data.items():
+                setattr(profile, attr, value)
+            profile.save()
+
+        return instance
 
 
 # ─────────────────────────────────────────────────────────────────────────────

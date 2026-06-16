@@ -393,3 +393,194 @@ class ExamAttemptDetailSerializer(serializers.ModelSerializer):
             "started_at", "submitted_at", "answers",
         ]
         read_only_fields = fields
+
+
+# ── Student-Facing Serializers ────────────────────────────────────────────────
+
+class StudentExamQuestionOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExamQuestionOption
+        fields = ["id", "text", "display_order"]
+
+
+class StudentExamQuestionReadSerializer(serializers.ModelSerializer):
+    options = StudentExamQuestionOptionSerializer(many=True, read_only=True)
+    image_url = serializers.SerializerMethodField()
+    matching_left = serializers.SerializerMethodField()
+    matching_right = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ExamQuestion
+        fields = [
+            "id", "question_type", "title", "text", "marks",
+            "display_order", "options", "image_url", "matching_left", "matching_right",
+        ]  # Omit correct_answer for safety during exam taking
+
+    def get_image_url(self, obj):
+        if not obj.image:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+    def get_matching_left(self, obj):
+        if obj.question_type == "matching" and obj.correct_answer:
+            pairs = obj.correct_answer.get("pairs", [])
+            return [p.get("a") for p in pairs if p.get("a")]
+        return None
+
+    def get_matching_right(self, obj):
+        if obj.question_type == "matching" and obj.correct_answer:
+            pairs = obj.correct_answer.get("pairs", [])
+            import random
+            right_items = [p.get("b") for p in pairs if p.get("b")]
+            # Shuffle items to prevent leak
+            shuffled = list(right_items)
+            random.shuffle(shuffled)
+            return shuffled
+        return None
+
+
+class StudentExamDetailSerializer(serializers.ModelSerializer):
+    questions = StudentExamQuestionReadSerializer(many=True, read_only=True)
+    total_marks = serializers.FloatField(read_only=True)
+    question_count = serializers.IntegerField(read_only=True)
+    course_name = serializers.CharField(source="course.name", read_only=True)
+
+    class Meta:
+        model = Exam
+        fields = [
+            "id", "course", "course_name", "title",
+            "duration_minutes", "passing_score",
+            "total_marks", "question_count", "questions",
+        ]
+
+
+class StudentAttemptAnswerCreateSerializer(serializers.Serializer):
+    question_id = serializers.IntegerField()
+    answer = serializers.JSONField(required=False, default=dict)
+
+
+class StudentExamAttemptCreateSerializer(serializers.Serializer):
+    answers = StudentAttemptAnswerCreateSerializer(many=True)
+
+    def validate(self, attrs):
+        exam_id = self.context.get("exam_id")
+        try:
+            exam = Exam.objects.prefetch_related("questions").get(pk=exam_id, is_active=True)
+        except Exam.DoesNotExist:
+            raise serializers.ValidationError("الاختبار غير موجود أو غير نشط.")
+        
+        attrs["exam"] = exam
+        
+        # Verify that all questions in answers belong to this exam
+        exam_question_ids = {q.id for q in exam.questions.all()}
+        for ans in attrs.get("answers", []):
+            if ans["question_id"] not in exam_question_ids:
+                raise serializers.ValidationError(
+                    f"السؤال ذو المعرف {ans['question_id']} لا ينتمي لهذا الاختبار."
+                )
+        return attrs
+
+    def create(self, validated_data):
+        from django.utils import timezone
+        exam = validated_data["exam"]
+        answers_data = validated_data["answers"]
+        student = self.context["request"].user.student_profile
+
+        with transaction.atomic():
+            attempt = ExamAttempt.objects.create(
+                exam=exam,
+                student=student,
+                started_at=timezone.now(),
+                submitted_at=timezone.now(),
+            )
+
+            total_score = 0.0
+            answers_dict = {ans["question_id"]: ans["answer"] for ans in answers_data}
+
+            for question in exam.questions.all():
+                student_answer = answers_dict.get(question.id, {})
+                correct_answer = question.correct_answer
+
+                # Grade based on question type
+                is_correct = False
+                q_type = question.question_type
+
+                if q_type == "true_false":
+                    is_correct = (student_answer.get("value") == correct_answer.get("value"))
+                elif q_type == "multiple_choice":
+                    is_correct = (student_answer.get("option_id") == correct_answer.get("option_id"))
+                elif q_type == "fill_blank":
+                    is_correct = (
+                        str(student_answer.get("text", "")).strip().lower()
+                        == str(correct_answer.get("text", "")).strip().lower()
+                    )
+                elif q_type == "matching":
+                    try:
+                        st_pairs = student_answer.get("pairs", [])
+                        cr_pairs = correct_answer.get("pairs", [])
+                        st_set = {(str(p.get("a", "")).strip(), str(p.get("b", "")).strip()) for p in st_pairs}
+                        cr_set = {(str(p.get("a", "")).strip(), str(p.get("b", "")).strip()) for p in cr_pairs}
+                        is_correct = (st_set == cr_set)
+                    except Exception:
+                        is_correct = False
+
+                earned_marks = question.marks if is_correct else 0.0
+                if is_correct:
+                    total_score += question.marks
+
+                ExamAttemptAnswer.objects.create(
+                    attempt=attempt,
+                    question=question,
+                    student_answer=student_answer,
+                    is_correct=is_correct,
+                    earned_marks=earned_marks,
+                )
+
+            attempt.score = total_score
+            total_possible = exam.total_marks
+            attempt.percentage = (total_score / total_possible * 100.0) if total_possible > 0 else 0.0
+            attempt.is_passed = total_score >= exam.passing_score
+            attempt.save()
+
+        return attempt
+
+
+class StudentExamAttemptAnswerDetailSerializer(serializers.ModelSerializer):
+    question_title = serializers.CharField(source="question.title", read_only=True)
+    question_text = serializers.CharField(source="question.text", read_only=True)
+    question_type = serializers.CharField(source="question.question_type", read_only=True)
+    question_marks = serializers.FloatField(source="question.marks", read_only=True)
+    correct_answer = serializers.JSONField(source="question.correct_answer", read_only=True)
+    options = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ExamAttemptAnswer
+        fields = [
+            "id", "question_title", "question_text", "question_type", "question_marks",
+            "correct_answer", "student_answer",
+            "is_correct", "earned_marks", "options",
+        ]
+
+    def get_options(self, obj):
+        return list(
+            obj.question.options.values("id", "text", "display_order")
+            .order_by("display_order")
+        )
+
+
+class StudentExamAttemptDetailSerializer(serializers.ModelSerializer):
+    exam_title = serializers.CharField(source="exam.title", read_only=True)
+    exam_total_marks = serializers.FloatField(source="exam.total_marks", read_only=True)
+    answers = StudentExamAttemptAnswerDetailSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ExamAttempt
+        fields = [
+            "id", "exam", "exam_title", "exam_total_marks",
+            "score", "percentage", "is_passed",
+            "started_at", "submitted_at", "answers",
+        ]
+        read_only_fields = fields

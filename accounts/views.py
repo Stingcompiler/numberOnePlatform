@@ -110,7 +110,12 @@ class LoginView(APIView):
         user_data     = UserDetailSerializer(user).data
 
         response = Response(
-            {"detail": _("تم تسجيل الدخول بنجاح."), "user": user_data},
+            {
+                "detail": _("تم تسجيل الدخول بنجاح."),
+                "user": user_data,
+                "access": str(refresh_token.access_token),
+                "refresh": str(refresh_token),
+            },
             status=status.HTTP_200_OK,
         )
         _set_auth_cookies(response, refresh_token)
@@ -128,7 +133,7 @@ class LogoutView(APIView):
 
     def post(self, request):
         refresh_cookie_name = JWT_SETTINGS.get("AUTH_COOKIE_REFRESH", "refresh_token")
-        raw_refresh = request.COOKIES.get(refresh_cookie_name)
+        raw_refresh = request.COOKIES.get(refresh_cookie_name) or request.data.get("refresh") or request.data.get("refresh_token")
 
         response = Response(
             {"detail": _("تم تسجيل الخروج بنجاح.")},
@@ -159,7 +164,7 @@ class TokenRefreshCookieView(APIView):
 
     def post(self, request):
         refresh_cookie_name = JWT_SETTINGS.get("AUTH_COOKIE_REFRESH", "refresh_token")
-        raw_refresh = request.COOKIES.get(refresh_cookie_name)
+        raw_refresh = request.COOKIES.get(refresh_cookie_name) or request.data.get("refresh") or request.data.get("refresh_token")
 
         if not raw_refresh:
             return Response(
@@ -178,11 +183,19 @@ class TokenRefreshCookieView(APIView):
             _clear_auth_cookies(response)
             return response
 
+        # Rotate the refresh token by generating a new one
+        new_refresh = RefreshToken.for_user(user)
+
         response = Response(
-            {"detail": _("تم تجديد التوكن."), "user": user_data},
+            {
+                "detail": _("تم تجديد التوكن."),
+                "user": user_data,
+                "access": str(new_refresh.access_token),
+                "refresh": str(new_refresh),
+            },
             status=status.HTTP_200_OK,
         )
-        _set_auth_cookies(response, refresh_token)
+        _set_auth_cookies(response, new_refresh)
         return response
 
 

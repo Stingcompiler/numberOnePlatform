@@ -17,7 +17,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsAdminOrManager
+from accounts.permissions import IsAdminOrManager, IsStudent
 from .models import Exam, ExamAttempt
 from .serializers import (
     ExamListSerializer,
@@ -243,3 +243,150 @@ class AttemptDetailView(APIView):
             )
 
         return Response(ExamAttemptDetailSerializer(attempt).data)
+
+
+# ── Student-Facing Exam Views ────────────────────────────────────────────────
+
+class StudentExamListView(APIView):
+    """
+    GET /api/exams/student/list/
+    قائمة جميع الاختبارات النشطة للكورسات المتاحة للطالب.
+    """
+    permission_classes = [IsStudent]
+
+    def get(self, request):
+        student = request.user.student_profile
+        from academic.models import StudentCourseAccess
+        access_qs = StudentCourseAccess.objects.filter(
+            student=student, is_active=True
+        ).select_related("course")
+        courses = [acc.course for acc in access_qs]
+
+        # تصفية الاختبارات النشطة للكورسات المتاحة
+        exams = Exam.objects.filter(course__in=courses, is_active=True).select_related("course").prefetch_related("questions")
+
+        # جلب محاولات الطالب
+        attempts = ExamAttempt.objects.filter(student=student).select_related("exam")
+        attempts_by_exam = {}
+        for att in attempts:
+            if att.exam_id not in attempts_by_exam:
+                attempts_by_exam[att.exam_id] = []
+            attempts_by_exam[att.exam_id].append({
+                "id": att.id,
+                "score": att.score,
+                "percentage": att.percentage,
+                "is_passed": att.is_passed,
+                "submitted_at": att.submitted_at,
+            })
+
+        data = []
+        for exam in exams:
+            exam_attempts = attempts_by_exam.get(exam.id, [])
+            data.append({
+                "id": exam.id,
+                "title": exam.title,
+                "duration_minutes": exam.duration_minutes,
+                "passing_score": exam.passing_score,
+                "course_id": exam.course.id,
+                "course_name": exam.course.name,
+                "total_marks": exam.total_marks,
+                "question_count": exam.question_count,
+                "attempts": exam_attempts,
+            })
+        return Response(data)
+
+
+class StudentExamDetailView(APIView):
+    """
+    GET /api/exams/student/<id>/
+    تفاصيل اختبار محدد بدون الإجابات الصحيحة للأسئلة.
+    """
+    permission_classes = [IsStudent]
+
+    def get(self, request, pk):
+        student = request.user.student_profile
+        try:
+            exam = Exam.objects.select_related("course").get(pk=pk, is_active=True)
+        except Exam.DoesNotExist:
+            return Response(
+                {"detail": _("الاختبار غير موجود.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # التحقق من وصول الطالب للكورس
+        from academic.models import StudentCourseAccess
+        if not StudentCourseAccess.objects.filter(student=student, course=exam.course, is_active=True).exists():
+            return Response(
+                {"detail": _("ليس لديك صلاحية الوصول لهذا الاختبار.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        from .serializers import StudentExamDetailSerializer
+        serializer = StudentExamDetailSerializer(exam, context={"request": request})
+        return Response(serializer.data)
+
+
+class StudentSubmitExamView(APIView):
+    """
+    POST /api/exams/student/<exam_id>/submit/
+    تسليم إجابات الطالب وتصحيحها تلقائياً وإنشاء محاولة جديدة.
+    """
+    permission_classes = [IsStudent]
+
+    def post(self, request, exam_id):
+        student = request.user.student_profile
+        try:
+            exam = Exam.objects.get(pk=exam_id, is_active=True)
+        except Exam.DoesNotExist:
+            return Response(
+                {"detail": _("الاختبار غير موجود.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # التحقق من وصول الطالب للكورس
+        from academic.models import StudentCourseAccess
+        if not StudentCourseAccess.objects.filter(student=student, course=exam.course, is_active=True).exists():
+            return Response(
+                {"detail": _("ليس لديك صلاحية الوصول لهذا الاختبار.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        from .serializers import StudentExamAttemptCreateSerializer, StudentExamAttemptDetailSerializer
+        serializer = StudentExamAttemptCreateSerializer(
+            data=request.data,
+            context={"request": request, "exam_id": exam_id}
+        )
+        serializer.is_valid(raise_exception=True)
+        attempt = serializer.save()
+        return Response(
+            {
+                "detail": _("تم تسليم الاختبار بنجاح."),
+                "attempt": StudentExamAttemptDetailSerializer(attempt).data
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+
+class StudentAttemptDetailView(APIView):
+    """
+    GET /api/exams/student/attempts/<id>/
+    ورقة الإجابة وتفاصيل نتائج محاولة سابقة للطالب.
+    """
+    permission_classes = [IsStudent]
+
+    def get(self, request, pk):
+        student = request.user.student_profile
+        try:
+            attempt = ExamAttempt.objects.select_related(
+                "exam", "student"
+            ).prefetch_related(
+                "answers__question__options"
+            ).get(pk=pk, student=student)
+        except ExamAttempt.DoesNotExist:
+            return Response(
+                {"detail": _("المحاولة غير موجودة.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        from .serializers import StudentExamAttemptDetailSerializer
+        return Response(StudentExamAttemptDetailSerializer(attempt).data)
