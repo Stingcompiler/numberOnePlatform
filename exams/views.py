@@ -256,11 +256,20 @@ class StudentExamListView(APIView):
 
     def get(self, request):
         student = request.user.student_profile
-        from academic.models import StudentCourseAccess
-        access_qs = StudentCourseAccess.objects.filter(
-            student=student, is_active=True
-        ).select_related("course")
-        courses = [acc.course for acc in access_qs]
+        
+        if student.system_type == "online":
+            from academic.models import Course
+            courses = Course.objects.filter(
+                grade=student.enrolled_grade,
+                system_type="online",
+                is_active=True
+            )
+        else:
+            from academic.models import StudentCourseAccess
+            access_qs = StudentCourseAccess.objects.filter(
+                student=student, is_active=True
+            ).select_related("course")
+            courses = [acc.course for acc in access_qs]
 
         # تصفية الاختبارات النشطة للكورسات المتاحة
         exams = Exam.objects.filter(course__in=courses, is_active=True).select_related("course").prefetch_related("questions")
@@ -314,8 +323,19 @@ class StudentExamDetailView(APIView):
             )
 
         # التحقق من وصول الطالب للكورس
-        from academic.models import StudentCourseAccess
-        if not StudentCourseAccess.objects.filter(student=student, course=exam.course, is_active=True).exists():
+        if student.system_type == "online":
+            has_access = (
+                exam.course.system_type == "online"
+                and exam.course.grade_id == student.enrolled_grade_id
+                and exam.course.is_active
+            )
+        else:
+            from academic.models import StudentCourseAccess
+            has_access = StudentCourseAccess.objects.filter(
+                student=student, course=exam.course, is_active=True
+            ).exists()
+
+        if not has_access:
             return Response(
                 {"detail": _("ليس لديك صلاحية الوصول لهذا الاختبار.")},
                 status=status.HTTP_403_FORBIDDEN,
@@ -336,7 +356,7 @@ class StudentSubmitExamView(APIView):
     def post(self, request, exam_id):
         student = request.user.student_profile
         try:
-            exam = Exam.objects.get(pk=exam_id, is_active=True)
+            exam = Exam.objects.select_related("course").get(pk=exam_id, is_active=True)
         except Exam.DoesNotExist:
             return Response(
                 {"detail": _("الاختبار غير موجود.")},
@@ -344,8 +364,19 @@ class StudentSubmitExamView(APIView):
             )
 
         # التحقق من وصول الطالب للكورس
-        from academic.models import StudentCourseAccess
-        if not StudentCourseAccess.objects.filter(student=student, course=exam.course, is_active=True).exists():
+        if student.system_type == "online":
+            has_access = (
+                exam.course.system_type == "online"
+                and exam.course.grade_id == student.enrolled_grade_id
+                and exam.course.is_active
+            )
+        else:
+            from academic.models import StudentCourseAccess
+            has_access = StudentCourseAccess.objects.filter(
+                student=student, course=exam.course, is_active=True
+            ).exists()
+
+        if not has_access:
             return Response(
                 {"detail": _("ليس لديك صلاحية الوصول لهذا الاختبار.")},
                 status=status.HTTP_403_FORBIDDEN,

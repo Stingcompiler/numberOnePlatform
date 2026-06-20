@@ -212,6 +212,12 @@ class MeView(APIView):
         return Response(UserDetailSerializer(request.user).data)
 
     def patch(self, request):
+        # Students are read-only — they cannot modify account data
+        if request.user.role == CustomUser.Roles.STUDENT:
+            return Response(
+                {"detail": _("الطلاب ليس لديهم صلاحية تعديل بيانات الحساب. تواصل مع الإدارة.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         serializer = UserDetailSerializer(
             request.user, data=request.data, partial=True
         )

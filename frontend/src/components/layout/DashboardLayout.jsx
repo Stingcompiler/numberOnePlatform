@@ -106,16 +106,6 @@ const TEACHER_NAV_GROUPS = [
   },
 ]
 
-const STUDENT_NAV_GROUPS = [
-  {
-    group: 'مساحتي',
-    items: [
-      { label: 'كورساتي',    icon: BookMarked,    href: '/dashboard/my-courses' },
-      { label: 'واجباتي',    icon: ClipboardList, href: '/dashboard/my-submissions' },
-    ],
-  },
-]
-
 const COURSES_SUPERVISOR_NAV_GROUPS = [
   {
     group: 'الرئيسية',
@@ -344,14 +334,12 @@ function SidebarNavGroup({ group, items, onLinkClick }) {
    المكوّن الرئيسي — DashboardLayout
    ══════════════════════════════════════════════════════════════════ */
 export default function DashboardLayout({ children }) {
-  const { user, logout, isStudent, isTeacher, canManage, isLectureSupervisor } = useAuth()
+  const { user, logout, isTeacher, canManage, isLectureSupervisor } = useAuth()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // اختر مجموعات القائمة حسب الدور
-  const navGroups = isStudent
-    ? STUDENT_NAV_GROUPS
-    : isTeacher
+  // اختر مجموعات القائمة حسب الدور (الطلاب لا يستخدمون لوحة التحكم الإلكترونية)
+  const navGroups = isTeacher
     ? TEACHER_NAV_GROUPS
     : isLectureSupervisor
     ? COURSES_SUPERVISOR_NAV_GROUPS

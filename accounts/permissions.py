@@ -87,6 +87,22 @@ class IsOwnerStudentOrAdmin(BasePermission):
         return obj == request.user
 
 
+class IsStudentReadOnly(BasePermission):
+    """
+    الطلاب: قراءة فقط — يُرفض أي طلب تعديل أو حذف أو إنشاء.
+    المديرون والمشرفون: صلاحيات كاملة.
+    يُستخدم لحماية نقاط نهاية الحسابات من تعديلات الطلاب.
+    """
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.user.role == CustomUser.Roles.STUDENT:
+            # الطلاب: قراءة فقط
+            return request.method in SAFE_METHODS
+        return True
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # صلاحيات مشرف المحاضرات
 # ─────────────────────────────────────────────────────────────────────────────

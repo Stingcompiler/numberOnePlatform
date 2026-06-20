@@ -45,9 +45,6 @@ const ExamListPage = lazy(() => import('./pages/dashboard/ExamListPage'))
 const ExamCreatePage = lazy(() => import('./pages/dashboard/ExamCreatePage'))
 const ExamSubmissionsPage = lazy(() => import('./pages/dashboard/ExamSubmissionsPage'))
 const AttemptDetailPage = lazy(() => import('./pages/dashboard/AttemptDetailPage'))
-// Student pages
-const MyCoursesPage = lazy(() => import('./pages/dashboard/MyCoursesPage'))
-const MySubmissionsPage = lazy(() => import('./pages/dashboard/MySubmissionsPage'))
 const BackupPage = lazy(() => import('./pages/dashboard/BackupPage'))
 const StudentPhoneDataPage = lazy(() => import('./pages/dashboard/StudentPhoneDataPage'))
 const RegistrationRequestDetailPage = lazy(() => import('./pages/dashboard/RegistrationRequestDetailPage'))
@@ -69,6 +66,8 @@ function PrivateRoute({ children, roles }) {
   const { user, loading } = useAuth()
   if (loading) return <PageLoader />
   if (!user) return <Navigate to="/login" replace />
+  // Students have no web dashboard — redirect to login
+  if (user.role === 'student') return <Navigate to="/login" replace />
   if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />
   return children
 }
@@ -99,7 +98,6 @@ const ADMIN_ROLES              = ['admin', 'manager']
 const ALL_STAFF                = ['admin', 'manager', 'teacher']
 const LECTURE_CONTENT_ROLES    = ['admin', 'manager', 'teacher', 'lecture_supervisor']
 const COURSES_SUPERVISOR_ROLES = ['lecture_supervisor']
-const STUDENT_ONLY             = ['student']
 
 function AppRoutes() {
   return (
@@ -237,13 +235,7 @@ function AppRoutes() {
         element={<DPage component={BackupPage} roles={ADMIN_ROLES} />}
       />
 
-      {/* ── واجهات الطالب ─────────────────────────────────────── */}
-      <Route path="/dashboard/my-courses"
-        element={<DPage component={MyCoursesPage} roles={STUDENT_ONLY} />}
-      />
-      <Route path="/dashboard/my-submissions"
-        element={<DPage component={MySubmissionsPage} roles={STUDENT_ONLY} />}
-      />
+      {/* ── واجهات الطالب: محذوفة — الطلاب يستخدمون التطبيق فقط ── */}
 
       {/* ── Fallback ──────────────────────────────────────────── */}
       <Route path="*" element={<Navigate to="/" replace />} />

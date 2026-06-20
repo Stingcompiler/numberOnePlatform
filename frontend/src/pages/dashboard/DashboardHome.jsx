@@ -9,7 +9,7 @@ import {
   Users, GraduationCap, DollarSign, BookOpen,
   TrendingUp, UserCheck, Inbox, BarChart3,
   ArrowLeft, Loader2, AlertTriangle, CheckCircle,
-  Clock, Star, Megaphone, Image, UserPlus
+  Clock, Megaphone, Image, UserPlus
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axiosInstance'
@@ -68,80 +68,6 @@ function QuickLink({ label, desc, icon: Icon, href, color = 'blue' }) {
       </div>
       <ArrowLeft size={14} className="text-white/20 group-hover:text-white/50 transition-colors mr-auto shrink-0" />
     </Link>
-  )
-}
-
-/* ─ واجهة إحصائيات الطالب ─────────────────────────────────────── */
-function StudentDashboard() {
-  const { user } = useAuth()
-  const [courses, setCourses] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    api.get('/academic/my-courses/')
-      .then(({ data }) => setCourses(data.results || data))
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
-
-  return (
-    <div className="space-y-6 animate-fade-in">
-      {/* ترحيب */}
-      <div className="glass-card p-6 bg-gradient-to-r from-brand-blue/10 to-brand-red/5 border-brand-blue/15">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-red/30 to-brand-blue/30 border border-white/10 flex items-center justify-center shrink-0">
-            <Star size={24} className="text-white" />
-          </div>
-          <div>
-            <h1 className="font-cairo font-bold text-white text-xl">
-              أهلاً، {user?.full_name?.split(' ')[0] || 'طالب'} 👋
-            </h1>
-            <p className="text-white/50 text-sm mt-0.5">استمر في رحلتك التعليمية</p>
-          </div>
-        </div>
-      </div>
-
-      {/* إحصائيات الطالب */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatCard label="كورساتي" value={loading ? null : courses.length} icon={BookOpen} color="blue" loading={loading} href="/dashboard/my-courses" />
-        <StatCard label="محاضرات مكتملة" value="—" icon={CheckCircle} color="cyan" />
-        <StatCard label="التمارين" value="—" icon={BarChart3} color="amber" href="/dashboard/my-submissions" />
-      </div>
-
-      {/* الكورسات النشطة */}
-      <div>
-        <h2 className="font-cairo font-semibold text-white mb-4 flex items-center gap-2">
-          <BookOpen size={18} className="text-brand-blue" /> كورساتي
-        </h2>
-        {loading ? (
-          <div className="grid sm:grid-cols-2 gap-4">
-            {[1, 2].map(i => <div key={i} className="skeleton h-24 rounded-2xl" />)}
-          </div>
-        ) : courses.length === 0 ? (
-          <div className="glass-card p-8 text-center text-white/40">
-            <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
-            <p>لا توجد كورسات متاحة حتى الآن.</p>
-            <p className="text-xs mt-1">تواصل مع الإدارة لتفعيل اشتراكك.</p>
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {courses.map((course) => (
-              <Link key={course.id} to={`/dashboard/my-courses/${course.id}`}
-                className="glass-card p-4 group">
-                {course.thumbnail && (
-                  <img src={`/media/${course.thumbnail}`} alt={course.name}
-                    className="w-full h-28 object-cover rounded-xl mb-3" />
-                )}
-                <h3 className="font-cairo font-semibold text-white text-sm group-hover:text-brand-blue transition-colors">
-                  {course.name}
-                </h3>
-                <p className="text-white/40 text-xs mt-1">{course.grade_name}</p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
   )
 }
 
@@ -486,10 +412,8 @@ function CoursesSupervisorDashboard() {
 
 /* ─ الصادر الرئيسي ────────────────────────────────────────────── */
 export default function DashboardHome() {
-  const { isStudent, isLectureSupervisor } = useAuth()
-  return isStudent
-    ? <StudentDashboard />
-    : isLectureSupervisor
+  const { isLectureSupervisor } = useAuth()
+  return isLectureSupervisor
     ? <CoursesSupervisorDashboard />
     : <AdminDashboard />
 }
