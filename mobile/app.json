@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Number One",
+    "slug": "number-one-student",
+    "icon": "./src/assets/main_icon.png",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.numberoneschools.student"
+    },
+    "android": {
+      "package": "com.numberoneschools.student",
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/main_icon.png",
+        "backgroundColor": "#000000"
+      }
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "scheme": "numberonestudent",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3b8c38e3-235d-4575-a9e5-4791ba744eb8"
+      }
+    }
+  }
+}
