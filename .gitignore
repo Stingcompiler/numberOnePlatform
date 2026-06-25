@@ -67,3 +67,8 @@ Thumbs.db
 # patch_students.py
 # patch_students_crud.py
 # seed_data.py
+
+# ─── Mobile Client ───────────────────────────────────────────────────────────
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
