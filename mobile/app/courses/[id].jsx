@@ -189,8 +189,9 @@ export default function CourseDetailsScreen() {
             courseData.system_type === 'online' &&
             courseData.grade === studentProfile.enrolled_grade_id;
         } else if (studentSystemType === 'flash') {
-          const assignedCourses = await courseService.getMyCourses();
-          isAllowed = (assignedCourses || []).some((c) => c.id === courseData.id);
+          // Flash students use /academic/my-courses/{id}/ which already enforces
+          // enrollment on the backend — if data was returned, access is granted.
+          isAllowed = true;
         }
       }
 

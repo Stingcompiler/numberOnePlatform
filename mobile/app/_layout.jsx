@@ -1,6 +1,7 @@
 import React from 'react';
 import { Slot } from 'expo-router';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
+import { useScreenSecurity } from '../src/hooks/useScreenSecurity';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { SessionProvider } from '../src/contexts/SessionContext';
@@ -83,11 +84,25 @@ if (TextInput && !TextInput.__patched) {
 // Inner layout that has access to ThemeProvider context
 function AppShell() {
   const { isDark } = useTheme();
+  const { isRecording } = useScreenSecurity();
+
   return (
     <View style={styles.root}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Slot />
       <ThemeToggle />
+      {/* iOS: overlay when screen recording is active */}
+      {Platform.OS === 'ios' && isRecording && (
+        <View style={styles.recordingShield}>
+          <View style={styles.recordingMessage}>
+            <Text style={styles.recordingIcon}>🔒</Text>
+            <Text style={styles.recordingTitle}>تسجيل الشاشة محظور</Text>
+            <Text style={styles.recordingSubtitle}>
+              أوقف تسجيل الشاشة للمتابعة.
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -129,5 +144,32 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     position: 'relative',
+  },
+  recordingShield: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000000',
+    zIndex: 9999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordingMessage: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  recordingIcon: {
+    fontSize: 48,
+  },
+  recordingTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  recordingSubtitle: {
+    fontSize: 14,
+    color: '#AAAAAA',
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

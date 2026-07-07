@@ -34,6 +34,46 @@ export default function LessonDetailsScreen() {
   const loadData = async () => {
     try {
       setError(null);
+      const studentProfile = user?.student_profile || {};
+      const isFlash = studentProfile?.system_type === 'flash';
+
+      // Flash students: lesson detail endpoint may not be accessible;
+      // load directly from course details fallback.
+      if (isFlash && courseId) {
+        const courseData = await courseService.getCourseDetails(courseId, studentProfile);
+        let foundLesson = null;
+        if (courseData && courseData.units) {
+          for (const unit of courseData.units) {
+            if (unit.lessons) {
+              const match = unit.lessons.find(l => l.id === parseInt(lessonId));
+              if (match) {
+                foundLesson = match;
+                break;
+              }
+            }
+          }
+        }
+        if (foundLesson) {
+          setLesson({
+            id: foundLesson.id,
+            title: foundLesson.title,
+            youtube_url: foundLesson.youtube_url,
+            youtube_embed_url: foundLesson.youtube_embed_url,
+            pdf_file: foundLesson.pdf_file,
+            duration_minutes: foundLesson.duration_minutes,
+            description: foundLesson.description || '',
+            is_completed: false,
+            exercise: null
+          });
+          // Reset exercise state
+          setSelectedChoices({});
+          setExerciseResult(null);
+          setExerciseError(null);
+          return;
+        }
+        // If lesson not found in course data, fall through to standard endpoint
+      }
+
       const data = await courseService.getLessonDetails(lessonId);
       setLesson(data);
       // Reset exercise answers/result when loading new lesson
@@ -41,8 +81,9 @@ export default function LessonDetailsScreen() {
       setExerciseResult(null);
       setExerciseError(null);
     } catch (e) {
-      if (e.response && e.response.status === 403 && courseId) {
-        console.log('Access restricted, attempting public course details fallback for courseId:', courseId);
+      // If primary endpoint fails and courseId is available, try fetching from course details
+      if (courseId) {
+        console.log('Primary lesson endpoint failed, trying course details fallback for courseId:', courseId);
         try {
           const studentProfile = user?.student_profile || {};
           const courseData = await courseService.getCourseDetails(courseId, studentProfile);
@@ -70,6 +111,10 @@ export default function LessonDetailsScreen() {
               is_completed: false,
               exercise: null
             });
+            // Reset exercise state
+            setSelectedChoices({});
+            setExerciseResult(null);
+            setExerciseError(null);
             return;
           }
         } catch (fallbackErr) {
