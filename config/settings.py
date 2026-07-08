@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "site_settings",
     "exams",
     "backups",
+    "notifications",
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

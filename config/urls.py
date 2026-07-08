@@ -73,6 +73,9 @@ urlpatterns = [
     # ── Backups: النسخ الاحتياطي والاستعادة ─────────────────────────────────
     path("api/backups/", include("backups.urls")),
 
+    # ── Notifications: إشعارات الدفع والتنبيهات ──────────────────────────────────
+    path("api/notifications/", include("notifications.urls")),
+
     # ── Public: صفحة الهبوط (بدون مصادقة) ────────────────────────────────────
     path("api/public/", include((public_urlpatterns, "public"))),
 

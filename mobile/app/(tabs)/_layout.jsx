@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/contexts/ThemeContext';
-import { Home, BookOpen, PenTool, Award, User } from 'lucide-react-native';
+import { Home, BookOpen, PenTool, Award, User, Bell } from 'lucide-react-native';
 import { isTablet, rf } from '../../src/utils/responsive';
 
 // Tab bar content height scales slightly for tablets.
@@ -11,8 +11,11 @@ const TAB_CONTENT_HEIGHT = isTablet ? 62 : 56;
 // Minimum extra breathing room above the system navigation area.
 const TAB_EXTRA_PADDING = 6;
 
+import { useNotifications } from '../../src/contexts/NotificationContext';
+
 export default function TabsLayout() {
   const { colors, isDark } = useTheme();
+  const { unreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
 
   // Real bottom inset reported by the OS (home indicator / gesture bar /
@@ -104,6 +107,22 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'الإشعارات',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.iconWrap, focused && { backgroundColor: `${color}18` }]}>
+              <Bell size={rf(22)} color={color} />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                </View>
+              )}
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'حسابي',
@@ -125,5 +144,24 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
 });
