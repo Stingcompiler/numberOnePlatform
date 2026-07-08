@@ -77,7 +77,6 @@ class ExerciseStudentSerializer(serializers.ModelSerializer):
 
 class LessonSerializer(serializers.ModelSerializer):
     youtube_embed_url  = serializers.CharField(read_only=True)
-    has_live_podcast   = serializers.BooleanField(read_only=True)
     exercise           = ExerciseSerializer(read_only=True)
 
     class Meta:
@@ -86,23 +85,18 @@ class LessonSerializer(serializers.ModelSerializer):
             "id", "unit", "title", "description", "youtube_url", "youtube_embed_url",
             "pdf_file", "display_order", "duration_minutes",
             "is_active", "exercise",
-            # ── Live Podcast ──────────────────────────────────────────
-            "live_podcast_title", "live_podcast_url", "has_live_podcast",
         ]
 
 
 class LessonListSerializer(serializers.ModelSerializer):
     """ملخص مختصر للمحاضرة في القوائم (بدون exercise)."""
     youtube_embed_url = serializers.CharField(read_only=True)
-    has_live_podcast  = serializers.BooleanField(read_only=True)
 
     class Meta:
         model  = Lesson
         fields = [
             "id", "title", "youtube_url", "youtube_embed_url",
             "pdf_file", "display_order", "duration_minutes", "is_active",
-            # ── Live Podcast ──────────────────────────────────────────
-            "live_podcast_title", "live_podcast_url", "has_live_podcast",
         ]
 
 
@@ -120,6 +114,7 @@ class CourseSerializer(serializers.ModelSerializer):
         source="teacher.full_name", read_only=True, default=None
     )
     grade_name   = serializers.CharField(source="grade.__str__", read_only=True)
+    has_live_podcast = serializers.BooleanField(read_only=True)
 
     class Meta:
         model  = Course
@@ -127,6 +122,7 @@ class CourseSerializer(serializers.ModelSerializer):
             "id", "name", "description", "grade", "grade_name",
             "teacher", "teacher_name", "thumbnail",
             "display_order", "is_active", "units", "system_type",
+            "live_podcast_title", "live_podcast_url", "has_live_podcast",
         ]
 
 
@@ -137,6 +133,7 @@ class CourseListSerializer(serializers.ModelSerializer):
     )
     grade_name   = serializers.CharField(source="grade.__str__", read_only=True)
     lesson_count = serializers.SerializerMethodField()
+    has_live_podcast = serializers.BooleanField(read_only=True)
 
     class Meta:
         model  = Course
@@ -144,6 +141,7 @@ class CourseListSerializer(serializers.ModelSerializer):
             "id", "name", "grade", "grade_name",
             "teacher_name", "thumbnail", "is_active", "system_type",
             "lesson_count",
+            "live_podcast_title", "live_podcast_url", "has_live_podcast",
         ]
 
     def get_lesson_count(self, obj):

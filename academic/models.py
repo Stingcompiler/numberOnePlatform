@@ -143,6 +143,24 @@ class Course(models.Model):
         choices=SystemType.choices,
         default=SystemType.ONLINE,
     )
+    
+    # ── بودكاست مباشر (Zoom / أي منصة خارجية) ─────────────────────────────
+    live_podcast_title = models.CharField(
+        _("عنوان البودكاست المباشر"),
+        max_length=255,
+        blank=True,
+        null=True,
+        default="",
+        help_text=_("اسم الجلسة المباشرة — يُعرَض للطلاب في التطبيق."),
+    )
+    live_podcast_url = models.URLField(
+        _("رابط البودكاست المباشر"),
+        blank=True,
+        null=True,
+        default="",
+        help_text=_("رابط Zoom أو أي منصة مباشرة. يفتح التطبيق المتصفح مباشرةً."),
+    )
+
     display_order = models.PositiveSmallIntegerField(_("ترتيب العرض"), default=0)
     is_active    = models.BooleanField(_("نشط"), default=True)
     created_at   = models.DateTimeField(auto_now_add=True)
@@ -154,6 +172,11 @@ class Course(models.Model):
 
     def __str__(self):
         return f"{self.grade} — {self.name}"
+
+    @property
+    def has_live_podcast(self) -> bool:
+        """يُعيد True إذا كان الكورس يحتوي على رابط بودكاست مباشر صالح."""
+        return bool(self.live_podcast_url and self.live_podcast_url.strip())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -216,23 +239,6 @@ class Lesson(models.Model):
         help_text=_("يُمرَّر عبر iframe مع ?modestbranding=1&rel=0 في الواجهة."),
     )
 
-    # ── بودكاست مباشر (Zoom / أي منصة خارجية) ─────────────────────────────
-    live_podcast_title = models.CharField(
-        _("عنوان البودكاست المباشر"),
-        max_length=255,
-        blank=True,
-        null=True,
-        default="",
-        help_text=_("اسم الجلسة المباشرة — يُعرَض للطلاب في التطبيق."),
-    )
-    live_podcast_url = models.URLField(
-        _("رابط البودكاست المباشر"),
-        blank=True,
-        null=True,
-        default="",
-        help_text=_("رابط Zoom أو أي منصة مباشرة. يفتح التطبيق المتصفح مباشرةً."),
-    )
-
     # ── ملف PDF ────────────────────────────────────────────────────────────
     pdf_file      = models.FileField(
         _("ملف PDF"),
@@ -276,11 +282,6 @@ class Lesson(models.Model):
         if video_id:
             return f"https://www.youtube.com/embed/{video_id}?modestbranding=1&rel=0"
         return self.youtube_url
-
-    @property
-    def has_live_podcast(self) -> bool:
-        """يُعيد True إذا كانت المحاضرة تحتوي على رابط بودكاست مباشر صالح."""
-        return bool(self.live_podcast_url and self.live_podcast_url.strip())
 
 
 

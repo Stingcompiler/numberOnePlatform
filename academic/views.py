@@ -551,8 +551,8 @@ class MyProgressView(APIView):
 class MyLivePodcastsView(APIView):
     """
     GET /api/academic/my-live-podcasts/
-    يُعيد جميع المحاضرات التي تحتوي على رابط بودكاست مباشر صالح
-    والطالب لديه صلاحية الوصول إلى الكورس المرتبطة بها.
+    يُعيد جميع الكورسات التي تحتوي على رابط بودكاست مباشر صالح
+    والطالب لديه صلاحية الوصول إليها.
 
     الأمان: يحترم قواعد وصول الكورس الحالية (online و flash).
     """
@@ -581,31 +581,29 @@ class MyLivePodcastsView(APIView):
                 ).values_list("course_id", flat=True)
             )
 
-        # جلب المحاضرات ذات رابط بودكاست صالح
-        lessons = (
-            Lesson.objects.filter(
-                unit__course_id__in=accessible_course_ids,
+        # جلب الكورسات ذات رابط بودكاست صالح
+        courses = (
+            Course.objects.filter(
+                id__in=accessible_course_ids,
                 is_active=True,
             )
             .exclude(live_podcast_url__isnull=True)
             .exclude(live_podcast_url="")
-            .select_related("unit__course__grade__level")
             .order_by("-created_at")
         )
 
-        # بناء الاستجابة مع معلومات الكورس والوحدة
+        # بناء الاستجابة
         data = [
             {
-                "id":                 lesson.id,
-                "title":              lesson.title,
-                "live_podcast_title": lesson.live_podcast_title or lesson.title,
-                "live_podcast_url":   lesson.live_podcast_url,
-                "course_id":          lesson.unit.course_id,
-                "course_name":        lesson.unit.course.name,
-                "unit_name":          lesson.unit.name,
-                "created_at":         lesson.created_at.isoformat(),
+                "id":                 course.id,
+                "title":              course.name,
+                "live_podcast_title": course.live_podcast_title or course.name,
+                "live_podcast_url":   course.live_podcast_url,
+                "course_id":          course.id,
+                "course_name":        course.name,
+                "created_at":         course.created_at.isoformat(),
                 "has_live_podcast":   True,
             }
-            for lesson in lessons
+            for course in courses
         ]
         return Response(data)

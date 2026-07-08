@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, Animated, Platform,
+  RefreshControl, Animated, Platform, Linking,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -14,7 +14,7 @@ import { CardSkeleton } from '../../src/components/ui/SkeletonLoader';
 import EmptyState from '../../src/components/ui/EmptyState';
 import {
   ChevronRight, PlayCircle, Check, ChevronDown, ChevronLeft,
-  BookOpen, User, Clock, Layers,
+  BookOpen, User, Clock, Layers, Radio,
 } from 'lucide-react-native';
 
 // ─── Subject color resolver ───────────────────────────────────
@@ -354,6 +354,28 @@ export default function CourseDetailsScreen() {
           </View>
         </View>
 
+        {/* ── Live Podcast Banner ── */}
+        {course.live_podcast_url ? (
+          <TouchableOpacity
+            style={[styles.podcastBanner, { backgroundColor: `${metaColor}15`, borderColor: `${metaColor}30` }]}
+            activeOpacity={0.8}
+            onPress={() => Linking.openURL(course.live_podcast_url)}
+          >
+            <View style={styles.podcastIconWrap}>
+              <Radio size={24} color={metaColor} />
+            </View>
+            <View style={styles.podcastInfo}>
+              <Text style={[styles.podcastTitle, { color: colors.text }]}>
+                {course.live_podcast_title || 'البث المباشر للمقرر'}
+              </Text>
+              <Text style={[styles.podcastSub, { color: colors.textMuted }]}>
+                اضغط هنا للانضمام إلى الجلسة المباشرة
+              </Text>
+            </View>
+            <ChevronLeft size={20} color={metaColor} />
+          </TouchableOpacity>
+        ) : null}
+
         {/* ── Section label ── */}
         <Text style={[styles.syllabusLabel, { color: colors.textMuted }]}>
           المنهج الدراسي
@@ -555,6 +577,45 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
+  },
+  syllabusLabel: {
+    fontFamily: TYPOGRAPHY.bold,
+    fontSize: 16,
+    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+  },
+  podcastBanner: {
+    marginHorizontal: SPACING.lg,
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  podcastIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.lg,
+    backgroundColor: '#ffffff20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  podcastInfo: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  podcastTitle: {
+    fontFamily: TYPOGRAPHY.bold,
+    fontSize: 16,
+    marginBottom: 2,
+    textAlign: 'right',
+  },
+  podcastSub: {
+    fontFamily: TYPOGRAPHY.medium,
+    fontSize: 12,
+    textAlign: 'right',
   },
   lessonItem: {
     marginBottom: SPACING.xs,

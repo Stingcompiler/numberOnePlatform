@@ -1,7 +1,7 @@
 /**
  * pages/dashboard/LivePodcastPage.jsx
  * ─────────────────────────────────────────────────────────────────────────────
- * إدارة البودكاست المباشر — تعديل حقلَي live_podcast_title + live_podcast_url
+ * إدارة البودكاست المباشر — مرتبطة بالكورس مباشرة
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -36,7 +36,7 @@ function EmptyState({ onAdd }) {
       </div>
       <div>
         <p className="text-white/80 font-bold text-lg">لا توجد بودكاستات مباشرة</p>
-        <p className="text-white/40 text-sm mt-1.5 max-w-sm mx-auto">اضغط «إضافة بودكاست» لربط رابط بث مباشر (Zoom، Google Meet، الخ) بمحاضرة موجودة في المنهج</p>
+        <p className="text-white/40 text-sm mt-1.5 max-w-sm mx-auto">اضغط «إضافة بودكاست» لربط رابط بث مباشر (Zoom، Google Meet، الخ) بكورس دراسي</p>
       </div>
       <button onClick={onAdd} className="btn-primary flex items-center gap-2 mt-4 px-6 py-2.5 rounded-xl shadow-lg shadow-brand-blue/20">
         <Plus size={16} strokeWidth={2.5} />
@@ -111,61 +111,39 @@ function CustomSelect({ value, onChange, options, placeholder, disabled, loading
   )
 }
 
-function PodcastFormModal({ lesson, onClose, onSaved }) {
-  const [courses, setCourses]   = useState([])
-  const [lessons, setLessons]   = useState([])
-  const [selectedCourse, setSelectedCourse] = useState(lesson?.unit_course_id ? String(lesson.unit_course_id) : "")
-  const [selectedLesson, setSelectedLesson] = useState(lesson ? String(lesson.id) : "")
-  const [podcastTitle, setPodcastTitle] = useState(lesson?.live_podcast_title || "")
-  const [podcastUrl, setPodcastUrl]     = useState(lesson?.live_podcast_url   || "")
+function PodcastFormModal({ course, onClose, onSaved }) {
+  const [coursesList, setCoursesList] = useState([])
+  const [selectedCourse, setSelectedCourse] = useState(course ? String(course.id) : "")
+  const [podcastTitle, setPodcastTitle] = useState(course?.live_podcast_title || "")
+  const [podcastUrl, setPodcastUrl]     = useState(course?.live_podcast_url   || "")
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState("")
-  const [loadingLessons, setLoadingLessons] = useState(false)
 
   useEffect(() => {
     api.get("/academic/courses/").then(({ data }) => {
       const list = data.results ?? data
-      setCourses(Array.isArray(list) ? list : [])
+      setCoursesList(Array.isArray(list) ? list : [])
     }).catch(() => {})
   }, [])
 
   useEffect(() => {
-    if (!selectedCourse) { setLessons([]); if (!lesson) setSelectedLesson(""); return }
-    setLoadingLessons(true)
-    api.get("/academic/units/", { params: { course: selectedCourse } })
-      .then(({ data }) => {
-        const unitList = data.results ?? data
-        const unitIds  = Array.isArray(unitList) ? unitList.map(u => u.id) : []
-        return Promise.all(
-          unitIds.map(uid =>
-            api.get("/academic/lessons/", { params: { unit: uid } })
-              .then(r => r.data.results ?? r.data)
-              .catch(() => [])
-          )
-        )
-      })
-      .then(arrays => { setLessons(arrays.flat()) })
-      .catch(() => setLessons([]))
-      .finally(() => setLoadingLessons(false))
-  }, [selectedCourse])
-
-  useEffect(() => {
-    if (!selectedLesson) { setPodcastTitle(""); setPodcastUrl(""); return }
-    const found = lessons.find(l => String(l.id) === String(selectedLesson))
+    if (!selectedCourse) { setPodcastTitle(""); setPodcastUrl(""); return }
+    const found = coursesList.find(c => String(c.id) === String(selectedCourse))
     if (found) {
-      setPodcastTitle(found.live_podcast_title || "")
-      setPodcastUrl(found.live_podcast_url     || "")
+      // Only set if not already set from props or user input
+      setPodcastTitle(prev => prev || (found.live_podcast_title || ""))
+      setPodcastUrl(prev => prev || (found.live_podcast_url || ""))
     }
-  }, [selectedLesson, lessons])
+  }, [selectedCourse, coursesList])
 
   const handleSave = async () => {
-    if (!selectedLesson) { setError("يرجى اختيار محاضرة."); return }
+    if (!selectedCourse) { setError("يرجى اختيار كورس."); return }
     if (podcastUrl && !podcastUrl.startsWith("http")) {
       setError("الرابط يجب أن يبدأ بـ http:// أو https://"); return
     }
     setSaving(true); setError("")
     try {
-      await api.patch(`/academic/lessons/${selectedLesson}/`, {
+      await api.patch(`/academic/courses/${selectedCourse}/`, {
         live_podcast_title: podcastTitle.trim(),
         live_podcast_url:   podcastUrl.trim(),
       })
@@ -176,11 +154,11 @@ function PodcastFormModal({ lesson, onClose, onSaved }) {
   }
 
   const handleClear = async () => {
-    if (!selectedLesson) return
-    if (!window.confirm("هل تريد إزالة البودكاست من هذه المحاضرة؟")) return
+    if (!selectedCourse) return
+    if (!window.confirm("هل تريد إزالة البودكاست من هذا الكورس؟")) return
     setSaving(true); setError("")
     try {
-      await api.patch(`/academic/lessons/${selectedLesson}/`, { live_podcast_title: "", live_podcast_url: "" })
+      await api.patch(`/academic/courses/${selectedCourse}/`, { live_podcast_title: "", live_podcast_url: "" })
       onSaved()
     } catch (e) {
       setError(e.response?.data?.detail || "حدث خطأ.")
@@ -197,8 +175,8 @@ function PodcastFormModal({ lesson, onClose, onSaved }) {
               <Radio size={20} className="text-brand-blue" />
             </div>
             <div>
-              <p className="font-bold text-white text-base">{lesson ? "تعديل البودكاست" : "إضافة بودكاست مباشر"}</p>
-              <p className="text-white/40 text-xs mt-0.5">ربط رابط بث مباشر بمحاضرة موجودة ضمن المنهج</p>
+              <p className="font-bold text-white text-base">{course ? "تعديل البودكاست" : "إضافة بودكاست مباشر"}</p>
+              <p className="text-white/40 text-xs mt-0.5">ربط رابط بث مباشر بكورس موجود ضمن المنهج</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl text-white/40 hover:bg-white/10 hover:text-white transition-colors">
@@ -208,29 +186,15 @@ function PodcastFormModal({ lesson, onClose, onSaved }) {
 
         {/* Body */}
         <div className="p-6 space-y-6">
-          <div className="grid sm:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">الكورس الدراسي</label>
-              <CustomSelect
-                value={selectedCourse}
-                onChange={setSelectedCourse}
-                options={courses.map(c => ({ id: c.id, label: c.name }))}
-                placeholder="— اختر الكورس —"
-                disabled={!!lesson}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">المحاضرة المرتبطة</label>
-              <CustomSelect
-                value={selectedLesson}
-                onChange={setSelectedLesson}
-                options={lessons.map(l => ({ id: l.id, label: l.title }))}
-                placeholder="— اختر المحاضرة —"
-                disabled={!!lesson || !selectedCourse}
-                loading={loadingLessons}
-              />
-            </div>
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">الكورس الدراسي</label>
+            <CustomSelect
+              value={selectedCourse}
+              onChange={setSelectedCourse}
+              options={coursesList.map(c => ({ id: c.id, label: c.name }))}
+              placeholder="— اختر الكورس —"
+              disabled={!!course}
+            />
           </div>
 
           <div className="h-px bg-white/05 w-full" />
@@ -242,7 +206,7 @@ function PodcastFormModal({ lesson, onClose, onSaved }) {
                 type="text"
                 value={podcastTitle}
                 onChange={e => setPodcastTitle(e.target.value)}
-                placeholder="مثال: جلسة مراجعة قواعد البيانات المباشرة"
+                placeholder="مثال: جلسة مراجعة الكورس المباشرة"
                 className="w-full glass-input px-4 py-3 rounded-xl transition-all hover:border-white/20 focus:border-brand-blue/50 focus:ring-2 focus:ring-brand-blue/20 bg-dark-800/50"
                 dir="rtl"
                 disabled={saving}
@@ -283,7 +247,7 @@ function PodcastFormModal({ lesson, onClose, onSaved }) {
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-5 border-t border-white/05 bg-white/[0.01] rounded-b-2xl">
-          {lesson?.live_podcast_url ? (
+          {course?.live_podcast_url ? (
             <button
               onClick={handleClear}
               disabled={saving}
@@ -303,7 +267,7 @@ function PodcastFormModal({ lesson, onClose, onSaved }) {
             </button>
             <button
               onClick={handleSave}
-              disabled={saving || !selectedLesson}
+              disabled={saving || !selectedCourse}
               className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl shadow-lg shadow-brand-blue/20 disabled:opacity-50 disabled:shadow-none"
             >
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={2.5} />}
@@ -316,26 +280,26 @@ function PodcastFormModal({ lesson, onClose, onSaved }) {
   )
 }
 
-function PodcastRow({ lesson, onEdit }) {
+function PodcastRow({ course, onEdit }) {
   return (
     <div className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/02 transition-all border border-white/04 group">
       <div className="w-9 h-9 rounded-xl bg-brand-blue/10 flex items-center justify-center shrink-0">
         <Radio size={15} className="text-brand-blue" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-semibold truncate">{lesson.live_podcast_title || lesson.title}</p>
-        <p className="text-white/35 text-xs truncate mt-0.5">{lesson.course_name} — {lesson.title}</p>
+        <p className="text-white text-sm font-semibold truncate">{course.live_podcast_title || course.name}</p>
+        <p className="text-white/35 text-xs truncate mt-0.5">{course.name}</p>
       </div>
-      {lesson.live_podcast_url && (
-        <a href={lesson.live_podcast_url} target="_blank" rel="noopener noreferrer"
+      {course.live_podcast_url && (
+        <a href={course.live_podcast_url} target="_blank" rel="noopener noreferrer"
            className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-dark-700/60 text-white/30 text-xs hover:text-white/60 transition-colors max-w-[160px] truncate"
            onClick={e => e.stopPropagation()}>
           <ExternalLink size={10} />
-          <span className="truncate">{lesson.live_podcast_url}</span>
+          <span className="truncate">{course.live_podcast_url}</span>
         </a>
       )}
-      <StatusBadge hasUrl={!!lesson.live_podcast_url} />
-      <button onClick={() => onEdit(lesson)} className="p-2 btn-ghost rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+      <StatusBadge hasUrl={!!course.live_podcast_url} />
+      <button onClick={() => onEdit(course)} className="p-2 btn-ghost rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
         <Pencil size={13} className="text-white/40" />
       </button>
     </div>
@@ -343,49 +307,31 @@ function PodcastRow({ lesson, onEdit }) {
 }
 
 export default function LivePodcastPage() {
-  const [lessons, setLessons]       = useState([])
+  const [courses, setCourses]       = useState([])
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState("")
   const [search, setSearch]         = useState("")
   const [page, setPage]             = useState(1)
   const [showModal, setShowModal]   = useState(false)
-  const [editLesson, setEditLesson] = useState(null)
+  const [editCourse, setEditCourse] = useState(null)
 
-  const fetchLessons = useCallback(async () => {
+  const fetchCourses = useCallback(async () => {
     setLoading(true); setError("")
     try {
-      const { data: courseData } = await api.get("/academic/courses/")
-      const courseList = courseData.results ?? courseData
-      const courseMap  = {}
-      courseList.forEach(c => { courseMap[c.id] = c.name })
-
-      const { data: unitData } = await api.get("/academic/units/")
-      const unitList = unitData.results ?? unitData
-
-      const lessonArrays = await Promise.all(
-        (Array.isArray(unitList) ? unitList : []).map(unit =>
-          api.get("/academic/lessons/", { params: { unit: unit.id } })
-            .then(r => {
-              const ls = r.data.results ?? r.data
-              return Array.isArray(ls)
-                ? ls.map(l => ({ ...l, unit_name: unit.name, unit_course_id: unit.course, course_name: courseMap[unit.course] || "" }))
-                : []
-            })
-            .catch(() => [])
-        )
-      )
-      const withPodcast = lessonArrays.flat().filter(l => l.live_podcast_url)
-      setLessons(withPodcast)
+      const { data } = await api.get("/academic/courses/")
+      const list = data.results ?? data
+      const withPodcast = (Array.isArray(list) ? list : []).filter(c => c.live_podcast_url)
+      setCourses(withPodcast)
     } catch { setError("تعذّر تحميل البيانات.") }
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchLessons() }, [fetchLessons])
+  useEffect(() => { fetchCourses() }, [fetchCourses])
 
-  const filtered  = lessons.filter(l =>
+  const filtered  = courses.filter(c =>
     !search ||
-    (l.live_podcast_title || l.title || "").includes(search) ||
-    (l.course_name || "").includes(search)
+    (c.live_podcast_title || c.name || "").includes(search) ||
+    (c.name || "").includes(search)
   )
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -399,24 +345,23 @@ export default function LivePodcastPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white font-cairo">البودكاست المباشر</h1>
-            <p className="text-white/35 text-sm">إدارة جلسات Zoom المرتبطة بالمحاضرات</p>
+            <p className="text-white/35 text-sm">إدارة الجلسات المباشرة المرتبطة بالكورسات</p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button onClick={fetchLessons} className="btn-ghost p-2 rounded-xl" title="تحديث">
+          <button onClick={fetchCourses} className="btn-ghost p-2 rounded-xl" title="تحديث">
             <RefreshCw size={15} className={loading ? "animate-spin text-brand-blue" : "text-white/40"} />
           </button>
-          <button onClick={() => { setEditLesson(null); setShowModal(true) }} className="btn-primary flex items-center gap-2">
+          <button onClick={() => { setEditCourse(null); setShowModal(true) }} className="btn-primary flex items-center gap-2">
             <Plus size={15} /><span className="text-sm">إضافة بودكاست</span>
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
         {[
-          { label: "إجمالي البودكاستات", value: lessons.length, color: "text-brand-blue" },
-          { label: "بروابط مفعّلة",       value: lessons.filter(l => l.live_podcast_url).length, color: "text-neon-cyan" },
-          { label: "كورسات مشاركة",       value: [...new Set(lessons.map(l => l.unit_course_id))].length, color: "text-white/70" },
+          { label: "إجمالي البودكاستات", value: courses.length, color: "text-brand-blue" },
+          { label: "بروابط مفعّلة",       value: courses.filter(c => c.live_podcast_url).length, color: "text-neon-cyan" },
         ].map(stat => (
           <div key={stat.label} className="glass-card p-4 text-center">
             <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -448,7 +393,7 @@ export default function LivePodcastPage() {
       ) : error ? (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-red/10 text-brand-red border border-brand-red/20">
           <AlertCircle size={16} />{error}
-          <button onClick={fetchLessons} className="mr-auto text-xs underline">إعادة المحاولة</button>
+          <button onClick={fetchCourses} className="mr-auto text-xs underline">إعادة المحاولة</button>
         </div>
       ) : paginated.length === 0 ? (
         search ? (
@@ -456,11 +401,11 @@ export default function LivePodcastPage() {
             <Search size={28} className="mx-auto mb-3 opacity-30" />
             <p>لا توجد نتائج لـ «{search}»</p>
           </div>
-        ) : <EmptyState onAdd={() => { setEditLesson(null); setShowModal(true) }} />
+        ) : <EmptyState onAdd={() => { setEditCourse(null); setShowModal(true) }} />
       ) : (
         <div className="space-y-2">
-          {paginated.map(lesson => (
-            <PodcastRow key={lesson.id} lesson={lesson} onEdit={l => { setEditLesson(l); setShowModal(true) }} />
+          {paginated.map(course => (
+            <PodcastRow key={course.id} course={course} onEdit={c => { setEditCourse(c); setShowModal(true) }} />
           ))}
         </div>
       )}
@@ -479,9 +424,9 @@ export default function LivePodcastPage() {
 
       {showModal && (
         <PodcastFormModal
-          lesson={editLesson}
-          onClose={() => { setShowModal(false); setEditLesson(null) }}
-          onSaved={() => { setShowModal(false); setEditLesson(null); fetchLessons() }}
+          course={editCourse}
+          onClose={() => { setShowModal(false); setEditCourse(null) }}
+          onSaved={() => { setShowModal(false); setEditCourse(null); fetchCourses() }}
         />
       )}
     </div>
