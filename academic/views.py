@@ -34,6 +34,9 @@ from .serializers import (
     QuestionSerializer, ChoiceSerializer,
 )
 
+# ── Live Podcast serializer (inline — reuses LessonListSerializer with course context) ──
+from rest_framework import serializers as drf_serializers
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Level — المراحل
@@ -539,3 +542,70 @@ class MyProgressView(APIView):
         student = request.user.student_profile
         progresses = LessonProgress.objects.filter(student=student).select_related("lesson")
         return Response(LessonProgressSerializer(progresses, many=True).data)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 9. My Live Podcasts — محاضرات البودكاست المباشر للطالب
+# ──────────────────────────────────────────────────────────────────────────────
+
+class MyLivePodcastsView(APIView):
+    """
+    GET /api/academic/my-live-podcasts/
+    يُعيد جميع المحاضرات التي تحتوي على رابط بودكاست مباشر صالح
+    والطالب لديه صلاحية الوصول إلى الكورس المرتبطة بها.
+
+    الأمان: يحترم قواعد وصول الكورس الحالية (online و flash).
+    """
+
+    permission_classes = [IsStudent]
+
+    def get(self, request):
+        from accounts.models import StudentProfile
+        student = request.user.student_profile
+
+        # حدد الكورسات المتاحة للطالب
+        if student.system_type == "online":
+            # طالب أونلاين: جميع كورسات فصله
+            accessible_course_ids = list(
+                Course.objects.filter(
+                    grade_id=student.enrolled_grade_id,
+                    system_type="online",
+                    is_active=True,
+                ).values_list("id", flat=True)
+            )
+        else:
+            # طالب فلاش: كورسات محددة عبر StudentCourseAccess
+            accessible_course_ids = list(
+                StudentCourseAccess.objects.filter(
+                    student=student, is_active=True
+                ).values_list("course_id", flat=True)
+            )
+
+        # جلب المحاضرات ذات رابط بودكاست صالح
+        lessons = (
+            Lesson.objects.filter(
+                unit__course_id__in=accessible_course_ids,
+                is_active=True,
+            )
+            .exclude(live_podcast_url__isnull=True)
+            .exclude(live_podcast_url="")
+            .select_related("unit__course__grade__level")
+            .order_by("-created_at")
+        )
+
+        # بناء الاستجابة مع معلومات الكورس والوحدة
+        data = [
+            {
+                "id":                 lesson.id,
+                "title":              lesson.title,
+                "live_podcast_title": lesson.live_podcast_title or lesson.title,
+                "live_podcast_url":   lesson.live_podcast_url,
+                "course_id":          lesson.unit.course_id,
+                "course_name":        lesson.unit.course.name,
+                "unit_name":          lesson.unit.name,
+                "created_at":         lesson.created_at.isoformat(),
+                "has_live_podcast":   True,
+            }
+            for lesson in lessons
+        ]
+        return Response(data)

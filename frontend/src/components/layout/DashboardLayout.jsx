@@ -18,7 +18,7 @@ import {
   BookMarked, ClipboardList, Link2, LayoutList, TrendingUp,
   Play, ShieldCheck, UserPlus, FileCheck, HardDrive,
   ChevronLeft, Mail, MailOpen, Loader2, Layers, UserCog,
-  KeyRound,
+  KeyRound, Radio,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axiosInstance'
@@ -57,6 +57,7 @@ const ADMIN_NAV_GROUPS = [
       { label: 'المراحل والفصول',   icon: Layers,         href: '/dashboard/academic/levels' },
       { label: 'الكورسات',          icon: BookMarked,     href: '/dashboard/academic/courses' },
       { label: 'المحاضرات',         icon: Play,           href: '/dashboard/academic/lessons' },
+      { label: 'البودكاست المباشر', icon: Radio,          href: '/dashboard/academic/live-podcast' },
       { label: 'التسليمات',         icon: ClipboardList,  href: '/dashboard/academic/submissions' },
       { label: 'الاختبارات',        icon: FileCheck,      href: '/dashboard/exams' },
       { label: 'وصول الكورسات',     icon: ShieldCheck,    href: '/dashboard/course-access' },
@@ -100,6 +101,7 @@ const TEACHER_NAV_GROUPS = [
       { label: 'المراحل والفصول',  icon: Layers,        href: '/dashboard/academic/levels' },
       { label: 'الكورسات',         icon: BookMarked,    href: '/dashboard/academic/courses' },
       { label: 'المحاضرات',        icon: Play,          href: '/dashboard/academic/lessons' },
+      { label: 'البودكاست المباشر',icon: Radio,         href: '/dashboard/academic/live-podcast' },
       { label: 'التسليمات',        icon: ClipboardList, href: '/dashboard/academic/submissions' },
       { label: 'الاختبارات',       icon: FileCheck,     href: '/dashboard/exams' },
     ],
@@ -116,8 +118,9 @@ const COURSES_SUPERVISOR_NAV_GROUPS = [
   {
     group: 'الكورسات والمحاضرات',
     items: [
-      { label: 'جميع الكورسات', icon: BookMarked,    href: '/dashboard/academic/courses' },
-      { label: 'إدارة المحاضرات', icon: Play,          href: '/dashboard/academic/lessons' },
+      { label: 'جميع الكورسات',     icon: BookMarked, href: '/dashboard/academic/courses' },
+      { label: 'إدارة المحاضرات',  icon: Play,       href: '/dashboard/academic/lessons' },
+      { label: 'البودكاست المباشر', icon: Radio,      href: '/dashboard/academic/live-podcast' },
     ],
   },
 ]

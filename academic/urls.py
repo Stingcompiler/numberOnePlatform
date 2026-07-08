@@ -17,6 +17,7 @@ from .views import (
     MyCoursesView, MyCourseDetailView, MyLessonDetailView,
     MarkLessonCompleteView, SubmitExerciseView,
     MySubmissionsView, AllSubmissionsView, MyProgressView,
+    MyLivePodcastsView,
 )
 
 urlpatterns = [
@@ -57,4 +58,7 @@ urlpatterns = [
     # ── التسليم والنتائج ──────────────────────────────────────────────────────
     path("submit/",                             SubmitExerciseView.as_view(),       name="exercise-submit"),
     path("submissions/",                        AllSubmissionsView.as_view(),       name="all-submissions"),
+
+    # ── بودكاست مباشر ─────────────────────────────────────────────────
+    path("my-live-podcasts/",                   MyLivePodcastsView.as_view(),       name="my-live-podcasts"),
 ]

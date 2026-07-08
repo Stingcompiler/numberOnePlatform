@@ -11,8 +11,10 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { useSession } from '../src/contexts/SessionContext';
 import { SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../src/theme/tokens';
 import { ShieldCheck, User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react-native';
+import { rs, rf, hp, isTablet } from '../src/utils/responsive';
 
-const logo = require('../src/assets/cropped-logo-number1-3.png');
+const logo = require('../src/assets/logo_official.jpg');
+
 
 // ─── Animated input field ─────────────────────────────────────
 function FloatingInput({
@@ -233,50 +235,55 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: SPACING.xl,
-    gap: SPACING.xl,
+    paddingHorizontal: hp,
+    paddingVertical: rs(SPACING.xl),
+    gap: rs(SPACING.xl),
   },
 
   // Brand Hero
   brandHero: {
     borderRadius: RADIUS.xl,
     borderWidth: 1,
-    padding: SPACING.xl2,
+    padding: rs(SPACING.xl2),
     alignItems: 'center',
     overflow: 'hidden',
     position: 'relative',
+    // Tablet: cap width and center
+    maxWidth: isTablet ? 520 : undefined,
+    alignSelf: isTablet ? 'center' : undefined,
+    width: isTablet ? '100%' : undefined,
     ...SHADOWS.md,
   },
   heroBlob: {
     position: 'absolute',
     top: -30,
     right: -30,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: rs(120),
+    height: rs(120),
+    borderRadius: rs(60),
   },
   iconRing: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: rs(80),
+    height: rs(80),
+    borderRadius: rs(40),
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: rs(SPACING.md),
     overflow: 'hidden',
   },
   logo: {
-    width: 64,
-    height: 64,
+    width: rs(64),
+    height: rs(64),
     resizeMode: 'contain',
   },
   brandTitle: {
-    fontSize: TYPOGRAPHY.size.xxl,
+    fontSize: rf(TYPOGRAPHY.size.xxl),
     fontWeight: TYPOGRAPHY.weight.black,
     textAlign: 'center',
   },
   brandSub: {
-    fontSize: TYPOGRAPHY.size.sm,
+    fontSize: rf(TYPOGRAPHY.size.sm),
     fontWeight: TYPOGRAPHY.weight.medium,
     marginTop: SPACING.xs,
     textAlign: 'center',
@@ -286,12 +293,16 @@ const styles = StyleSheet.create({
   loginCard: {
     borderRadius: RADIUS.xl,
     borderWidth: 0.5,
-    padding: SPACING.xl,
-    gap: SPACING.md,
+    padding: rs(SPACING.xl),
+    gap: rs(SPACING.md),
+    // Tablet: cap width
+    maxWidth: isTablet ? 520 : undefined,
+    alignSelf: isTablet ? 'center' : undefined,
+    width: isTablet ? '100%' : undefined,
     ...SHADOWS.md,
   },
   formTitle: {
-    fontSize: TYPOGRAPHY.size.lg,
+    fontSize: rf(TYPOGRAPHY.size.lg),
     fontWeight: TYPOGRAPHY.weight.bold,
     textAlign: 'right',
     marginBottom: SPACING.xs,
@@ -319,18 +330,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: RADIUS.md,
     borderWidth: 1.5,
-    paddingHorizontal: SPACING.md,
-    height: 54,
+    paddingHorizontal: rs(SPACING.md),
+    height: rs(54),
     gap: SPACING.sm,
   },
   inputLabel: {
-    fontSize: TYPOGRAPHY.size.xs,
+    fontSize: rf(TYPOGRAPHY.size.xs),
     fontWeight: TYPOGRAPHY.weight.medium,
     flexShrink: 0,
   },
   inputField: {
     flex: 1,
-    fontSize: TYPOGRAPHY.size.md,
+    fontSize: rf(TYPOGRAPHY.size.md),
     height: '100%',
     padding: 0,
   },
@@ -345,20 +356,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
-    height: 52,
+    height: rs(52),
     borderRadius: RADIUS.button,
     marginTop: SPACING.xs,
     ...SHADOWS.accent,
   },
   submitBtnText: {
     color: '#fff',
-    fontSize: TYPOGRAPHY.size.md,
+    fontSize: rf(TYPOGRAPHY.size.md),
     fontWeight: TYPOGRAPHY.weight.bold,
   },
 
   // Device hint
   deviceHint: {
-    fontSize: TYPOGRAPHY.size.xs,
+    fontSize: rf(TYPOGRAPHY.size.xs),
     textAlign: 'center',
   },
 });
+

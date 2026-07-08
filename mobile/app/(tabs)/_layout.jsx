@@ -4,10 +4,10 @@ import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { Home, BookOpen, PenTool, Award, User } from 'lucide-react-native';
+import { isTablet, rf } from '../../src/utils/responsive';
 
-// Fixed content area height (icons + label + top padding) — does NOT include
-// the safe-area inset, which is added separately as paddingBottom.
-const TAB_CONTENT_HEIGHT = 56;
+// Tab bar content height scales slightly for tablets.
+const TAB_CONTENT_HEIGHT = isTablet ? 62 : 56;
 // Minimum extra breathing room above the system navigation area.
 const TAB_EXTRA_PADDING = 6;
 
@@ -49,7 +49,7 @@ export default function TabsLayout() {
           elevation: 12,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: rf(10),
           fontWeight: '700',
           marginTop: 2,
         },
@@ -65,7 +65,7 @@ export default function TabsLayout() {
           title: 'الرئيسية',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconWrap, focused && { backgroundColor: `${color}18` }]}>
-              <Home size={22} color={color} />
+              <Home size={rf(22)} color={color} />
             </View>
           ),
         }}
@@ -76,7 +76,7 @@ export default function TabsLayout() {
           title: 'الكورسات',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconWrap, focused && { backgroundColor: `${color}18` }]}>
-              <BookOpen size={22} color={color} />
+              <BookOpen size={rf(22)} color={color} />
             </View>
           ),
         }}
@@ -87,7 +87,7 @@ export default function TabsLayout() {
           title: 'الاختبارات',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconWrap, focused && { backgroundColor: `${color}18` }]}>
-              <PenTool size={22} color={color} />
+              <PenTool size={rf(22)} color={color} />
             </View>
           ),
         }}
@@ -98,7 +98,7 @@ export default function TabsLayout() {
           title: 'النتائج',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconWrap, focused && { backgroundColor: `${color}18` }]}>
-              <Award size={22} color={color} />
+              <Award size={rf(22)} color={color} />
             </View>
           ),
         }}
@@ -109,7 +109,7 @@ export default function TabsLayout() {
           title: 'حسابي',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconWrap, focused && { backgroundColor: `${color}18` }]}>
-              <User size={22} color={color} />
+              <User size={rf(22)} color={color} />
             </View>
           ),
         }}
@@ -120,8 +120,8 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   iconWrap: {
-    width: 36,
-    height: 28,
+    width: isTablet ? 44 : 36,
+    height: isTablet ? 34 : 28,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',

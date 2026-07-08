@@ -76,8 +76,9 @@ class ExerciseStudentSerializer(serializers.ModelSerializer):
 
 
 class LessonSerializer(serializers.ModelSerializer):
-    youtube_embed_url = serializers.CharField(read_only=True)
-    exercise          = ExerciseSerializer(read_only=True)
+    youtube_embed_url  = serializers.CharField(read_only=True)
+    has_live_podcast   = serializers.BooleanField(read_only=True)
+    exercise           = ExerciseSerializer(read_only=True)
 
     class Meta:
         model  = Lesson
@@ -85,18 +86,23 @@ class LessonSerializer(serializers.ModelSerializer):
             "id", "unit", "title", "description", "youtube_url", "youtube_embed_url",
             "pdf_file", "display_order", "duration_minutes",
             "is_active", "exercise",
+            # ── Live Podcast ──────────────────────────────────────────
+            "live_podcast_title", "live_podcast_url", "has_live_podcast",
         ]
 
 
 class LessonListSerializer(serializers.ModelSerializer):
     """ملخص مختصر للمحاضرة في القوائم (بدون exercise)."""
     youtube_embed_url = serializers.CharField(read_only=True)
+    has_live_podcast  = serializers.BooleanField(read_only=True)
 
     class Meta:
         model  = Lesson
         fields = [
             "id", "title", "youtube_url", "youtube_embed_url",
             "pdf_file", "display_order", "duration_minutes", "is_active",
+            # ── Live Podcast ──────────────────────────────────────────
+            "live_podcast_title", "live_podcast_url", "has_live_podcast",
         ]
 
 

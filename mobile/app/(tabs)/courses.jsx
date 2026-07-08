@@ -15,6 +15,7 @@ import {
   BookOpen, Calculator, PenTool, Languages, Compass,
   FlaskConical, Atom, Globe, Search,
 } from 'lucide-react-native';
+import { rs, rf, hp } from '../../src/utils/responsive';
 
 // ─── Subject color/icon resolver (same logic, centralized) ───
 function getSubjectMeta(courseName, fallbackColor) {
@@ -231,16 +232,16 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     marginTop: Platform.OS === 'ios' ? 52 : 40,
-    height: 56,
+    height: rs(56),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: hp,
     borderBottomWidth: 0.5,
     gap: SPACING.sm,
   },
   headerTitle: {
-    fontSize: TYPOGRAPHY.size.lg,
+    fontSize: rf(TYPOGRAPHY.size.lg),
     fontWeight: TYPOGRAPHY.weight.bold,
   },
   countBadge: {
@@ -251,20 +252,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   countText: {
-    fontSize: TYPOGRAPHY.size.xs,
+    fontSize: rf(TYPOGRAPHY.size.xs),
     fontWeight: TYPOGRAPHY.weight.bold,
   },
   searchWrapper: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+    paddingHorizontal: hp,
+    paddingVertical: rs(SPACING.md),
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    paddingHorizontal: SPACING.md,
-    height: 44,
+    paddingHorizontal: rs(SPACING.md),
+    height: rs(44),
     gap: SPACING.sm,
   },
   searchIcon: {
@@ -272,21 +273,20 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: TYPOGRAPHY.size.sm,
+    fontSize: rf(TYPOGRAPHY.size.sm),
     padding: 0,
   },
   skeletonList: {
-    padding: SPACING.lg,
-    paddingTop: SPACING.md,
+    padding: hp,
+    paddingTop: rs(SPACING.md),
   },
-  // flex:1 on the FlatList itself so it expands into remaining space
   flatList: {
     flex: 1,
   },
   list: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-    // Extra bottom padding so last card clears the tab bar
+    paddingHorizontal: hp,
+    paddingTop: rs(SPACING.md),
     paddingBottom: 100,
   },
 });
+

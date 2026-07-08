@@ -10,6 +10,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import ThemeToggle from '../src/components/ThemeToggle';
+import { isDeviceSupported } from '../src/utils/deviceCompat';
+import UnsupportedDeviceScreen from '../src/components/UnsupportedDeviceScreen';
+
+// Check device compatibility ONCE at module load time (Dimensions is sync).
+// This constant never changes during the app session.
+const DEVICE_SUPPORTED = isDeviceSupported();
 import { useTheme } from '../src/contexts/ThemeContext';
 import { 
   Cairo_300Light, 
@@ -123,6 +129,18 @@ export default function RootLayout() {
 
   if (!fontsLoaded) {
     return null;
+  }
+
+  // ── Device compatibility gate ──────────────────────────────────────────
+  // If the physical screen is larger than 11 inches on Android, block the
+  // entire app. This check runs before ANY provider, route, or component
+  // is rendered, making it impossible to bypass via deep links or navigation.
+  if (!DEVICE_SUPPORTED) {
+    return (
+      <SafeAreaProvider>
+        <UnsupportedDeviceScreen />
+      </SafeAreaProvider>
+    );
   }
 
   return (

@@ -11,6 +11,7 @@ import ResultCard from '../../src/components/ui/ResultCard';
 import EmptyState from '../../src/components/ui/EmptyState';
 import { CardSkeleton } from '../../src/components/ui/SkeletonLoader';
 import { Award, TrendingUp, CheckCircle } from 'lucide-react-native';
+import { rs, rf, hp } from '../../src/utils/responsive';
 
 // ─── Summary stat cell ───────────────────────────────────────
 function SummaryStat({ value, label, color }) {
@@ -200,47 +201,46 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     marginTop: Platform.OS === 'ios' ? 52 : 40,
-    height: 56,
+    height: rs(56),
     alignItems: 'flex-end',
     justifyContent: 'center',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: hp,
     borderBottomWidth: 0.5,
   },
   headerTitle: {
-    fontSize: TYPOGRAPHY.size.lg,
+    fontSize: rf(TYPOGRAPHY.size.lg),
     fontWeight: TYPOGRAPHY.weight.bold,
   },
   skeletonList: {
-    padding: SPACING.lg,
+    padding: hp,
   },
   list: {
-    padding: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.xxxl,
+    paddingHorizontal: hp,
+    paddingTop: rs(SPACING.md),
+    paddingBottom: rs(SPACING.xxxl),
   },
-  // Summary Card
   summaryCard: {
     borderRadius: RADIUS.xl,
     borderWidth: 1,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
+    padding: rs(SPACING.lg),
+    marginBottom: rs(SPACING.lg),
     ...SHADOWS.md,
   },
   summaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    marginBottom: SPACING.lg,
+    marginBottom: rs(SPACING.lg),
   },
   divider: {
     width: 1,
-    height: 40,
+    height: rs(40),
   },
   passRateRow: {
     gap: SPACING.sm,
   },
   passRateBg: {
-    height: 8,
+    height: rs(8),
     borderRadius: RADIUS.round,
     overflow: 'hidden',
   },
@@ -249,7 +249,8 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.round,
   },
   passRateLabel: {
-    fontSize: 10,
+    fontSize: rf(10),
     textAlign: 'right',
   },
 });
+

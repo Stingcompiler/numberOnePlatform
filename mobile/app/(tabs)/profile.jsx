@@ -12,6 +12,7 @@ import {
   User, Phone, MapPin, Shield, CheckCircle, Wallet,
   Smartphone, Calendar, FileText, Copy, LogOut,
 } from 'lucide-react-native';
+import { rs, rf, hp } from '../../src/utils/responsive';
 
 // ─────────────────────────────────────────────────────────────
 // ProfileRow — RTL: [value (left, truncated)] ... [label | ICON (right)]
@@ -313,45 +314,45 @@ const styles = StyleSheet.create({
   // App bar
   appBar: {
     marginTop: Platform.OS === 'ios' ? 52 : 40,
-    height: 56,
+    height: rs(56),
     alignItems: 'flex-end',
     justifyContent: 'center',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: hp,
     borderBottomWidth: 0.5,
   },
   appBarTitle: {
-    fontSize: TYPOGRAPHY.size.lg,
+    fontSize: rf(TYPOGRAPHY.size.lg),
     fontWeight: TYPOGRAPHY.weight.bold,
   },
 
   scrollContent: {
-    padding: SPACING.lg,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.xxxl,
+    paddingHorizontal: hp,
+    paddingTop: rs(SPACING.xl),
+    paddingBottom: rs(SPACING.xxxl),
   },
 
   // ── Hero card
   heroCard: {
     borderRadius: RADIUS.xl,
     borderWidth: 0.5,
-    padding: SPACING.xl,
+    padding: rs(SPACING.xl),
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: rs(SPACING.xl),
     ...SHADOWS.sm,
   },
   avatarRing: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: rs(80),
+    height: rs(80),
+    borderRadius: rs(40),
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    marginBottom: SPACING.md,
+    marginBottom: rs(SPACING.md),
   },
   avatarImg: { width: '100%', height: '100%' },
   heroName: {
-    fontSize: TYPOGRAPHY.size.md,
+    fontSize: rf(TYPOGRAPHY.size.md),
     fontWeight: TYPOGRAPHY.weight.bold,
     textAlign: 'center',
     marginBottom: SPACING.xs,
@@ -401,35 +402,33 @@ const styles = StyleSheet.create({
 
   // ── Profile Row
   row: {
-    flexDirection: 'row',          // LTR base: value LEFT, label+icon RIGHT
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
+    paddingVertical: rs(SPACING.md),
+    paddingHorizontal: rs(SPACING.md),
     gap: SPACING.sm,
   },
-  // Left: value (flex so it can shrink and ellipsize)
   rowValue: {
-    fontSize: TYPOGRAPHY.size.sm,
-    flex: 1,                       // takes remaining space
+    fontSize: rf(TYPOGRAPHY.size.sm),
+    flex: 1,
     textAlign: 'left',
     flexShrink: 1,
   },
-  // Right: label + icon box (fixed, won't shrink)
   rowRight: {
-    flexDirection: 'row',          // label then icon (icon is rightmost)
+    flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
     flexShrink: 0,
   },
   rowLabel: {
-    fontSize: TYPOGRAPHY.size.sm,
+    fontSize: rf(TYPOGRAPHY.size.sm),
     fontWeight: TYPOGRAPHY.weight.medium,
     textAlign: 'right',
   },
   iconBox: {
-    width: 30,
-    height: 30,
+    width: rs(30),
+    height: rs(30),
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',

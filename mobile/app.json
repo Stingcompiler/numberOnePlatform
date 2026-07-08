@@ -2,7 +2,7 @@
   "expo": {
     "name": "Number One",
     "slug": "number-one-student",
-    "icon": "./src/assets/main_icon.png",
+    "icon": "./src/assets/logo_official.jpg",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -13,7 +13,7 @@
     "android": {
       "package": "com.numberoneschools.student",
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/main_icon.png",
+        "foregroundImage": "./src/assets/logo_official.jpg",
         "backgroundColor": "#000000"
       }
     },

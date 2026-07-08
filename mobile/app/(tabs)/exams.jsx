@@ -13,6 +13,7 @@ import ExamCard from '../../src/components/ui/ExamCard';
 import EmptyState from '../../src/components/ui/EmptyState';
 import { CardSkeleton } from '../../src/components/ui/SkeletonLoader';
 import { PenTool, CheckCircle } from 'lucide-react-native';
+import { rs, rf, hp } from '../../src/utils/responsive';
 
 export default function ExamsScreen() {
   const { colors } = useTheme();
@@ -241,26 +242,26 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     marginTop: Platform.OS === 'ios' ? 52 : 40,
-    height: 56,
+    height: rs(56),
     alignItems: 'flex-end',
     justifyContent: 'center',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: hp,
     borderBottomWidth: 0.5,
   },
   headerTitle: {
-    fontSize: TYPOGRAPHY.size.lg,
+    fontSize: rf(TYPOGRAPHY.size.lg),
     fontWeight: TYPOGRAPHY.weight.bold,
   },
   tabWrap: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
+    paddingHorizontal: hp,
+    paddingTop: rs(SPACING.md),
+    paddingBottom: rs(SPACING.sm),
   },
   segmented: {
     flexDirection: 'row',
     borderRadius: RADIUS.md,
     borderWidth: 0.5,
-    height: 44,
+    height: rs(44),
     overflow: 'hidden',
     position: 'relative',
   },
@@ -281,16 +282,17 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   tabLabel: {
-    fontSize: TYPOGRAPHY.size.xs,
+    fontSize: rf(TYPOGRAPHY.size.xs),
     fontWeight: TYPOGRAPHY.weight.bold,
   },
   skeletonList: {
-    padding: SPACING.lg,
-    paddingTop: SPACING.md,
+    padding: hp,
+    paddingTop: rs(SPACING.md),
   },
   list: {
-    padding: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.xxxl,
+    paddingHorizontal: hp,
+    paddingTop: rs(SPACING.md),
+    paddingBottom: rs(SPACING.xxxl),
   },
 });
+
