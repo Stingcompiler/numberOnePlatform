@@ -5,11 +5,10 @@
 
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  Users, GraduationCap, DollarSign, BookOpen,
-  TrendingUp, UserCheck, Inbox, BarChart3,
-  ArrowLeft, Loader2, AlertTriangle, CheckCircle,
-  Clock, Megaphone, Image, UserPlus
+import { 
+  Users, BookOpen, Clock, Activity, TrendingUp, AlertCircle, ChevronRight,
+  GraduationCap, CheckCircle2, Megaphone, MonitorPlay, Inbox, BarChart3,
+  UserCheck, ShieldAlert, BadgeInfo, Radio, DollarSign, ArrowLeft, Loader2, AlertTriangle, CheckCircle, Image, UserPlus
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axiosInstance'
@@ -139,8 +138,8 @@ function AdminDashboard() {
           <QuickLink label="طلبات التسجيل" desc="الطلبات الواردة من النافذة العامة" icon={UserPlus} href="/dashboard/student-requests" color="cyan" />
           <QuickLink label="الملفات المالية" desc="دفعات وأقساط" icon={DollarSign} href="/dashboard/finance" color="cyan" />
           <QuickLink label=" المراحل والفصول" desc="الهيكل الأكاديمي" icon={BookOpen} href="/dashboard/academic/levels" color="blue" />
-
           <QuickLink label="  الكورسات والوحدات " desc="الهيكل الأكاديمي" icon={BookOpen} href="/dashboard/academic/courses" color="blue" />
+          <QuickLink label="البودكاست المباشر" desc="بث وإدارة الزووم" icon={Radio} href="/dashboard/academic/live-podcast" color="cyan" />
           <QuickLink label="الأساتذة" desc="إدارة هيئة التدريس" icon={GraduationCap} href="/dashboard/teachers" color="red" />
           <QuickLink label="المشرفات" desc="تقارير المشرفات" icon={UserCheck} href="/dashboard/supervisors" color="cyan" />
           <QuickLink label="صندوق الوارد" desc="رسائل الزوار" icon={Inbox} href="/dashboard/inbox" color="blue" />
