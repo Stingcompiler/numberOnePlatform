@@ -303,6 +303,7 @@ function CoursesSupervisorDashboard() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <QuickLink label="جميع الكورسات" desc="تصفح وعرض محتوى الكورسات" icon={BookOpen} href="/dashboard/academic/courses" color="blue" />
           <QuickLink label="إدارة المحاضرات" desc="إضافة وتعديل المحاضرات" icon={TrendingUp} href="/dashboard/academic/lessons" color="cyan" />
+          <QuickLink label="البودكاست المباشر" desc="بث وإدارة الزووم" icon={Radio} href="/dashboard/academic/live-podcast" color="cyan" />
         </div>
       </div>
 
