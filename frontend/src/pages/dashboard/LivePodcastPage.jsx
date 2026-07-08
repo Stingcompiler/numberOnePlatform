@@ -1,14 +1,14 @@
-﻿/**
+/**
  * pages/dashboard/LivePodcastPage.jsx
  * ─────────────────────────────────────────────────────────────────────────────
  * إدارة البودكاست المباشر — تعديل حقلَي live_podcast_title + live_podcast_url
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import {
   Radio, Search, Loader2, X, Check, Trash2, Pencil, Plus,
-  Link2, AlertCircle, ChevronRight, ChevronLeft,
+  Link2, AlertCircle, ChevronRight, ChevronLeft, ChevronDown,
   RefreshCw, ExternalLink,
 } from "lucide-react"
 import api from "../../api/axiosInstance"
@@ -31,17 +31,82 @@ function StatusBadge({ hasUrl }) {
 function EmptyState({ onAdd }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-brand-blue/10 flex items-center justify-center">
-        <Radio size={28} className="text-brand-blue/50" />
+      <div className="w-16 h-16 rounded-2xl bg-brand-blue/10 flex items-center justify-center shadow-inner">
+        <Radio size={28} className="text-brand-blue/60" />
       </div>
       <div>
-        <p className="text-white/60 font-medium">لا توجد بودكاستات مباشرة</p>
-        <p className="text-white/30 text-sm mt-1">اضغط «إضافة بودكاست» لربط رابط Zoom بمحاضرة</p>
+        <p className="text-white/80 font-bold text-lg">لا توجد بودكاستات مباشرة</p>
+        <p className="text-white/40 text-sm mt-1.5 max-w-sm mx-auto">اضغط «إضافة بودكاست» لربط رابط بث مباشر (Zoom، Google Meet، الخ) بمحاضرة موجودة في المنهج</p>
       </div>
-      <button onClick={onAdd} className="btn-primary flex items-center gap-2 mt-2">
-        <Plus size={15} />
-        إضافة بودكاست
+      <button onClick={onAdd} className="btn-primary flex items-center gap-2 mt-4 px-6 py-2.5 rounded-xl shadow-lg shadow-brand-blue/20">
+        <Plus size={16} strokeWidth={2.5} />
+        <span className="font-semibold">إضافة بودكاست</span>
       </button>
+    </div>
+  )
+}
+
+function CustomSelect({ value, onChange, options, placeholder, disabled, loading }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const wrapperRef = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const selectedOption = options.find(o => String(o.id) === String(value))
+
+  return (
+    <div className={`relative w-full ${disabled ? "opacity-50 pointer-events-none" : ""}`} ref={wrapperRef}>
+      <button
+        type="button"
+        className="w-full glass-input flex items-center justify-between text-right px-4 py-3 rounded-xl transition-all hover:border-white/20 focus:border-brand-blue/50 focus:ring-2 focus:ring-brand-blue/20 bg-dark-800/50"
+        onClick={() => !disabled && !loading && setIsOpen(!isOpen)}
+        disabled={disabled || loading}
+      >
+        <span className={selectedOption ? "text-white truncate font-medium" : "text-white/40 truncate"}>
+          {loading ? "جاري التحميل..." : (selectedOption ? selectedOption.label : placeholder)}
+        </span>
+        {loading ? (
+          <Loader2 size={16} className="text-white/40 animate-spin shrink-0 ml-1" />
+        ) : (
+          <ChevronDown size={16} className={`text-white/40 transition-transform duration-200 shrink-0 ml-1 ${isOpen ? "rotate-180 text-brand-blue" : ""}`} />
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-[100] w-full mt-2 bg-[#1e2738] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto" dir="rtl">
+          {options.length === 0 ? (
+            <div className="p-5 text-center text-white/40 text-sm">لا توجد خيارات متاحة</div>
+          ) : (
+            <div className="p-1.5">
+              {options.map(option => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`w-full text-right px-4 py-3 rounded-lg text-sm transition-colors mb-0.5 last:mb-0 ${
+                    String(option.id) === String(value)
+                      ? "bg-brand-blue/15 text-brand-blue font-bold"
+                      : "text-white/70 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => {
+                    onChange(option.id)
+                    setIsOpen(false)
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -123,80 +188,126 @@ function PodcastFormModal({ lesson, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-900/80 backdrop-blur-md">
-      <div className="w-full max-w-lg glass-card-strong border border-white/10 shadow-2xl animate-slide-up">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/08">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-blue/15 flex items-center justify-center">
-              <Radio size={17} className="text-brand-blue" />
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 bg-dark-900/80 backdrop-blur-md overflow-y-auto">
+      <div className="w-full max-w-xl glass-card-strong border border-white/10 shadow-2xl animate-slide-up rounded-2xl flex flex-col my-auto relative">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/05 bg-white/[0.02] rounded-t-2xl">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-brand-blue/15 flex items-center justify-center shadow-inner">
+              <Radio size={20} className="text-brand-blue" />
             </div>
             <div>
-              <p className="font-semibold text-white text-sm">{lesson ? "تعديل البودكاست" : "إضافة بودكاست مباشر"}</p>
-              <p className="text-white/30 text-xs">ربط رابط Zoom بمحاضرة موجودة</p>
+              <p className="font-bold text-white text-base">{lesson ? "تعديل البودكاست" : "إضافة بودكاست مباشر"}</p>
+              <p className="text-white/40 text-xs mt-0.5">ربط رابط بث مباشر بمحاضرة موجودة ضمن المنهج</p>
             </div>
           </div>
-          <button onClick={onClose} className="btn-ghost p-2 rounded-xl"><X size={17} /></button>
+          <button onClick={onClose} className="p-2 rounded-xl text-white/40 hover:bg-white/10 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">الكورس</label>
-            <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)} className="w-full form-select glass-input" disabled={!!lesson}>
-              <option value="">— اختر كورساً —</option>
-              {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">المحاضرة</label>
-            {loadingLessons ? (
-              <div className="flex items-center gap-2 py-3 text-white/30 text-sm"><Loader2 size={14} className="animate-spin" /> جاري التحميل...</div>
-            ) : (
-              <select value={selectedLesson} onChange={e => setSelectedLesson(e.target.value)} className="w-full form-select glass-input" disabled={!!lesson || !selectedCourse}>
-                <option value="">— اختر محاضرة —</option>
-                {lessons.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
-              </select>
-            )}
-          </div>
-
-          <div className="border-t border-white/08 pt-2" />
-
-          <div>
-            <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">عنوان البودكاست</label>
-            <input type="text" value={podcastTitle} onChange={e => setPodcastTitle(e.target.value)} placeholder="مثال: جلسة قواعد البيانات المباشرة" className="w-full glass-input" dir="rtl" />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">رابط Zoom / المنصة</label>
-            <div className="relative">
-              <input type="url" value={podcastUrl} onChange={e => setPodcastUrl(e.target.value)} placeholder="https://zoom.us/j/..." className="w-full glass-input pl-10" dir="ltr" />
-              <Link2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+        {/* Body */}
+        <div className="p-6 space-y-6">
+          <div className="grid sm:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">الكورس الدراسي</label>
+              <CustomSelect
+                value={selectedCourse}
+                onChange={setSelectedCourse}
+                options={courses.map(c => ({ id: c.id, label: c.name }))}
+                placeholder="— اختر الكورس —"
+                disabled={!!lesson}
+              />
             </div>
-            {podcastUrl && (
-              <a href={podcastUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 text-xs text-brand-blue hover:underline">
-                <ExternalLink size={11} /> اختبر الرابط
-              </a>
-            )}
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">المحاضرة المرتبطة</label>
+              <CustomSelect
+                value={selectedLesson}
+                onChange={setSelectedLesson}
+                options={lessons.map(l => ({ id: l.id, label: l.title }))}
+                placeholder="— اختر المحاضرة —"
+                disabled={!!lesson || !selectedCourse}
+                loading={loadingLessons}
+              />
+            </div>
+          </div>
+
+          <div className="h-px bg-white/05 w-full" />
+
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">عنوان البودكاست التوضيحي (اختياري)</label>
+              <input
+                type="text"
+                value={podcastTitle}
+                onChange={e => setPodcastTitle(e.target.value)}
+                placeholder="مثال: جلسة مراجعة قواعد البيانات المباشرة"
+                className="w-full glass-input px-4 py-3 rounded-xl transition-all hover:border-white/20 focus:border-brand-blue/50 focus:ring-2 focus:ring-brand-blue/20 bg-dark-800/50"
+                dir="rtl"
+                disabled={saving}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">رابط البث (Zoom / Google Meet)</label>
+              <div className="relative">
+                <input
+                  type="url"
+                  value={podcastUrl}
+                  onChange={e => setPodcastUrl(e.target.value)}
+                  placeholder="https://zoom.us/j/..."
+                  className="w-full glass-input pl-11 pr-4 py-3 rounded-xl transition-all hover:border-white/20 focus:border-brand-blue/50 focus:ring-2 focus:ring-brand-blue/20 bg-dark-800/50"
+                  dir="ltr"
+                  disabled={saving}
+                />
+                <Link2 size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
+              </div>
+              {podcastUrl && (
+                <div className="flex justify-start mt-2.5">
+                  <a href={podcastUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-blue/10 text-xs font-medium text-brand-blue hover:bg-brand-blue/20 transition-colors">
+                    <ExternalLink size={12} /> تجربة الرابط
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-red/10 text-brand-red text-sm border border-brand-red/20">
-              <AlertCircle size={14} />{error}
+            <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-brand-red/10 text-brand-red text-sm border border-brand-red/20 animate-fade-in">
+              <AlertCircle size={16} className="shrink-0" />
+              <p className="flex-1 font-medium">{error}</p>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/08 gap-3">
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-5 border-t border-white/05 bg-white/[0.01] rounded-b-2xl">
           {lesson?.live_podcast_url ? (
-            <button onClick={handleClear} disabled={saving} className="flex items-center gap-1.5 text-brand-red/60 hover:text-brand-red text-sm transition-colors">
-              <Trash2 size={13} /> حذف البودكاست
+            <button
+              onClick={handleClear}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-brand-red/70 hover:text-brand-red hover:bg-brand-red/10 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              <Trash2 size={16} /> إزالة البودكاست
             </button>
           ) : <span />}
-          <div className="flex items-center gap-2">
-            <button onClick={onClose} className="btn-secondary text-sm px-4 py-2">إلغاء</button>
-            <button onClick={handleSave} disabled={saving || !selectedLesson} className="btn-primary flex items-center gap-2 text-sm px-5 py-2">
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              حفظ
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              disabled={saving}
+              className="px-5 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !selectedLesson}
+              className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl shadow-lg shadow-brand-blue/20 disabled:opacity-50 disabled:shadow-none"
+            >
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={2.5} />}
+              <span className="font-semibold">حفظ التغييرات</span>
             </button>
           </div>
         </div>
