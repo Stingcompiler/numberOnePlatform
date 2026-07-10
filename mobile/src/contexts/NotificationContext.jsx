@@ -115,17 +115,18 @@ export const NotificationProvider = ({ children }) => {
 
   const handleNotificationTap = (data) => {
     if (!data) return;
-    
-    // Example Deep Linking Logic based on your models
+
     if (data.type === 'lecture') {
       router.push(`/courses/lesson/${data.related_object_id}`);
     } else if (data.type === 'exam') {
       router.push(`/exams/${data.related_object_id}`);
-    } else if (data.type === 'live_podcast') {
-      router.push(`/courses/${data.related_object_id}`);
+    } else if (data.type === 'live_session' || data.type === 'live_podcast') {
+      // كلا النوعين يوجّهان لشاشة البث المباشر الجديدة
+      router.push('/live-podcast');
     }
-    // Add more types as needed
+    // يمكن إضافة أنواع أخرى مستقبلاً هنا
   };
+
 
   return (
     <NotificationContext.Provider

@@ -23,11 +23,13 @@ class ExpoPushToken(models.Model):
 
 class Notification(models.Model):
     class NotificationType(models.TextChoices):
-        LECTURE = 'lecture', 'محاضرة جديدة'
-        EXAM = 'exam', 'امتحان جديد'
-        RESULT = 'result', 'نتيجة امتحان'
-        LIVE_PODCAST = 'live_podcast', 'بث مباشر'
+        LECTURE      = 'lecture',      'محاضرة جديدة'
+        EXAM         = 'exam',         'امتحان جديد'
+        RESULT       = 'result',       'نتيجة امتحان'
+        LIVE_SESSION = 'live_session', 'جلسة بث مباشر'
+        LIVE_PODCAST = 'live_podcast', 'بث مباشر'          # للتوافق مع السجلات القديمة
         ANNOUNCEMENT = 'announcement', 'إعلان هام'
+
 
     student = models.ForeignKey(
         StudentProfile,

@@ -1,432 +1,796 @@
 /**
  * pages/dashboard/LivePodcastPage.jsx
  * ─────────────────────────────────────────────────────────────────────────────
- * إدارة البودكاست المباشر — مرتبطة بالكورس مباشرة
+ * إدارة البث المباشر — نظام الغرف والجلسات الجديد
+ *
+ * الهيكل:
+ *   LiveRoom (الغرفة) → يحتوي على → LiveSession (جلسات)
+ *
+ * الميزات:
+ *   • CRUD كامل للغرف (إنشاء، تعديل، حذف، تفعيل/تعطيل)
+ *   • CRUD كامل للجلسات داخل كل غرفة
+ *   • عرض الجلسات بشكل مدمج داخل بطاقة الغرفة
+ *   • اختيار مزود البث، رابط، موعد، حالة
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
-  Radio, Search, Loader2, X, Check, Trash2, Pencil, Plus,
-  Link2, AlertCircle, ChevronRight, ChevronLeft, ChevronDown,
-  RefreshCw, ExternalLink,
+  Radio, Plus, Pencil, Trash2, X, Check, Loader2,
+  AlertCircle, RefreshCw, ChevronDown, ChevronUp,
+  Link2, ExternalLink, Play, Clock, Calendar,
+  Video, Youtube, Monitor, Wifi, ToggleLeft, ToggleRight,
 } from "lucide-react"
 import api from "../../api/axiosInstance"
 
-const PAGE_SIZE = 10
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
 
-function StatusBadge({ hasUrl }) {
-  return hasUrl ? (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20">
-      <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
-      مفعّل
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/05 text-white/30 border border-white/08">
-      غير مفعّل
+const ROOM_TYPES = [
+  { value: "online", label: "أونلاين" },
+  { value: "flash",  label: "فلاش" },
+]
+
+const COURSE_TYPES = [
+  { value: "general",    label: "عام" },
+  { value: "scientific", label: "علمي" },
+  { value: "literary",   label: "أدبي" },
+]
+
+const PROVIDERS = [
+  { value: "zoom",        label: "Zoom",           icon: Video },
+  { value: "google_meet", label: "Google Meet",    icon: Monitor },
+  { value: "teams",       label: "Microsoft Teams", icon: Monitor },
+  { value: "youtube",     label: "YouTube Live",   icon: Youtube },
+  { value: "other",       label: "أخرى",           icon: Wifi },
+]
+
+const SESSION_STATUSES = [
+  { value: "upcoming", label: "قادمة",        color: "text-blue-400" },
+  { value: "live",     label: "مباشرة الآن",  color: "text-neon-cyan" },
+  { value: "ended",    label: "انتهت",         color: "text-white/40" },
+  { value: "archived", label: "مؤرشفة",        color: "text-white/25" },
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper Components
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StatusBadge({ status }) {
+  const s = SESSION_STATUSES.find(x => x.value === status)
+  const isLive = status === "live"
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border
+      ${isLive
+        ? "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20"
+        : status === "upcoming"
+        ? "bg-brand-blue/10 text-brand-blue border-brand-blue/20"
+        : "bg-white/5 text-white/30 border-white/10"
+      }`}>
+      {isLive && <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />}
+      {s?.label || status}
     </span>
   )
 }
 
-function EmptyState({ onAdd }) {
+function RoomTypeBadge({ type }) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-brand-blue/10 flex items-center justify-center shadow-inner">
-        <Radio size={28} className="text-brand-blue/60" />
-      </div>
-      <div>
-        <p className="text-white/80 font-bold text-lg">لا توجد بودكاستات مباشرة</p>
-        <p className="text-white/40 text-sm mt-1.5 max-w-sm mx-auto">اضغط «إضافة بودكاست» لربط رابط بث مباشر (Zoom، Google Meet، الخ) بكورس دراسي</p>
-      </div>
-      <button onClick={onAdd} className="btn-primary flex items-center gap-2 mt-4 px-6 py-2.5 rounded-xl shadow-lg shadow-brand-blue/20">
-        <Plus size={16} strokeWidth={2.5} />
-        <span className="font-semibold">إضافة بودكاست</span>
-      </button>
+    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border
+      ${type === "online"
+        ? "bg-brand-blue/10 text-brand-blue border-brand-blue/20"
+        : "bg-purple-500/10 text-purple-400 border-purple-400/20"
+      }`}>
+      {type === "online" ? "أونلاين" : "فلاش"}
+    </span>
+  )
+}
+
+function FieldLabel({ children }) {
+  return (
+    <label className="block text-xs font-bold text-white/50 uppercase tracking-wider mb-1.5">
+      {children}
+    </label>
+  )
+}
+
+function FormInput({ label, ...props }) {
+  return (
+    <div className="space-y-1.5">
+      {label && <FieldLabel>{label}</FieldLabel>}
+      <input
+        className="w-full glass-input px-4 py-3 rounded-xl text-sm"
+        dir="rtl"
+        {...props}
+      />
     </div>
   )
 }
 
-function CustomSelect({ value, onChange, options, placeholder, disabled, loading }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const wrapperRef = useRef(null)
+function FormSelect({ label, options, value, onChange, ...props }) {
+  return (
+    <div className="space-y-1.5">
+      {label && <FieldLabel>{label}</FieldLabel>}
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full glass-input px-4 py-3 rounded-xl text-sm bg-dark-800/60 cursor-pointer"
+        dir="rtl"
+        {...props}
+      >
+        {options.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false)
+function ErrorBanner({ message }) {
+  if (!message) return null
+  return (
+    <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-brand-red/10 text-brand-red text-sm border border-brand-red/20">
+      <AlertCircle size={15} className="shrink-0" />
+      <span>{message}</span>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Room Form Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+function RoomFormModal({ room, onClose, onSaved }) {
+  const isEdit = !!room
+  const [form, setForm] = useState({
+    room_name:   room?.room_name   || "",
+    room_type:   room?.room_type   || "online",
+    course_type: room?.course_type || "general",
+    description: room?.description || "",
+    is_active:   room?.is_active   ?? true,
+  })
+  const [saving, setSaving] = useState(false)
+  const [error,  setError]  = useState("")
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const handleSave = async () => {
+    if (!form.room_name.trim()) { setError("اسم الغرفة مطلوب."); return }
+    setSaving(true); setError("")
+    try {
+      if (isEdit) {
+        await api.patch(`/live/rooms/${room.id}/`, form)
+      } else {
+        await api.post("/live/rooms/", form)
       }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  const selectedOption = options.find(o => String(o.id) === String(value))
+      onSaved()
+    } catch (e) {
+      const data = e.response?.data
+      if (typeof data === "object") {
+        const msgs = Object.values(data).flat().join(" | ")
+        setError(msgs || "حدث خطأ أثناء الحفظ.")
+      } else {
+        setError("حدث خطأ أثناء الحفظ.")
+      }
+    } finally { setSaving(false) }
+  }
 
   return (
-    <div className={`relative w-full ${disabled ? "opacity-50 pointer-events-none" : ""}`} ref={wrapperRef}>
-      <button
-        type="button"
-        className="w-full glass-input flex items-center justify-between text-right px-4 py-3 rounded-xl transition-all hover:border-white/20 focus:border-brand-blue/50 focus:ring-2 focus:ring-brand-blue/20 bg-dark-800/50"
-        onClick={() => !disabled && !loading && setIsOpen(!isOpen)}
-        disabled={disabled || loading}
-      >
-        <span className={selectedOption ? "text-white truncate font-medium" : "text-white/40 truncate"}>
-          {loading ? "جاري التحميل..." : (selectedOption ? selectedOption.label : placeholder)}
-        </span>
-        {loading ? (
-          <Loader2 size={16} className="text-white/40 animate-spin shrink-0 ml-1" />
-        ) : (
-          <ChevronDown size={16} className={`text-white/40 transition-transform duration-200 shrink-0 ml-1 ${isOpen ? "rotate-180 text-brand-blue" : ""}`} />
-        )}
-      </button>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-dark-900/80 backdrop-blur-md">
+      <div className="w-full max-w-lg glass-card-strong border border-white/10 shadow-2xl rounded-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/05">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-brand-blue/15 flex items-center justify-center">
+              <Radio size={18} className="text-brand-blue" />
+            </div>
+            <div>
+              <p className="font-bold text-white">{isEdit ? "تعديل الغرفة" : "إنشاء غرفة جديدة"}</p>
+              <p className="text-white/35 text-xs mt-0.5">الغرفة التنظيمية للبث المباشر</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-white/40 hover:bg-white/10 hover:text-white transition-colors">
+            <X size={18} />
+          </button>
+        </div>
 
-      {isOpen && (
-        <div className="absolute z-[100] w-full mt-2 bg-[#1e2738] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto" dir="rtl">
-          {options.length === 0 ? (
-            <div className="p-5 text-center text-white/40 text-sm">لا توجد خيارات متاحة</div>
+        {/* Body */}
+        <div className="p-6 space-y-5">
+          <FormInput
+            label="اسم الغرفة *"
+            value={form.room_name}
+            onChange={e => set("room_name", e.target.value)}
+            placeholder="مثال: غرفة البث المباشر — أونلاين"
+            disabled={saving}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <FormSelect
+              label="نوع النظام *"
+              value={form.room_type}
+              onChange={v => set("room_type", v)}
+              options={ROOM_TYPES}
+            />
+            <FormSelect
+              label="نوع الكورس"
+              value={form.course_type}
+              onChange={v => set("course_type", v)}
+              options={COURSE_TYPES}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>الوصف (اختياري)</FieldLabel>
+            <textarea
+              value={form.description}
+              onChange={e => set("description", e.target.value)}
+              rows={3}
+              className="w-full glass-input px-4 py-3 rounded-xl text-sm resize-none"
+              dir="rtl"
+              placeholder="وصف اختياري للغرفة..."
+              disabled={saving}
+            />
+          </div>
+
+          <ErrorBanner message={error} />
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/05">
+          <button onClick={onClose} disabled={saving}
+            className="px-5 py-2.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 text-sm transition-colors disabled:opacity-50">
+            إلغاء
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl disabled:opacity-50">
+            {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+            <span className="font-semibold text-sm">حفظ</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session Form Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SessionFormModal({ roomId, session, onClose, onSaved }) {
+  const isEdit = !!session
+
+  // تحويل datetime للتوافق مع input type="datetime-local"
+  const toLocal = (iso) => {
+    if (!iso) return ""
+    const d = new Date(iso)
+    const pad = n => String(n).padStart(2, "0")
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  const [form, setForm] = useState({
+    session_name:    session?.session_name    || "",
+    description:     session?.description     || "",
+    provider:        session?.provider        || "zoom",
+    stream_url:      session?.stream_url      || "",
+    scheduled_start: toLocal(session?.scheduled_start) || "",
+    scheduled_end:   toLocal(session?.scheduled_end)   || "",
+    status:          session?.status          || "upcoming",
+  })
+  const [saving, setSaving] = useState(false)
+  const [error,  setError]  = useState("")
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const handleSave = async () => {
+    if (!form.session_name.trim())    { setError("اسم الجلسة مطلوب.");       return }
+    if (!form.stream_url.trim())      { setError("رابط البث مطلوب.");         return }
+    if (!form.scheduled_start)        { setError("موعد البداية مطلوب.");      return }
+    if (!form.scheduled_end)          { setError("موعد النهاية مطلوب.");      return }
+    if (form.scheduled_end <= form.scheduled_start) {
+      setError("موعد النهاية يجب أن يكون بعد موعد البداية.")
+      return
+    }
+
+    setSaving(true); setError("")
+    try {
+      const payload = { ...form, room: roomId }
+      if (isEdit) {
+        await api.patch(`/live/rooms/${roomId}/sessions/${session.id}/`, payload)
+      } else {
+        await api.post(`/live/rooms/${roomId}/sessions/`, payload)
+      }
+      onSaved()
+    } catch (e) {
+      const data = e.response?.data
+      if (typeof data === "object") {
+        const msgs = Object.values(data).flat().join(" | ")
+        setError(msgs || "حدث خطأ أثناء الحفظ.")
+      } else {
+        setError("حدث خطأ أثناء الحفظ.")
+      }
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-dark-900/85 backdrop-blur-md overflow-y-auto">
+      <div className="w-full max-w-xl glass-card-strong border border-white/10 shadow-2xl rounded-2xl my-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/05">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
+              <Play size={16} className="text-neon-cyan" />
+            </div>
+            <div>
+              <p className="font-bold text-white">{isEdit ? "تعديل الجلسة" : "إنشاء جلسة جديدة"}</p>
+              <p className="text-white/35 text-xs mt-0.5">جلسة بث مباشر</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-white/40 hover:bg-white/10 hover:text-white transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-5">
+          <FormInput
+            label="اسم الجلسة *"
+            value={form.session_name}
+            onChange={e => set("session_name", e.target.value)}
+            placeholder="مثال: مراجعة شاملة — الفصل الأول"
+            disabled={saving}
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormSelect
+              label="مزود البث *"
+              value={form.provider}
+              onChange={v => set("provider", v)}
+              options={PROVIDERS}
+            />
+            <FormSelect
+              label="الحالة"
+              value={form.status}
+              onChange={v => set("status", v)}
+              options={SESSION_STATUSES.map(s => ({ value: s.value, label: s.label }))}
+            />
+          </div>
+
+          {/* Stream URL */}
+          <div className="space-y-1.5">
+            <FieldLabel>رابط البث *</FieldLabel>
+            <div className="relative">
+              <input
+                type="url"
+                value={form.stream_url}
+                onChange={e => set("stream_url", e.target.value)}
+                placeholder="https://zoom.us/j/..."
+                className="w-full glass-input pl-11 pr-4 py-3 rounded-xl text-sm"
+                dir="ltr"
+                disabled={saving}
+              />
+              <Link2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
+            </div>
+            {form.stream_url && (
+              <a href={form.stream_url} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-brand-blue hover:underline mt-1">
+                <ExternalLink size={11} /> تجربة الرابط
+              </a>
+            )}
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <FieldLabel>موعد البداية *</FieldLabel>
+              <input
+                type="datetime-local"
+                value={form.scheduled_start}
+                onChange={e => set("scheduled_start", e.target.value)}
+                className="w-full glass-input px-4 py-3 rounded-xl text-sm"
+                disabled={saving}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <FieldLabel>موعد النهاية *</FieldLabel>
+              <input
+                type="datetime-local"
+                value={form.scheduled_end}
+                onChange={e => set("scheduled_end", e.target.value)}
+                className="w-full glass-input px-4 py-3 rounded-xl text-sm"
+                disabled={saving}
+              />
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-1.5">
+            <FieldLabel>الوصف (اختياري)</FieldLabel>
+            <textarea
+              value={form.description}
+              onChange={e => set("description", e.target.value)}
+              rows={2}
+              className="w-full glass-input px-4 py-3 rounded-xl text-sm resize-none"
+              dir="rtl"
+              placeholder="ملاحظات اختيارية..."
+              disabled={saving}
+            />
+          </div>
+
+          <ErrorBanner message={error} />
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/05">
+          <button onClick={onClose} disabled={saving}
+            className="px-5 py-2.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 text-sm transition-colors disabled:opacity-50">
+            إلغاء
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl disabled:opacity-50">
+            {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+            <span className="font-semibold text-sm">حفظ</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session Row — صف الجلسة داخل بطاقة الغرفة
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SessionRow({ session, onEdit, onDelete }) {
+  const [deleting, setDeleting] = useState(false)
+  const provider = PROVIDERS.find(p => p.value === session.provider)
+  const ProviderIcon = provider?.icon || Wifi
+
+  const formatDate = (iso) => {
+    if (!iso) return "—"
+    const d = new Date(iso)
+    return d.toLocaleString("ar-EG", {
+      month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    })
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm(`هل تريد حذف الجلسة «${session.session_name}»؟`)) return
+    setDeleting(true)
+    try { await onDelete(session.id) }
+    finally { setDeleting(false) }
+  }
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-dark-800/40 border border-white/04 group hover:border-white/08 transition-all">
+      {/* Provider icon */}
+      <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0">
+        <ProviderIcon size={14} className="text-brand-blue" />
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-white text-sm font-semibold truncate">{session.session_name}</p>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          <span className="text-white/35 text-xs flex items-center gap-1">
+            <Calendar size={10} />
+            {formatDate(session.scheduled_start)}
+          </span>
+          <span className="text-white/20 text-xs">·</span>
+          <span className="text-white/35 text-xs flex items-center gap-1">
+            <Clock size={10} />
+            {formatDate(session.scheduled_end)}
+          </span>
+        </div>
+      </div>
+
+      {/* Status + actions */}
+      <div className="flex items-center gap-2 shrink-0">
+        <StatusBadge status={session.status} />
+        {session.stream_url && (
+          <a href={session.stream_url} target="_blank" rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="p-1.5 rounded-lg bg-dark-700/60 text-white/25 hover:text-white/60 transition-colors">
+            <ExternalLink size={12} />
+          </a>
+        )}
+        <button onClick={() => onEdit(session)}
+          className="p-1.5 rounded-lg btn-ghost opacity-0 group-hover:opacity-100 transition-opacity">
+          <Pencil size={12} className="text-white/40" />
+        </button>
+        <button onClick={handleDelete} disabled={deleting}
+          className="p-1.5 rounded-lg btn-ghost opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-30">
+          {deleting ? <Loader2 size={12} className="animate-spin text-brand-red/60" /> : <Trash2 size={12} className="text-brand-red/60" />}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Room Card — بطاقة الغرفة مع جلساتها
+// ─────────────────────────────────────────────────────────────────────────────
+
+function RoomCard({ room, onEditRoom, onDeleteRoom, onToggle, onRefresh }) {
+  const [expanded,        setExpanded]        = useState(false)
+  const [sessions,        setSessions]        = useState([])
+  const [loadingSessions, setLoadingSessions] = useState(false)
+  const [showSessionForm, setShowSessionForm] = useState(false)
+  const [editSession,     setEditSession]     = useState(null)
+  const [toggling,        setToggling]        = useState(false)
+
+  // تحميل الجلسات عند فتح البطاقة
+  useEffect(() => {
+    if (!expanded) return
+    loadSessions()
+  }, [expanded])
+
+  const loadSessions = async () => {
+    setLoadingSessions(true)
+    try {
+      const { data } = await api.get(`/live/rooms/${room.id}/sessions/`)
+      const list = Array.isArray(data) ? data : (data.results || [])
+      setSessions(list)
+    } catch { /* أخطاء الشبكة تُعالج صامتةً */ }
+    finally { setLoadingSessions(false) }
+  }
+
+  const handleDeleteSession = async (sessionId) => {
+    await api.delete(`/live/rooms/${room.id}/sessions/${sessionId}/`)
+    setSessions(prev => prev.filter(s => s.id !== sessionId))
+  }
+
+  const handleSessionSaved = () => {
+    setShowSessionForm(false)
+    setEditSession(null)
+    loadSessions()
+  }
+
+  const handleToggle = async () => {
+    setToggling(true)
+    try { await onToggle(room.id) }
+    finally { setToggling(false) }
+  }
+
+  return (
+    <div className={`glass-card border transition-all ${room.is_active ? "border-white/08" : "border-white/04 opacity-70"}`}>
+      {/* Room Header */}
+      <div className="flex items-center gap-4 p-4">
+        {/* Icon */}
+        <div className="w-10 h-10 rounded-xl bg-brand-blue/10 flex items-center justify-center shrink-0">
+          <Radio size={18} className="text-brand-blue" />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-white font-bold text-sm">{room.room_name}</p>
+            <RoomTypeBadge type={room.room_type} />
+            {!room.is_active && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/05 text-white/30 border border-white/08">
+                معطّلة
+              </span>
+            )}
+          </div>
+          <p className="text-white/35 text-xs mt-0.5">
+            {room.sessions_count || 0} جلسة
+            {room.description && ` · ${room.description}`}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Toggle active */}
+          <button onClick={handleToggle} disabled={toggling}
+            className="p-2 rounded-xl btn-ghost disabled:opacity-50"
+            title={room.is_active ? "تعطيل الغرفة" : "تفعيل الغرفة"}>
+            {toggling
+              ? <Loader2 size={15} className="animate-spin text-white/40" />
+              : room.is_active
+              ? <ToggleRight size={18} className="text-neon-cyan" />
+              : <ToggleLeft size={18} className="text-white/30" />
+            }
+          </button>
+          <button onClick={() => onEditRoom(room)} className="p-2 rounded-xl btn-ghost">
+            <Pencil size={14} className="text-white/40" />
+          </button>
+          <button onClick={() => onDeleteRoom(room.id, room.room_name)} className="p-2 rounded-xl btn-ghost">
+            <Trash2 size={14} className="text-brand-red/50" />
+          </button>
+          <button onClick={() => setExpanded(e => !e)} className="p-2 rounded-xl btn-ghost">
+            {expanded ? <ChevronUp size={16} className="text-white/40" /> : <ChevronDown size={16} className="text-white/40" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Sessions panel */}
+      {expanded && (
+        <div className="px-4 pb-4 space-y-3 border-t border-white/04 pt-4">
+          {/* Sessions header */}
+          <div className="flex items-center justify-between">
+            <p className="text-white/50 text-xs font-bold uppercase tracking-wider">الجلسات</p>
+            <button
+              onClick={() => { setEditSession(null); setShowSessionForm(true) }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-blue/10 text-brand-blue text-xs font-semibold hover:bg-brand-blue/20 transition-colors">
+              <Plus size={12} />
+              إضافة جلسة
+            </button>
+          </div>
+
+          {/* Sessions list */}
+          {loadingSessions ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 size={20} className="animate-spin text-brand-blue" />
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="text-center py-8 text-white/25 text-sm">
+              <Play size={24} className="mx-auto mb-2 opacity-30" />
+              <p>لا توجد جلسات بعد</p>
+            </div>
           ) : (
-            <div className="p-1.5">
-              {options.map(option => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`w-full text-right px-4 py-3 rounded-lg text-sm transition-colors mb-0.5 last:mb-0 ${
-                    String(option.id) === String(value)
-                      ? "bg-brand-blue/15 text-brand-blue font-bold"
-                      : "text-white/70 hover:bg-white/5 hover:text-white"
-                  }`}
-                  onClick={() => {
-                    onChange(option.id)
-                    setIsOpen(false)
-                  }}
-                >
-                  {option.label}
-                </button>
+            <div className="space-y-2">
+              {sessions.map(s => (
+                <SessionRow
+                  key={s.id}
+                  session={s}
+                  onEdit={sess => { setEditSession(sess); setShowSessionForm(true) }}
+                  onDelete={handleDeleteSession}
+                />
               ))}
             </div>
           )}
         </div>
       )}
-    </div>
-  )
-}
 
-function PodcastFormModal({ course, onClose, onSaved }) {
-  const [coursesList, setCoursesList] = useState([])
-  const [selectedCourse, setSelectedCourse] = useState(course ? String(course.id) : "")
-  const [podcastTitle, setPodcastTitle] = useState(course?.live_podcast_title || "")
-  const [podcastUrl, setPodcastUrl]     = useState(course?.live_podcast_url   || "")
-  const [saving, setSaving]         = useState(false)
-  const [error, setError]           = useState("")
-
-  useEffect(() => {
-    api.get("/academic/courses/").then(({ data }) => {
-      const list = data.results ?? data
-      setCoursesList(Array.isArray(list) ? list : [])
-    }).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    if (!selectedCourse) { setPodcastTitle(""); setPodcastUrl(""); return }
-    const found = coursesList.find(c => String(c.id) === String(selectedCourse))
-    if (found) {
-      // Only set if not already set from props or user input
-      setPodcastTitle(prev => prev || (found.live_podcast_title || ""))
-      setPodcastUrl(prev => prev || (found.live_podcast_url || ""))
-    }
-  }, [selectedCourse, coursesList])
-
-  const handleSave = async () => {
-    if (!selectedCourse) { setError("يرجى اختيار كورس."); return }
-    if (podcastUrl && !podcastUrl.startsWith("http")) {
-      setError("الرابط يجب أن يبدأ بـ http:// أو https://"); return
-    }
-    setSaving(true); setError("")
-    try {
-      await api.patch(`/academic/courses/${selectedCourse}/`, {
-        live_podcast_title: podcastTitle.trim(),
-        live_podcast_url:   podcastUrl.trim(),
-      })
-      onSaved()
-    } catch (e) {
-      setError(e.response?.data?.detail || "حدث خطأ أثناء الحفظ.")
-    } finally { setSaving(false) }
-  }
-
-  const handleClear = async () => {
-    if (!selectedCourse) return
-    if (!window.confirm("هل تريد إزالة البودكاست من هذا الكورس؟")) return
-    setSaving(true); setError("")
-    try {
-      await api.patch(`/academic/courses/${selectedCourse}/`, { live_podcast_title: "", live_podcast_url: "" })
-      onSaved()
-    } catch (e) {
-      setError(e.response?.data?.detail || "حدث خطأ.")
-    } finally { setSaving(false) }
-  }
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 bg-dark-900/80 backdrop-blur-md overflow-y-auto">
-      <div className="w-full max-w-xl glass-card-strong border border-white/10 shadow-2xl animate-slide-up rounded-2xl flex flex-col my-auto relative">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/05 bg-white/[0.02] rounded-t-2xl">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-brand-blue/15 flex items-center justify-center shadow-inner">
-              <Radio size={20} className="text-brand-blue" />
-            </div>
-            <div>
-              <p className="font-bold text-white text-base">{course ? "تعديل البودكاست" : "إضافة بودكاست مباشر"}</p>
-              <p className="text-white/40 text-xs mt-0.5">ربط رابط بث مباشر بكورس موجود ضمن المنهج</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-xl text-white/40 hover:bg-white/10 hover:text-white transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-6 space-y-6">
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">الكورس الدراسي</label>
-            <CustomSelect
-              value={selectedCourse}
-              onChange={setSelectedCourse}
-              options={coursesList.map(c => ({ id: c.id, label: c.name }))}
-              placeholder="— اختر الكورس —"
-              disabled={!!course}
-            />
-          </div>
-
-          <div className="h-px bg-white/05 w-full" />
-
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">عنوان البودكاست التوضيحي (اختياري)</label>
-              <input
-                type="text"
-                value={podcastTitle}
-                onChange={e => setPodcastTitle(e.target.value)}
-                placeholder="مثال: جلسة مراجعة الكورس المباشرة"
-                className="w-full glass-input px-4 py-3 rounded-xl transition-all hover:border-white/20 focus:border-brand-blue/50 focus:ring-2 focus:ring-brand-blue/20 bg-dark-800/50"
-                dir="rtl"
-                disabled={saving}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">رابط البث (Zoom / Google Meet)</label>
-              <div className="relative">
-                <input
-                  type="url"
-                  value={podcastUrl}
-                  onChange={e => setPodcastUrl(e.target.value)}
-                  placeholder="https://zoom.us/j/..."
-                  className="w-full glass-input pl-11 pr-4 py-3 rounded-xl transition-all hover:border-white/20 focus:border-brand-blue/50 focus:ring-2 focus:ring-brand-blue/20 bg-dark-800/50"
-                  dir="ltr"
-                  disabled={saving}
-                />
-                <Link2 size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
-              </div>
-              {podcastUrl && (
-                <div className="flex justify-start mt-2.5">
-                  <a href={podcastUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-blue/10 text-xs font-medium text-brand-blue hover:bg-brand-blue/20 transition-colors">
-                    <ExternalLink size={12} /> تجربة الرابط
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-brand-red/10 text-brand-red text-sm border border-brand-red/20 animate-fade-in">
-              <AlertCircle size={16} className="shrink-0" />
-              <p className="flex-1 font-medium">{error}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-5 border-t border-white/05 bg-white/[0.01] rounded-b-2xl">
-          {course?.live_podcast_url ? (
-            <button
-              onClick={handleClear}
-              disabled={saving}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-brand-red/70 hover:text-brand-red hover:bg-brand-red/10 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              <Trash2 size={16} /> إزالة البودكاست
-            </button>
-          ) : <span />}
-          
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              disabled={saving}
-              className="px-5 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              إلغاء
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || !selectedCourse}
-              className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl shadow-lg shadow-brand-blue/20 disabled:opacity-50 disabled:shadow-none"
-            >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={2.5} />}
-              <span className="font-semibold">حفظ التغييرات</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function PodcastRow({ course, onEdit }) {
-  return (
-    <div className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/02 transition-all border border-white/04 group">
-      <div className="w-9 h-9 rounded-xl bg-brand-blue/10 flex items-center justify-center shrink-0">
-        <Radio size={15} className="text-brand-blue" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-semibold truncate">{course.live_podcast_title || course.name}</p>
-        <p className="text-white/35 text-xs truncate mt-0.5">{course.name}</p>
-      </div>
-      {course.live_podcast_url && (
-        <a href={course.live_podcast_url} target="_blank" rel="noopener noreferrer"
-           className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-dark-700/60 text-white/30 text-xs hover:text-white/60 transition-colors max-w-[160px] truncate"
-           onClick={e => e.stopPropagation()}>
-          <ExternalLink size={10} />
-          <span className="truncate">{course.live_podcast_url}</span>
-        </a>
+      {/* Session Modal */}
+      {showSessionForm && (
+        <SessionFormModal
+          roomId={room.id}
+          session={editSession}
+          onClose={() => { setShowSessionForm(false); setEditSession(null) }}
+          onSaved={handleSessionSaved}
+        />
       )}
-      <StatusBadge hasUrl={!!course.live_podcast_url} />
-      <button onClick={() => onEdit(course)} className="p-2 btn-ghost rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
-        <Pencil size={13} className="text-white/40" />
-      </button>
     </div>
   )
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function LivePodcastPage() {
-  const [courses, setCourses]       = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState("")
-  const [search, setSearch]         = useState("")
-  const [page, setPage]             = useState(1)
-  const [showModal, setShowModal]   = useState(false)
-  const [editCourse, setEditCourse] = useState(null)
+  const [rooms,     setRooms]     = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState("")
+  const [showForm,  setShowForm]  = useState(false)
+  const [editRoom,  setEditRoom]  = useState(null)
 
-  const fetchCourses = useCallback(async () => {
+  // ── Fetch Rooms ────────────────────────────────────────────────────────────
+  const fetchRooms = useCallback(async () => {
     setLoading(true); setError("")
     try {
-      const { data } = await api.get("/academic/courses/")
-      const list = data.results ?? data
-      const withPodcast = (Array.isArray(list) ? list : []).filter(c => c.live_podcast_url)
-      setCourses(withPodcast)
-    } catch { setError("تعذّر تحميل البيانات.") }
-    finally { setLoading(false) }
+      const { data } = await api.get("/live/rooms/")
+      setRooms(Array.isArray(data) ? data : (data.results || []))
+    } catch {
+      setError("تعذّر تحميل الغرف. يرجى المحاولة مجدداً.")
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  useEffect(() => { fetchCourses() }, [fetchCourses])
+  useEffect(() => { fetchRooms() }, [fetchRooms])
 
-  const filtered  = courses.filter(c =>
-    !search ||
-    (c.live_podcast_title || c.name || "").includes(search) ||
-    (c.name || "").includes(search)
-  )
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  // ── Toggle Room Active ─────────────────────────────────────────────────────
+  const handleToggle = async (roomId) => {
+    const { data } = await api.post(`/live/rooms/${roomId}/toggle-active/`)
+    setRooms(prev => prev.map(r => r.id === roomId ? { ...r, is_active: data.is_active } : r))
+  }
+
+  // ── Delete Room ────────────────────────────────────────────────────────────
+  const handleDeleteRoom = async (roomId, roomName) => {
+    if (!window.confirm(`هل تريد حذف الغرفة «${roomName}» وجميع جلساتها؟ لا يمكن التراجع.`)) return
+    try {
+      await api.delete(`/live/rooms/${roomId}/`)
+      setRooms(prev => prev.filter(r => r.id !== roomId))
+    } catch {
+      alert("تعذّر حذف الغرفة.")
+    }
+  }
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  const totalSessions = rooms.reduce((acc, r) => acc + (r.sessions_count || 0), 0)
+  const activeRooms   = rooms.filter(r => r.is_active).length
 
   return (
     <div className="max-w-4xl mx-auto space-y-6" dir="rtl">
+
+      {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-brand-blue/15 flex items-center justify-center">
             <Radio size={20} className="text-brand-blue" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white font-cairo">البودكاست المباشر</h1>
-            <p className="text-white/35 text-sm">إدارة الجلسات المباشرة المرتبطة بالكورسات</p>
+            <h1 className="text-xl font-bold text-white font-cairo">البث المباشر</h1>
+            <p className="text-white/35 text-sm">إدارة غرف وجلسات البث المباشر</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={fetchCourses} className="btn-ghost p-2 rounded-xl" title="تحديث">
+        <div className="flex items-center gap-2">
+          <button onClick={fetchRooms} className="btn-ghost p-2 rounded-xl" title="تحديث">
             <RefreshCw size={15} className={loading ? "animate-spin text-brand-blue" : "text-white/40"} />
           </button>
-          <button onClick={() => { setEditCourse(null); setShowModal(true) }} className="btn-primary flex items-center gap-2">
-            <Plus size={15} /><span className="text-sm">إضافة بودكاست</span>
+          <button
+            onClick={() => { setEditRoom(null); setShowForm(true) }}
+            className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl">
+            <Plus size={15} />
+            <span className="text-sm font-semibold">غرفة جديدة</span>
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+      {/* ── Stats Row ── */}
+      <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "إجمالي البودكاستات", value: courses.length, color: "text-brand-blue" },
-          { label: "بروابط مفعّلة",       value: courses.filter(c => c.live_podcast_url).length, color: "text-neon-cyan" },
-        ].map(stat => (
-          <div key={stat.label} className="glass-card p-4 text-center">
-            <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-            <p className="text-white/35 text-xs mt-1">{stat.label}</p>
+          { label: "إجمالي الغرف",    value: rooms.length,  color: "text-brand-blue"  },
+          { label: "غرف نشطة",        value: activeRooms,   color: "text-neon-cyan"   },
+          { label: "إجمالي الجلسات",  value: totalSessions, color: "text-purple-400"  },
+        ].map(s => (
+          <div key={s.label} className="glass-card p-4 text-center">
+            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+            <p className="text-white/35 text-xs mt-1">{s.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="relative">
-        <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30" />
-        <input
-          type="text" value={search}
-          onChange={e => { setSearch(e.target.value); setPage(1) }}
-          placeholder="بحث في عنوان البودكاست أو الكورس..."
-          className="w-full glass-input pr-10" dir="rtl"
-        />
-        {search && (
-          <button onClick={() => { setSearch(""); setPage(1) }} className="absolute left-3 top-1/2 -translate-y-1/2 btn-ghost p-1 rounded-lg">
-            <X size={12} />
-          </button>
-        )}
-      </div>
-
+      {/* ── Content ── */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <Loader2 size={28} className="animate-spin text-brand-blue" />
-          <p className="text-white/30 text-sm">جاري التحميل...</p>
+          <p className="text-white/30 text-sm">جاري تحميل الغرف...</p>
         </div>
       ) : error ? (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-red/10 text-brand-red border border-brand-red/20">
-          <AlertCircle size={16} />{error}
-          <button onClick={fetchCourses} className="mr-auto text-xs underline">إعادة المحاولة</button>
+          <AlertCircle size={16} />
+          <span>{error}</span>
+          <button onClick={fetchRooms} className="mr-auto text-xs underline">إعادة المحاولة</button>
         </div>
-      ) : paginated.length === 0 ? (
-        search ? (
-          <div className="text-center py-16 text-white/30">
-            <Search size={28} className="mx-auto mb-3 opacity-30" />
-            <p>لا توجد نتائج لـ «{search}»</p>
+      ) : rooms.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-brand-blue/10 flex items-center justify-center">
+            <Radio size={28} className="text-brand-blue/60" />
           </div>
-        ) : <EmptyState onAdd={() => { setEditCourse(null); setShowModal(true) }} />
+          <div>
+            <p className="text-white/80 font-bold text-lg">لا توجد غرف بث مباشر</p>
+            <p className="text-white/40 text-sm mt-1.5 max-w-sm mx-auto">
+              أنشئ غرفة جديدة ثم أضف داخلها جلسات البث المباشر (Zoom، Google Meet، إلخ)
+            </p>
+          </div>
+          <button onClick={() => { setEditRoom(null); setShowForm(true) }}
+            className="btn-primary flex items-center gap-2 mt-2 px-6 py-2.5 rounded-xl">
+            <Plus size={16} />
+            <span className="font-semibold">إنشاء غرفة</span>
+          </button>
+        </div>
       ) : (
-        <div className="space-y-2">
-          {paginated.map(course => (
-            <PodcastRow key={course.id} course={course} onEdit={c => { setEditCourse(c); setShowModal(true) }} />
+        <div className="space-y-4">
+          {rooms.map(room => (
+            <RoomCard
+              key={room.id}
+              room={room}
+              onEditRoom={r => { setEditRoom(r); setShowForm(true) }}
+              onDeleteRoom={handleDeleteRoom}
+              onToggle={handleToggle}
+              onRefresh={fetchRooms}
+            />
           ))}
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="btn-ghost p-2 rounded-xl disabled:opacity-30">
-            <ChevronRight size={16} />
-          </button>
-          <span className="text-white/40 text-sm px-2">{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="btn-ghost p-2 rounded-xl disabled:opacity-30">
-            <ChevronLeft size={16} />
-          </button>
-        </div>
-      )}
-
-      {showModal && (
-        <PodcastFormModal
-          course={editCourse}
-          onClose={() => { setShowModal(false); setEditCourse(null) }}
-          onSaved={() => { setShowModal(false); setEditCourse(null); fetchCourses() }}
+      {/* ── Room Form Modal ── */}
+      {showForm && (
+        <RoomFormModal
+          room={editRoom}
+          onClose={() => { setShowForm(false); setEditRoom(null) }}
+          onSaved={() => { setShowForm(false); setEditRoom(null); fetchRooms() }}
         />
       )}
     </div>

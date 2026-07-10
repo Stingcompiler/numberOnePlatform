@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from academic.models import Lesson, Course
+from academic.models import Lesson
 from exams.models import Exam, ExamAttempt
 from site_settings.models import Announcement
 from accounts.models import StudentProfile
@@ -21,30 +21,6 @@ def notify_new_lesson(sender, instance, created, **kwargs):
             notification_type=Notification.NotificationType.LECTURE,
             related_object_id=str(instance.id)
         )
-
-@receiver(post_save, sender=Course)
-def notify_live_podcast(sender, instance, created, **kwargs):
-    # If live_podcast_url is added/updated, notify students
-    if instance.live_podcast_url and instance.live_podcast_title:
-        # Check if we already sent this exact podcast notification recently
-        # To avoid spamming on every course edit, check if a podcast notification exists for this course
-        exists = Notification.objects.filter(
-            notification_type=Notification.NotificationType.LIVE_PODCAST,
-            related_object_id=str(instance.id),
-            title=instance.live_podcast_title
-        ).exists()
-
-        if not exists:
-            students = StudentProfile.objects.filter(course_accesses__course=instance).distinct()
-            title = instance.live_podcast_title
-            message = f"تم جدولة بث مباشر في مقرر {instance.name}"
-            create_and_send_notification(
-                students=students,
-                title=title,
-                message=message,
-                notification_type=Notification.NotificationType.LIVE_PODCAST,
-                related_object_id=str(instance.id)
-            )
 
 @receiver(post_save, sender=Exam)
 def notify_new_exam(sender, instance, created, **kwargs):

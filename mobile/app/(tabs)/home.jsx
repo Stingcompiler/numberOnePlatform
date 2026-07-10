@@ -25,7 +25,7 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { useNotifications } from '../../src/contexts/NotificationContext';
 import courseService from '../../src/services/courseService';
 import examService from '../../src/services/examService';
-import podcastService from '../../src/services/podcastService';
+import liveService from '../../src/services/liveService';
 import { SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../../src/theme/tokens';
 import { StatCard, SectionHeader } from '../../src/components/ui/UIKit';
 import EmptyState from '../../src/components/ui/EmptyState';
@@ -139,10 +139,12 @@ export default function HomeScreen() {
       }, 0);
       setPassedExams(passedCount);
 
-      // ── Live Podcasts (non-critical) ──
+      // ── Live Sessions (non-critical) ──
       try {
-        const podcasts = await podcastService.getMyLivePodcasts();
-        setLivePodcasts(podcasts);
+        const rooms = await liveService.getMyLiveSessions();
+        // تجميع جميع الجلسات من جميع الغرف
+        const allSessions = rooms.flatMap(r => r.sessions || []);
+        setLivePodcasts(allSessions);
       } catch { /* silently ignore */ }
 
     } catch (e) {

@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "exams",
     "backups",
     "notifications",
+    "live",              # نظام البث المباشر (Live Rooms & Sessions)
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
