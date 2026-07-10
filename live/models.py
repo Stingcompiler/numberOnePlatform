@@ -123,8 +123,8 @@ class LiveSession(models.Model):
         _("رابط البث"),
         help_text=_("رابط Zoom / Google Meet / YouTube أو أي منصة بث."),
     )
-    scheduled_start = models.DateTimeField(_("موعد البداية"))
-    scheduled_end   = models.DateTimeField(_("موعد النهاية"))
+    scheduled_start = models.DateTimeField(_("موعد البداية"), null=True, blank=True)
+    scheduled_end   = models.DateTimeField(_("موعد النهاية"), null=True, blank=True)
     status          = models.CharField(
         _("الحالة"),
         max_length=20,

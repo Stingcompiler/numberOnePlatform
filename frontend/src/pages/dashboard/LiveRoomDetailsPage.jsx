@@ -143,9 +143,7 @@ function SessionFormModal({ roomId, session, onClose, onSaved }) {
   const handleSave = async () => {
     if (!form.session_name.trim())    { setError("اسم الجلسة مطلوب.");       return }
     if (!form.stream_url.trim())      { setError("رابط البث مطلوب.");         return }
-    if (!form.scheduled_start)        { setError("موعد البداية مطلوب.");      return }
-    if (!form.scheduled_end)          { setError("موعد النهاية مطلوب.");      return }
-    if (form.scheduled_end <= form.scheduled_start) {
+    if (form.scheduled_start && form.scheduled_end && form.scheduled_end <= form.scheduled_start) {
       setError("موعد النهاية يجب أن يكون بعد موعد البداية.")
       return
     }
@@ -236,7 +234,7 @@ function SessionFormModal({ roomId, session, onClose, onSaved }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <FieldLabel>موعد البداية *</FieldLabel>
+              <FieldLabel>موعد البداية</FieldLabel>
               <input
                 type="datetime-local"
                 value={form.scheduled_start}
@@ -246,7 +244,7 @@ function SessionFormModal({ roomId, session, onClose, onSaved }) {
               />
             </div>
             <div className="space-y-1.5">
-              <FieldLabel>موعد النهاية *</FieldLabel>
+              <FieldLabel>موعد النهاية</FieldLabel>
               <input
                 type="datetime-local"
                 value={form.scheduled_end}
