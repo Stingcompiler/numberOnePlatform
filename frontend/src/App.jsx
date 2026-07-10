@@ -54,6 +54,7 @@ const LectureSupervisorDetailPage = lazy(() => import('./pages/dashboard/Lecture
 const ProfilePage                 = lazy(() => import('./pages/dashboard/ProfilePage'))
 const PasswordManagementPage      = lazy(() => import('./pages/dashboard/PasswordManagementPage'))
 const LivePodcastPage             = lazy(() => import('./pages/dashboard/LivePodcastPage'))
+const LiveRoomDetailsPage         = lazy(() => import('./pages/dashboard/LiveRoomDetailsPage'))
 
 /* ── Page Loader ──────────────────────────────────────────────── */
 const PageLoader = () => (
@@ -191,6 +192,9 @@ function AppRoutes() {
       />
       <Route path="/dashboard/academic/live-podcast"
         element={<DPage component={LivePodcastPage} roles={LECTURE_CONTENT_ROLES} />}
+      />
+      <Route path="/dashboard/academic/live-podcast/rooms/:id"
+        element={<DPage component={LiveRoomDetailsPage} roles={LECTURE_CONTENT_ROLES} />}
       />
       <Route path="/dashboard/academic/submissions"
         element={<DPage component={AllSubmissionsPage} roles={ALL_STAFF} />}
