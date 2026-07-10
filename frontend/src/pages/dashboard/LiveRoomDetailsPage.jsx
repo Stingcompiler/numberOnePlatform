@@ -151,6 +151,9 @@ function SessionFormModal({ roomId, session, onClose, onSaved }) {
     setSaving(true); setError("")
     try {
       const payload = { ...form, room: roomId }
+      if (!payload.scheduled_start) payload.scheduled_start = null
+      if (!payload.scheduled_end)   payload.scheduled_end = null
+
       if (isEdit) {
         await api.patch(`/live/rooms/${roomId}/sessions/${session.id}/`, payload)
       } else {

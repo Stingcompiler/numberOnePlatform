@@ -1,0 +1,1 @@
+import{a as s}from"./index-CO8QO63K.js";const e="/exams",o=t=>s.post(`${e}/create/`,t),m=(t={})=>s.get(`${e}/`,{params:t}),$=t=>s.get(`${e}/${t}/`),n=(t,a)=>s.put(`${e}/${t}/`,a),p=t=>s.delete(`${e}/${t}/`),x=(t,a={})=>s.get(`${e}/${t}/submissions/`,{params:a}),E=t=>s.get(`${e}/attempts/${t}/`);export{$ as a,x as b,o as c,p as d,E as e,m as f,n as u};
