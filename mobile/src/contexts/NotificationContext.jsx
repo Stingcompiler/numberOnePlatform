@@ -35,8 +35,10 @@ export const NotificationProvider = ({ children }) => {
 
       responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
         // User tapped notification
-        const data = response.notification.request.content.data;
-        handleNotificationTap(data);
+        const data = response?.notification?.request?.content?.data;
+        if (data) {
+          handleNotificationTap(data);
+        }
       });
 
     } else {
@@ -45,8 +47,8 @@ export const NotificationProvider = ({ children }) => {
     }
 
     return () => {
-      if (notificationListener.current) Notifications.removeNotificationSubscription(notificationListener.current);
-      if (responseListener.current) Notifications.removeNotificationSubscription(responseListener.current);
+      if (notificationListener.current) notificationListener.current.remove();
+      if (responseListener.current) responseListener.current.remove();
     };
   }, [isAuthenticated]);
 
@@ -57,7 +59,7 @@ export const NotificationProvider = ({ children }) => {
         await notificationService.syncPushToken(token);
       }
     } catch (e) {
-      console.warn('Push notification setup failed:', e);
+      console.error('[NotificationContext Push Setup Error]:', e, e?.stack);
     }
   };
 
@@ -68,7 +70,7 @@ export const NotificationProvider = ({ children }) => {
       const list = Array.isArray(data) ? data : (data && Array.isArray(data.results) ? data.results : []);
       setNotifications(list);
     } catch (e) {
-      console.warn('Failed to load notifications', e);
+      console.error('[NotificationContext Load Error]:', e, e?.stack);
     } finally {
       setLoading(false);
     }
@@ -81,7 +83,7 @@ export const NotificationProvider = ({ children }) => {
         setUnreadCount(data.count);
       }
     } catch (e) {
-      console.warn('Failed to load unread count', e);
+      console.error('[NotificationContext Unread Count Error]:', e, e?.stack);
     }
   };
 
@@ -93,7 +95,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       await notificationService.markAsRead(id);
     } catch (e) {
-      console.warn('Failed to mark notification as read', e);
+      console.error('[NotificationContext MarkRead Error]:', e, e?.stack);
       // Revert optimistic update
       loadNotifications();
       loadUnreadCount();
@@ -107,7 +109,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       await notificationService.markAllAsRead();
     } catch (e) {
-      console.warn('Failed to mark all as read', e);
+      console.error('[NotificationContext MarkAllRead Error]:', e, e?.stack);
       loadNotifications();
       loadUnreadCount();
     }

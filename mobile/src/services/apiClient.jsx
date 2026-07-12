@@ -20,7 +20,7 @@ apiClient.interceptors.request.use(
         config.headers['Authorization'] = `Bearer ${token}`;
       }
     } catch (e) {
-      console.warn('Could not retrieve access token from SecureStore', e);
+      console.error('[apiClient Request Interceptor Error]:', e, e?.stack);
     }
     return config;
   },
@@ -100,6 +100,7 @@ apiClient.interceptors.response.use(
 
         return apiClient(originalRequest);
       } catch (refreshError) {
+        console.error('[apiClient Token Refresh Error]:', refreshError, refreshError?.stack);
         processQueue(refreshError, null);
         isRefreshing = false;
 

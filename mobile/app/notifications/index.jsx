@@ -14,10 +14,10 @@ import { Bell, ChevronRight, CheckCheck } from 'lucide-react-native';
 
 export default function NotificationsIndex() {
   const { colors } = useTheme();
-  const { notifications, loading, readIds, markAsRead, loadNotifications } = useNotifications();
+  const { notifications, loading, markAsRead, loadNotifications } = useNotifications();
   const router = useRouter();
 
-  const unreadCount = notifications.filter(n => !readIds.includes(n.id)).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const handlePress = (item) => {
     markAsRead(item.id);
@@ -29,7 +29,7 @@ export default function NotificationsIndex() {
   };
 
   const renderItem = ({ item }) => {
-    const isRead = readIds.includes(item.id);
+    const isRead = item.is_read;
     return (
       <NotificationCard
         item={item}

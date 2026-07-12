@@ -12,6 +12,10 @@ export const authService = {
       device_id: deviceId,
     });
 
+    if (!response || !response.data) {
+      throw new Error('لم يتم استلام استجابة من الخادم (Response is undefined).');
+    }
+
     const { access, refresh, user } = response.data;
     
     if (access) {
@@ -37,7 +41,8 @@ export const authService = {
         refresh: refreshToken,
       });
     } catch (e) {
-      console.warn('Backend logout failed or token already invalid', e);
+      console.error('[authService logout Error]: Backend logout failed', e, e?.stack);
+      throw e;
     } finally {
       await SecureStore.deleteItemAsync('student_access_token');
       await SecureStore.deleteItemAsync('student_refresh_token');

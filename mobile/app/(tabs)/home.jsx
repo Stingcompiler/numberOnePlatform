@@ -95,7 +95,7 @@ function TapStatCard({ icon, value, label, iconBg, onPress }) {
 export default function HomeScreen() {
   const { user }    = useAuth();
   const { colors, isDark } = useTheme();
-  const { notifications, loading: notifLoading, readIds, markAsRead } = useNotifications();
+  const { notifications, loading: notifLoading, markAsRead } = useNotifications();
   const router      = useRouter();
 
   const recentNotifs = notifications.slice(0, 3);
@@ -145,10 +145,12 @@ export default function HomeScreen() {
         // تجميع جميع الجلسات من جميع الغرف
         const allSessions = rooms.flatMap(r => r.sessions || []);
         setLivePodcasts(allSessions);
-      } catch { /* silently ignore */ }
+      } catch (err) {
+        console.error('[Home LiveService Error]:', err, err?.stack);
+      }
 
     } catch (e) {
-      console.log('Home: error loading dashboard stats', e);
+      console.error('[Home Dashboard Error]:', e, e?.stack);
     } finally {
       setLoading(false);
       Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
@@ -435,7 +437,7 @@ export default function HomeScreen() {
               <NotificationCard
                 key={item.id}
                 item={item}
-                isRead={readIds.includes(item.id)}
+                isRead={item.is_read}
                 onPress={() => {
                   markAsRead(item.id);
                   router.push(`/notifications/${item.id}`);

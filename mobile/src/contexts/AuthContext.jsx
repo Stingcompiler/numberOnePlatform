@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
           }
         }
       } catch (e) {
-        console.log('No valid session stored or backend offline', e);
+        console.error('[AuthContext checkAuth Error]:', e, e.stack);
       } finally {
         setLoading(false);
       }
@@ -43,6 +43,9 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const userData = await authService.login(username, password);
+      if (!userData || typeof userData !== 'object') {
+        throw new Error('بيانات المستخدم مفقودة من استجابة الخادم.');
+      }
       if (userData.role !== 'student') {
         await authService.logout();
         throw new Error('هذا التطبيق مخصص للطلاب فقط.');
@@ -50,6 +53,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       return userData;
     } catch (e) {
+      console.error('[AuthContext login Error]:', e, e?.stack);
       setUser(null);
       throw e;
     } finally {
@@ -62,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await authService.logout();
     } catch (e) {
-      console.warn('Logout error', e);
+      console.error('[AuthContext logout Error]:', e, e?.stack);
     } finally {
       setUser(null);
       setLoading(false);
