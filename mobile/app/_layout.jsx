@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import React from 'react';
 import { Slot } from 'expo-router';
 import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
@@ -12,11 +13,11 @@ import { useFonts } from 'expo-font';
 import ThemeToggle from '../src/components/ThemeToggle';
 import { isDeviceSupported } from '../src/utils/deviceCompat';
 import UnsupportedDeviceScreen from '../src/components/UnsupportedDeviceScreen';
+import { useTheme } from '../src/contexts/ThemeContext';
 
 // Check device compatibility ONCE at module load time (Dimensions is sync).
 // This constant never changes during the app session.
 const DEVICE_SUPPORTED = isDeviceSupported();
-import { useTheme } from '../src/contexts/ThemeContext';
 import { 
   Cairo_300Light, 
   Cairo_400Regular, 
@@ -33,58 +34,72 @@ import {
 } from '@expo-google-fonts/tajawal';
 
 // Intercept Text render to inject custom font family and automatically select the correct weight
-if (Text && !Text.__patched) {
-  Text.__patched = true;
-  const originalRender = Text.render;
-  if (originalRender) {
+// Wrapped in try-catch: on RN 0.81+ New Architecture, Text.render may not be a plain function
+try {
+  if (Text && !Text.__patched && typeof Text.render === 'function') {
+    Text.__patched = true;
+    const originalRender = Text.render;
     Text.render = function (props, ref) {
-      const origin = originalRender.apply(this, [props, ref]);
-      const flattenedStyle = StyleSheet.flatten(props.style);
-      
-      const useCairo = flattenedStyle && flattenedStyle.fontFamily && String(flattenedStyle.fontFamily).toLowerCase().includes('cairo');
-      const prefix = useCairo ? 'Cairo-' : 'Tajawal-';
-      
-      let resolvedFont = prefix + 'Regular';
-      if (flattenedStyle) {
-        const weight = String(flattenedStyle.fontWeight || '400');
-        if (weight === 'bold' || weight === '700') {
-          resolvedFont = prefix + 'Bold';
-        } else if (weight === '900' || weight === 'black') {
-          resolvedFont = prefix + 'Black';
-        } else if (weight === '500' || weight === 'medium') {
-          resolvedFont = prefix + 'Medium';
-        } else if (weight === '300' || weight === 'light') {
-          resolvedFont = prefix + 'Light';
-        }
-      }
-      
-      return React.cloneElement(origin, {
-        style: [
-          props.style, 
-          { 
-            fontFamily: resolvedFont,
-            fontWeight: 'normal' 
+      try {
+        const origin = originalRender.apply(this, [props, ref]);
+        const flattenedStyle = StyleSheet.flatten(props.style);
+        
+        const useCairo = flattenedStyle && flattenedStyle.fontFamily && String(flattenedStyle.fontFamily).toLowerCase().includes('cairo');
+        const prefix = useCairo ? 'Cairo-' : 'Tajawal-';
+        
+        let resolvedFont = prefix + 'Regular';
+        if (flattenedStyle) {
+          const weight = String(flattenedStyle.fontWeight || '400');
+          if (weight === 'bold' || weight === '700') {
+            resolvedFont = prefix + 'Bold';
+          } else if (weight === '900' || weight === 'black') {
+            resolvedFont = prefix + 'Black';
+          } else if (weight === '500' || weight === 'medium') {
+            resolvedFont = prefix + 'Medium';
+          } else if (weight === '300' || weight === 'light') {
+            resolvedFont = prefix + 'Light';
           }
-        ]
-      });
+        }
+        
+        return React.cloneElement(origin, {
+          style: [
+            props.style, 
+            { 
+              fontFamily: resolvedFont,
+              fontWeight: 'normal' 
+            }
+          ]
+        });
+      } catch (e) {
+        // Fallback: render without font patching rather than crash
+        return originalRender.apply(this, [props, ref]);
+      }
     };
   }
+} catch (e) {
+  console.warn('[FontPatch] Text.render patching skipped:', e.message);
 }
 
-if (TextInput && !TextInput.__patched) {
-  TextInput.__patched = true;
-  const originalInputRender = TextInput.render;
-  if (originalInputRender) {
+try {
+  if (TextInput && !TextInput.__patched && typeof TextInput.render === 'function') {
+    TextInput.__patched = true;
+    const originalInputRender = TextInput.render;
     TextInput.render = function (props, ref) {
-      const origin = originalInputRender.apply(this, [props, ref]);
-      return React.cloneElement(origin, {
-        style: [
-          props.style,
-          { fontFamily: 'Tajawal-Regular' }
-        ]
-      });
+      try {
+        const origin = originalInputRender.apply(this, [props, ref]);
+        return React.cloneElement(origin, {
+          style: [
+            props.style,
+            { fontFamily: 'Tajawal-Regular' }
+          ]
+        });
+      } catch (e) {
+        return originalInputRender.apply(this, [props, ref]);
+      }
     };
   }
+} catch (e) {
+  console.warn('[FontPatch] TextInput.render patching skipped:', e.message);
 }
 
 // Inner layout that has access to ThemeProvider context

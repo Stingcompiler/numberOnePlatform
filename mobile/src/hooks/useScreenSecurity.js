@@ -27,20 +27,25 @@ export function useScreenSecurity() {
     let screenshotSub;
 
     (async () => {
-      const available = await isAvailableAsync();
-      if (!available) return;
+      try {
+        const available = await isAvailableAsync();
+        if (!available) return;
 
-      // Prevent screen capture (works as FLAG_SECURE reinforcement on Android;
-      // on iOS it only blocks screenshots — not recordings — at the system level).
-      await preventScreenCaptureAsync();
+        // Prevent screen capture (works as FLAG_SECURE reinforcement on Android;
+        // on iOS it only blocks screenshots — not recordings — at the system level).
+        await preventScreenCaptureAsync();
 
-      if (Platform.OS === 'ios') {
-        // iOS: listen for screenshot events as a proxy signal and use
-        // the screen-capture listener to detect active recording state.
-        screenshotSub = addScreenshotListener(() => {
-          // Screenshot was taken — log but no actionable block possible.
-          console.warn('[Security] Screenshot attempt detected on iOS.');
-        });
+        if (Platform.OS === 'ios') {
+          // iOS: listen for screenshot events as a proxy signal and use
+          // the screen-capture listener to detect active recording state.
+          screenshotSub = addScreenshotListener(() => {
+            // Screenshot was taken — log but no actionable block possible.
+            console.warn('[Security] Screenshot attempt detected on iOS.');
+          });
+        }
+      } catch (e) {
+        // Native module may not be linked or available — fail gracefully
+        console.warn('[useScreenSecurity] Screen capture API unavailable:', e.message);
       }
     })();
 

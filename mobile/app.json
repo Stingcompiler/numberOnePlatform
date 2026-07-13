@@ -18,7 +18,14 @@
       }
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./src/assets/logo_official.png",
+          "color": "#000000"
+        }
+      ]
     ],
     "scheme": "numberonestudent",
     "extra": {
