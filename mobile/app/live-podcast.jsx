@@ -65,18 +65,18 @@ import { rs, rf, hp } from '../src/utils/responsive';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PROVIDERS = {
-  zoom:        { label: 'Zoom',            Icon: Video   },
-  google_meet: { label: 'Google Meet',     Icon: Monitor },
-  teams:       { label: 'Microsoft Teams', Icon: Monitor },
-  youtube:     { label: 'YouTube Live',    Icon: Youtube },
-  other:       { label: 'أخرى',            Icon: Wifi    },
+  zoom: { label: 'Zoom', Icon: Video },
+  google_meet: { label: 'Google Meet', Icon: Monitor },
+  teams: { label: 'Microsoft Teams', Icon: Monitor },
+  youtube: { label: 'YouTube Live', Icon: Youtube },
+  other: { label: 'أخرى', Icon: Wifi },
 };
 
 const STATUS_CONFIG = {
-  upcoming: { label: 'قادمة',       color: '#4F87FF', pulse: false },
-  live:     { label: 'مباشر الآن', color: '#22D3A8', pulse: true  },
-  ended:    { label: 'انتهت',       color: '#4A5578', pulse: false },
-  archived: { label: 'مؤرشفة',     color: '#4A5578', pulse: false },
+  upcoming: { label: 'قادمة', color: '#4F87FF', pulse: false },
+  live: { label: 'مباشر الآن', color: '#22D3A8', pulse: true },
+  ended: { label: 'انتهت', color: '#4A5578', pulse: false },
+  archived: { label: 'مؤرشفة', color: '#4A5578', pulse: false },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ function SkeletonCard({ colors }) {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(anim, { toValue: 1,   duration: 700, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 1, duration: 700, useNativeDriver: true }),
         Animated.timing(anim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
       ])
     ).start();
@@ -109,7 +109,7 @@ function SkeletonCard({ colors }) {
 // StatusBadge — شارة حالة الجلسة
 // ─────────────────────────────────────────────────────────────────────────────
 function StatusBadge({ status, isDark }) {
-  const cfg   = STATUS_CONFIG[status] || STATUS_CONFIG.upcoming;
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.upcoming;
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -117,7 +117,7 @@ function StatusBadge({ status, isDark }) {
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1,   duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
       ])
     ).start();
   }, [cfg.pulse]);
@@ -137,11 +137,11 @@ function StatusBadge({ status, isDark }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function SessionCard({ session, colors, isDark }) {
   const scale = useRef(new Animated.Value(1)).current;
-  const prov  = PROVIDERS[session.provider] || PROVIDERS.other;
+  const prov = PROVIDERS[session.provider] || PROVIDERS.other;
   const ProvIcon = prov.Icon;
 
-  const onPressIn  = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }).start();
-  const onPressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true }).start();
+  const onPressIn = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }).start();
+  const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
 
   const formatDate = (iso) => {
     if (!iso) return '—';
@@ -311,13 +311,14 @@ function EmptyState({ colors }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LivePodcastScreen() {
   const { colors, isDark } = useTheme();
+  const { user } = useAuth();
   const router   = useRouter();
   const insets   = useSafeAreaInsets();
 
-  const [rooms,      setRooms]      = useState([]);
-  const [loading,    setLoading]    = useState(true);
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error,      setError]      = useState(null);
+  const [error, setError] = useState(null);
 
   // مستمع الإشعارات — لتحديث القائمة عند وصول إشعار live_session
   const notifListener = useRef(null);
@@ -327,7 +328,13 @@ export default function LivePodcastScreen() {
     if (!silent) setError(null);
     try {
       const data = await liveService.getMyLiveSessions();
-      setRooms(data);
+      // Client-side safety filter: only show rooms matching the student's system_type
+      const studentSystemType = user?.student_profile?.system_type;
+      if (studentSystemType) {
+        setRooms(data.filter(room => room.room_type === studentSystemType));
+      } else {
+        setRooms(data);
+      }
     } catch (e) {
       console.warn('[LivePodcastScreen] load error:', e);
       if (!silent) setError('تعذّر تحميل البث المباشر. يرجى التحقق من اتصالك.');
@@ -371,7 +378,7 @@ export default function LivePodcastScreen() {
 
   // ── Stats ──────────────────────────────────────────────────────────────
   const totalSessions = rooms.reduce((acc, r) => acc + (r.sessions?.length || 0), 0);
-  const liveSessions  = rooms.reduce(
+  const liveSessions = rooms.reduce(
     (acc, r) => acc + (r.sessions?.filter(s => s.status === 'live').length || 0),
     0
   );
@@ -436,9 +443,9 @@ export default function LivePodcastScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           {[
-            { label: 'الغرف المتاحة',   value: rooms.length   },
-            { label: 'إجمالي الجلسات', value: totalSessions   },
-            { label: 'مباشرة الآن',    value: liveSessions    },
+            { label: 'الغرف المتاحة', value: rooms.length },
+            { label: 'إجمالي الجلسات', value: totalSessions },
+            { label: 'مباشرة الآن', value: liveSessions },
           ].map(stat => (
             <View
               key={stat.label}

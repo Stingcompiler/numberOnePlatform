@@ -32,6 +32,8 @@ def send_expo_push_notification(tokens, title, message, data=None):
             'body': message,
             'data': data,
             'badge': 1,
+            'channelId': 'default',
+            'priority': 'high',
         })
 
     try:

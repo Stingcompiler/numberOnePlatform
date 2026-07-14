@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import React from 'react';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
 import { useScreenSecurity } from '../src/hooks/useScreenSecurity';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
@@ -110,7 +110,7 @@ function AppShell() {
   return (
     <View style={styles.root}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Slot />
+      <Stack screenOptions={{ headerShown: false }} />
       <ThemeToggle />
       {/* iOS: overlay when screen recording is active */}
       {Platform.OS === 'ios' && isRecording && (

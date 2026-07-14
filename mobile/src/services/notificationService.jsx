@@ -1,5 +1,6 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import apiClient from './apiClient';
 
@@ -42,9 +43,11 @@ export const notificationService = {
         return null;
       }
 
-      // projectId must be grabbed from Constants or fallback to app.json if you have EAS configured
-      // For bare workflow or simple Expo, this usually works without projectId if defined in app.json
-      token = (await Notifications.getExpoPushTokenAsync()).data;
+      // projectId must be provided explicitly for EAS builds
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+      token = (await Notifications.getExpoPushTokenAsync({
+        projectId: projectId,
+      })).data;
     } else {
       console.warn('Must use physical device for Push Notifications');
     }
