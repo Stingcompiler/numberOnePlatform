@@ -40,6 +40,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { useAuth } from '../src/contexts/AuthContext';
 import liveService from '../src/services/liveService';
 import { SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../src/theme/tokens.js';
 import {
@@ -145,11 +146,16 @@ function SessionCard({ session, colors, isDark }) {
 
   const formatDate = (iso) => {
     if (!iso) return '—';
-    const d = new Date(iso);
-    return d.toLocaleString('ar-EG', {
-      month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString('ar-EG', {
+        month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    } catch (e) {
+      console.warn('[LivePodcastScreen] formatDate error:', e);
+      return iso.split('T')[0] || iso;
+    }
   };
 
   const handleOpen = async () => {
@@ -311,7 +317,7 @@ function EmptyState({ colors }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LivePodcastScreen() {
   const { colors, isDark } = useTheme();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router   = useRouter();
   const insets   = useSafeAreaInsets();
 
@@ -319,9 +325,6 @@ export default function LivePodcastScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-
-  // مستمع الإشعارات — لتحديث القائمة عند وصول إشعار live_session
-  const notifListener = useRef(null);
 
   // ── Load ────────────────────────────────────────────────────────────────
   const load = useCallback(async (silent = false) => {
@@ -341,14 +344,16 @@ export default function LivePodcastScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    load();
+    if (!authLoading) {
+      load();
+    }
 
     // ── استماع لإشعارات live_session ─────────────────────────────────────
     // عند وصول إشعار جلسة جديدة → تحديث القائمة تلقائياً + إظهار Alert
-    notifListener.current = Notifications.addNotificationReceivedListener(notification => {
+    const subscription = Notifications.addNotificationReceivedListener(notification => {
       const data = notification.request.content.data;
       if (data?.type === 'live_session') {
         // تحديث صامت في الخلفية
@@ -364,11 +369,9 @@ export default function LivePodcastScreen() {
     });
 
     return () => {
-      if (notifListener.current) {
-        Notifications.removeNotificationSubscription(notifListener.current);
-      }
+      subscription.remove();
     };
-  }, [load]);
+  }, [authLoading, load]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -379,7 +382,7 @@ export default function LivePodcastScreen() {
   // ── Stats ──────────────────────────────────────────────────────────────
   const totalSessions = rooms.reduce((acc, r) => acc + (r.sessions?.length || 0), 0);
   const liveSessions = rooms.reduce(
-    (acc, r) => acc + (r.sessions?.filter(s => s.status === 'live').length || 0),
+    (acc, r) => acc + (r.sessions?.filter(s => s.status === 'live')?.length || 0),
     0
   );
 
