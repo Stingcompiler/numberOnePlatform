@@ -3,25 +3,15 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Device compatibility utilities for Number One Student App.
  *
- * This app is designed for Android phones and tablets up to 11 inches.
- * Devices with a physical screen diagonal larger than 11 inches must be blocked.
- *
- * Detection method:
- *   - `Dimensions.get('screen')` returns width/height in density-independent
- *     pixels (dp). On Android, 1 dp = 1/160 physical inch at the mdpi baseline.
- *   - diagonal_inches = sqrt(w_dp² + h_dp²) / 160
- *
- * This matches the Android SDK's DisplayMetrics approach and correctly
- * identifies screen size across all density classes (mdpi, hdpi, xhdpi …).
- *
- * Example validation:
- *   Galaxy S23 (6.1")  → ~370×800 dp → 5.6" ✅  (supported)
- *   Galaxy Tab S8 (11") → ~1495×934 dp → 11.0" ✅ (boundary, supported)
- *   Galaxy Tab S9 Ultra (14.6") → ~1800×1100 dp → ~13.5" ❌ (blocked)
+ * Security Requirements:
+ *   - Only physical iOS and Android devices are permitted.
+ *   - Emulators, simulators, Web, Windows, macOS, and Linux are strictly BLOCKED.
+ *   - Screen size on Android must be 11 inches or smaller.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { Dimensions, Platform } from 'react-native';
+import * as Device from 'expo-device';
 
 /** The maximum supported screen diagonal in inches. */
 const MAX_SUPPORTED_DIAGONAL_INCHES = 11.0;
@@ -34,7 +24,6 @@ const MAX_SUPPORTED_DIAGONAL_INCHES = 11.0;
  */
 export function getScreenDiagonalInches() {
   const { width, height } = Dimensions.get('screen');
-  // Use the larger of the two axes for the diagonal regardless of orientation
   const w = Math.max(width, height);
   const h = Math.min(width, height);
   const diagonalDp = Math.sqrt(w * w + h * h);
@@ -42,26 +31,70 @@ export function getScreenDiagonalInches() {
 }
 
 /**
+ * Advanced emulator detection heuristics.
+ * Checks known emulator signatures in device metadata.
+ * 
+ * @returns {boolean} True if the device exhibits emulator signatures.
+ */
+function isEmulatorHeuristic() {
+  const brand = (Device.brand || '').toLowerCase();
+  const manufacturer = (Device.manufacturer || '').toLowerCase();
+  const modelName = (Device.modelName || '').toLowerCase();
+  const designName = (Device.designName || '').toLowerCase();
+  const productName = (Device.productName || '').toLowerCase();
+
+  const emulatorKeywords = [
+    'bluestacks', 'genymotion', 'nox', 'memu', 'ldplayer', 'mumu', 
+    'wsa', 'vbox', 'qemu', 'emulator', 'simulator', 'sdk_gphone', 
+    'vmos', 'microvirt', 'bignox'
+  ];
+
+  const checkStrings = [brand, manufacturer, modelName, designName, productName];
+
+  return checkStrings.some(str => 
+    emulatorKeywords.some(keyword => str.includes(keyword))
+  );
+}
+
+/**
  * Returns true if the current device is supported by this application.
  *
  * Supported devices:
- *   • Android phones (any screen size up to 11")
- *   • Android tablets with a screen ≤ 11 inches diagonal
+ *   • Physical Android phones and tablets up to 11 inches.
+ *   • Physical iPhones and iPads.
  *
  * Unsupported devices:
- *   • Android devices with screen > 11 inches (large tablets, smart displays, etc.)
- *
- * iOS is not a target platform for this app; treated as supported to avoid
- * accidentally blocking iOS developer/QA devices during testing.
+ *   • Android devices > 11 inches.
+ *   • iOS/Android Emulators & Simulators.
+ *   • Desktop (Windows, macOS, Linux).
+ *   • Web / Browsers.
  */
 export function isDeviceSupported() {
-  // Only restrict Android. iOS is pass-through.
-  if (Platform.OS !== 'android') {
-    return true;
+  // 1. Block Desktop and Web strictly by Platform.OS
+  if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
+    return false; // Blocks web, windows, macos, etc.
   }
 
-  const diagonal = getScreenDiagonalInches();
-  return diagonal <= MAX_SUPPORTED_DIAGONAL_INCHES;
+  // 2. Block Simulators and Emulators using Expo's native check
+  // `isDevice` is true for physical devices, false for emulators/simulators.
+  if (!Device.isDevice) {
+    return false; 
+  }
+
+  // 3. Block sneaky emulators that might bypass `isDevice` (like some Android desktop players)
+  if (isEmulatorHeuristic()) {
+    return false;
+  }
+
+  // 4. Enforce screen size limits for Android (prevent giant smart screens/desktop window resizing)
+  if (Platform.OS === 'android') {
+    const diagonal = getScreenDiagonalInches();
+    if (diagonal > MAX_SUPPORTED_DIAGONAL_INCHES) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export default isDeviceSupported;

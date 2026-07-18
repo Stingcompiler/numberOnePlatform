@@ -93,25 +93,24 @@ export default function UnsupportedDeviceScreen() {
 
         {/* Message */}
         <Text style={styles.message}>
-          This mobile application is designed only for Android phones and tablets
-          with a screen size of 11 inches or smaller.{'\n\n'}
-          Please use a supported device to continue.
+          This application only supports installation and use on a physical Android or iOS device.{'\n\n'}
+          For security reasons, emulators, simulators, desktop operating systems, and virtual environments are not supported.
         </Text>
 
         {/* Footer — supported devices list */}
         <View style={styles.footerCard}>
-          <Text style={styles.footerTitle}>Supported devices:</Text>
+          <Text style={styles.footerTitle}>Supported Physical Devices:</Text>
 
           <View style={styles.footerRow}>
             <View style={styles.dot} />
             <Smartphone size={14} color={COLORS.textSec} style={{ marginRight: 6 }} />
-            <Text style={styles.footerItem}>Android phones</Text>
+            <Text style={styles.footerItem}>Android (Phones & Tablets ≤ 11")</Text>
           </View>
 
           <View style={styles.footerRow}>
             <View style={styles.dot} />
-            <Tablet size={14} color={COLORS.textSec} style={{ marginRight: 6 }} />
-            <Text style={styles.footerItem}>Android tablets up to 11 inches</Text>
+            <Smartphone size={14} color={COLORS.textSec} style={{ marginRight: 6 }} />
+            <Text style={styles.footerItem}>iOS (iPhone & iPad)</Text>
           </View>
         </View>
       </Animated.View>
