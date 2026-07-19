@@ -37,11 +37,32 @@ export function getScreenDiagonalInches() {
  * @returns {boolean} True if the device exhibits emulator signatures.
  */
 function isEmulatorHeuristic() {
+  // Deep emulator heuristics are only necessary for Android, which has 
+  // third-party desktop emulators like BlueStacks. iOS only has official 
+  // simulators, which are already reliably caught by `!Device.isDevice`.
+  if (Platform.OS !== 'android') {
+    return false;
+  }
+
   const brand = (Device.brand || '').toLowerCase();
   const manufacturer = (Device.manufacturer || '').toLowerCase();
   const modelName = (Device.modelName || '').toLowerCase();
   const designName = (Device.designName || '').toLowerCase();
   const productName = (Device.productName || '').toLowerCase();
+
+  // 1. Check CPU Architectures
+  // PC Emulators (BlueStacks, Nox, etc.) often support or run natively on x86/x64.
+  // Physical Android devices are overwhelmingly ARM-based.
+  const cpuArchitectures = Device.supportedCpuArchitectures || [];
+  const hasX86 = cpuArchitectures.some(arch => 
+    arch.toLowerCase().includes('x86') || 
+    arch.toLowerCase().includes('i686') || 
+    arch.toLowerCase().includes('amd64')
+  );
+
+  if (hasX86) {
+    return true;
+  }
 
   const emulatorKeywords = [
     'bluestacks', 'genymotion', 'nox', 'memu', 'ldplayer', 'mumu', 
@@ -79,6 +100,11 @@ export function isDeviceSupported() {
   // `isDevice` is true for physical devices, false for emulators/simulators.
   if (!Device.isDevice) {
     return false; 
+  }
+
+  // 2.5 Block Apple Silicon Macs running the iOS app natively ("Designed for iPad")
+  if (Platform.OS === 'ios' && Device.modelName && Device.modelName.toLowerCase().includes('mac')) {
+    return false;
   }
 
   // 3. Block sneaky emulators that might bypass `isDevice` (like some Android desktop players)
