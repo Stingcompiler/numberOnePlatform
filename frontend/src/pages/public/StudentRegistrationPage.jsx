@@ -15,7 +15,7 @@ const GENDERS = [
   { value: 'female', label: 'أنثى' },
 ]
 const STUDENT_STATUSES = [
-  { value: 'returning', label: 'عائد في نفس السنة' },
+  { value: 'returning', label: 'عائد لنفس السنه' },
   { value: 'new_year', label: 'عام دراسي جديد' },
 ]
 
