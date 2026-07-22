@@ -90,14 +90,13 @@ urlpatterns = [
     re_path(r'^assets/(?P<path>.*)$', serve_frontend_assets),
     # ملفات ثابتة في جذر dist (vite.svg, favicon.ico, ...)
     re_path(r'^(?P<path>vite\.svg|favicon\.ico|logo\.png)$', serve_frontend_static),
+    # ── خدمة ملفات الـ Media (الصور المرفوعة) ─────────────────────────────────
+    # WhiteNoise تخدم /static/ فقط. ملفات /media/ يُخدِّمها Django مباشرةً
+    # عبر django.views.static.serve في كلتا البيئتين (DEBUG=True / DEBUG=False).
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+
     # Catch-all للـ SPA — يُعيد index.html لكل مسار لا يبدأ بـ api أو admin أو static أو media
     re_path(r'^(?!api/|admin/|static/|media/).*$',
             TemplateView.as_view(template_name='index.html'),
             name='frontend'),
 ]
-
-# ── خدمة ملفات الـ Media ──────────────────────────────────────────────────────
-# WhiteNoise تخدم /static/ فقط. ملفات /media/ (الصور المرفوعة) تُخدم
-# بواسطة Django مباشرةً في كلتا البيئتين.
-# ⚠️  في الإنتاج على Render: نظام الملفات مؤقت — استخدم Disk أو S3 للملفات الدائمة.
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

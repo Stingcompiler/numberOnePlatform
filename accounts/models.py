@@ -419,7 +419,7 @@ class NewStudentRegistration(models.Model):
         FEMALE = "female", _("أنثى")
 
     class StudentStatusChoices(models.TextChoices):
-        RETURNING = "returning", _("معيد في نفس السنة")
+        RETURNING = "returning", _("عائد في نفس السنة")
         NEW_YEAR  = "new_year",  _("عام دراسي جديد")
 
     class RequestStatusChoices(models.TextChoices):

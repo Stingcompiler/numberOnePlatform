@@ -258,7 +258,9 @@ STORAGES = {
 # ملفات الوسائط (صور مرفوعة)
 # ─────────────────────────────────────────────────────────────────────────────
 MEDIA_URL  = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+_default_media_root = BASE_DIR / "media"
+MEDIA_ROOT = Path(config("MEDIA_ROOT", default=str(_default_media_root)))
+os.makedirs(MEDIA_ROOT, exist_ok=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # مجلد تخزين النسخ الاحتياطية

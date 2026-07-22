@@ -15,7 +15,7 @@ const GENDERS = [
   { value: 'female', label: 'أنثى' },
 ]
 const STUDENT_STATUSES = [
-  { value: 'returning', label: 'معيد في نفس السنة' },
+  { value: 'returning', label: 'عائد في نفس السنة' },
   { value: 'new_year', label: 'عام دراسي جديد' },
 ]
 
@@ -28,11 +28,11 @@ const INITIAL = {
 }
 
 /* ── File Input ── */
-function FileInput({ label, name, icon: Icon, onChange, file }) {
+function FileInput({ label, name, icon: Icon, onChange, file, required }) {
   return (
     <div>
       <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>
-        {label}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
       <label className="flex items-center gap-3 cursor-pointer rounded-xl border-2 border-dashed px-4 py-3 transition-all hover:border-blue-400"
         style={{ borderColor: file ? '#3b82f6' : 'var(--lp-border)', background: file ? 'rgba(59,130,246,0.04)' : 'var(--lp-bg-subtle)' }}>
@@ -43,6 +43,11 @@ function FileInput({ label, name, icon: Icon, onChange, file }) {
         <input type="file" accept="image/*" className="hidden" onChange={e => onChange(name, e.target.files[0])} />
         {file && <CheckCircle size={16} style={{ color: '#22c55e' }} />}
       </label>
+      {required && (
+        <span className="text-xs font-bold mt-1 block" style={{ color: '#dc2626' }}>
+          مطلوب *
+        </span>
+      )}
     </div>
   )
 }

@@ -22,6 +22,12 @@ services:
     buildCommand: "./build.sh"
     startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120 --log-level info"
 
+    # ── التخزين الدائم لملفات الوسائط ─────────────────────────────────────
+    disk:
+      name: media-storage
+      mountPath: /var/data/media
+      sizeGB: 1
+
     # ── متغيرات البيئة ─────────────────────────────────────────────────────
     envVars:
       # Django Core
@@ -33,6 +39,10 @@ services:
 
       - key: PYTHON_VERSION
         value: "3.12.0"
+
+      # مسار التخزين الدائم للملفات الوسائطية المرفوعة
+      - key: MEDIA_ROOT
+        value: "/var/data/media"
 
       # ALLOWED_HOSTS: يُضاف دومين Render تلقائياً + أي دومين مخصص
       # استبدل number-platform-api.onrender.com بالدومين الفعلي بعد النشر

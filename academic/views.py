@@ -557,6 +557,7 @@ class PublicLevelListView(generics.ListAPIView):
 
     serializer_class   = LevelSerializer
     permission_classes = [AllowAny]
+    pagination_class   = None
 
     def get_queryset(self):
         qs = Level.objects.filter(is_active=True).order_by("display_order", "name")
@@ -575,6 +576,7 @@ class PublicGradeListView(generics.ListAPIView):
 
     serializer_class   = GradeSerializer
     permission_classes = [AllowAny]
+    pagination_class   = None
 
     def get_queryset(self):
         qs = Grade.objects.filter(is_active=True).select_related("level").order_by(
