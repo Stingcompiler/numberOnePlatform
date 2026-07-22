@@ -30,22 +30,52 @@ const INITIAL = {
 /* ── File Input ── */
 function FileInput({ label, name, icon: Icon, onChange, file, required }) {
   return (
-    <div>
-      <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <label className="flex items-center gap-3 cursor-pointer rounded-xl border-2 border-dashed px-4 py-3 transition-all hover:border-blue-400"
-        style={{ borderColor: file ? '#3b82f6' : 'var(--lp-border)', background: file ? 'rgba(59,130,246,0.04)' : 'var(--lp-bg-subtle)' }}>
-        <Icon size={18} style={{ color: file ? '#3b82f6' : 'var(--lp-text-muted)' }} />
-        <span className="flex-1 text-sm truncate" style={{ color: file ? '#3b82f6' : 'var(--lp-text-muted)' }}>
-          {file ? file.name : 'اضغط لاختيار ملف...'}
-        </span>
-        <input type="file" accept="image/*" className="hidden" onChange={e => onChange(name, e.target.files[0])} />
-        {file && <CheckCircle size={16} style={{ color: '#22c55e' }} />}
-      </label>
+    <div className="flex flex-col">
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-medium" style={{ color: 'var(--lp-text-secondary)' }}>
+          {label}
+        </label>
+        {required && (
+          <span className="text-[11px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+            إجباري *
+          </span>
+        )}
+      </div>
+
+      <div className="relative">
+        <label
+          className="flex items-center gap-3 cursor-pointer rounded-xl border-2 border-dashed px-4 py-3 transition-all hover:border-red-400 overflow-hidden"
+          style={{
+            borderColor: file ? '#22c55e' : (required ? '#ef4444' : 'var(--lp-border)'),
+            background: file ? 'rgba(34,197,94,0.04)' : (required ? 'rgba(239,68,68,0.03)' : 'var(--lp-bg-subtle)'),
+          }}
+        >
+          <Icon size={18} style={{ color: file ? '#22c55e' : (required ? '#dc2626' : 'var(--lp-text-muted)') }} />
+          <span className="flex-1 text-sm truncate font-medium" style={{ color: file ? '#15803d' : (required ? '#991b1b' : 'var(--lp-text-muted)') }}>
+            {file ? file.name : 'اضغط لاختيار ملف...'}
+          </span>
+          <input type="file" accept="image/*" className="hidden" onChange={e => onChange(name, e.target.files[0])} />
+          {file && <CheckCircle size={16} style={{ color: '#22c55e' }} />}
+        </label>
+
+        {/* Solid Red Line under the input container */}
+        {required && (
+          <div
+            className="w-full h-[3px] rounded-b-xl transition-all"
+            style={{
+              background: file ? '#22c55e' : '#dc2626',
+              marginTop: '-3px',
+              position: 'relative',
+              zIndex: 10,
+            }}
+          />
+        )}
+      </div>
+
       {required && (
-        <span className="text-xs font-bold mt-1 block" style={{ color: '#dc2626' }}>
-          مطلوب *
+        <span className="text-[11px] font-bold text-red-600 mt-1.5 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-600 inline-block"></span>
+          هذا الحقل مطلوب وإجباري *
         </span>
       )}
     </div>
