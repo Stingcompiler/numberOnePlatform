@@ -438,7 +438,7 @@ export default function StudentRegistrationPage() {
                 <FileInput required={true} label="  صورة شخصية للطالب / باسبورت" name="personal_photo" icon={Camera} onChange={handleFile} file={files.personal_photo} />
                 <FileInput required={true} label="تحميل الرقم الوطني للأب  " name="father_id_image" icon={CreditCard} onChange={handleFile} file={files.father_id_image} />
                 <FileInput required={true} label="تحميل الرقم الوطني للأم   " name="mother_id_image" icon={CreditCard} onChange={handleFile} file={files.mother_id_image} />
-                <FileInput label="  تحميل اشعار سداد الرسوم / اشعار بنكك " name="payment_receipt_image" icon={CreditCard} onChange={handleFile} file={files.payment_receipt_image} />
+                <FileInput required={true} label="  تحميل اشعار سداد الرسوم / اشعار بنكك " name="payment_receipt_image" icon={CreditCard} onChange={handleFile} file={files.payment_receipt_image} />
               </div>
             </div>
 
