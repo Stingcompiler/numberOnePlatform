@@ -72,21 +72,32 @@ export default function StudentRegistrationPage() {
 
   const [grades, setGrades] = useState([])
   const [levels, setLevels] = useState([])
+  const [gradesLoading, setGradesLoading] = useState(false)
 
+  // րր تحميل البيانات الثابتة عند التحميل (conditions + supervisors + levels) րր
   useEffect(() => {
     api.get('/registration-conditions/public/').then(r => setConditions(r.data.results || r.data)).catch(() => { })
     api.get('/supervisors/public/').then(r => setSupervisors(r.data.results || r.data)).catch(() => { })
 
-    const fetchAcademic = async () => {
-      const gradesData = await api.get('/academic/grades/?system_type=online')
-      const levelsData = await api.get('/academic/levels/?system_type=online')
-      setLevels(levelsData.data.results || levelsData.data)
-      setGrades(gradesData.data.results || gradesData.data)
-
-    }
-    fetchAcademic()
-
+    // جلب المراحل من النقطة العامة (بدون مصادقة)
+    api.get('/academic/levels/public/?system_type=online')
+      .then(r => setLevels(r.data.results || r.data))
+      .catch(() => { })
   }, [])
+
+  // րր إعادة جلب الصفوف كلما تغيّرت المرحلة المختارة րր
+  useEffect(() => {
+    setForm(f => ({ ...f, grade: '' }))   // صفر الصف عند تغيير المرحلة
+    if (!form.level) {
+      setGrades([])
+      return
+    }
+    setGradesLoading(true)
+    api.get(`/academic/grades/public/?system_type=online&level=${form.level}`)
+      .then(r => setGrades(r.data.results || r.data))
+      .catch(() => setGrades([]))
+      .finally(() => setGradesLoading(false))
+  }, [form.level])
 
   const handleChange = e => {
     const { name, value, type, checked } = e.target
@@ -263,8 +274,11 @@ export default function StudentRegistrationPage() {
                 </div>
                 <div>
                   <label className="text-xs mb-1.5 block font-medium" style={{ color: 'var(--lp-text-secondary)' }}>الصف <span className="text-red-500">*</span></label>
-                  <select required name="grade" value={form.grade} onChange={handleChange} className={selectClass}>
-                    <option value="" disabled>  اختر الصف   </option>
+                  <select required name="grade" value={form.grade} onChange={handleChange} className={selectClass}
+                    disabled={!form.level || gradesLoading}>
+                    <option value="" disabled>
+                      {!form.level ? 'اختر المرحلة أولاً' : gradesLoading ? 'جاري التحميل...' : 'اختر الصف'}
+                    </option>
                     {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
                 </div>
@@ -360,6 +374,28 @@ export default function StudentRegistrationPage() {
             {/* Section 5: Files */}
             <div className="rounded-2xl p-6 shadow-sm" style={{ background: 'white', border: '1px solid var(--lp-border)' }}>
               <SectionHeader icon={Upload} title="المستندات والمرفقات" subtitle="يرجى رفع المستندات المطلوبة" />
+
+              {/* ⚠️  Alert — تنبيه رفع المستندات */}
+              <div
+                className="mb-5 rounded-xl p-4 text-sm"
+                style={{
+                  background: 'rgba(220,38,38,0.06)',
+                  border: '1.5px solid rgba(220,38,38,0.3)',
+                  color: '#b91c1c',
+                  direction: 'rtl',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2 font-bold text-base" style={{ color: '#991b1b' }}>
+                  <AlertCircle size={18} className="shrink-0" />
+                  <span>تنبيه هام — المستندات إلزامية</span>
+                </div>
+                <ul className="list-disc list-inside space-y-1.5 leading-relaxed" style={{ paddingInlineStart: '0.25rem' }}>
+                  <li>رفع <strong>جميع</strong> المستندات المطلوبة إلزامي وليس اختيارياً.</li>
+                  <li>لا يمكن إتمام عملية التسجيل دون رفع جميع المستندات المطلوبة.</li>
+                  <li>أي مستند ناقص سيؤدي إلى تعليق الطلب أو رفضه حتى استكمال الناقص.</li>
+                </ul>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FileInput required={true} label="   تحميل اخر نتيجة دراسية للطالب" name="academic_result_image" icon={FileText} onChange={handleFile} file={files.academic_result_image} />
                 <FileInput required={true} label="  تحميل شهادة ميلاد الطالب" name="birth_certificate_image" icon={FileText} onChange={handleFile} file={files.birth_certificate_image} />

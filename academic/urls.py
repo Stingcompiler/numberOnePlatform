@@ -17,15 +17,18 @@ from .views import (
     MyCoursesView, MyCourseDetailView, MyLessonDetailView,
     MarkLessonCompleteView, SubmitExerciseView,
     MySubmissionsView, AllSubmissionsView, MyProgressView,
+    PublicLevelListView, PublicGradeListView,
 )
 
 urlpatterns = [
     # ── الهيكل الأكاديمي (Admin) ──────────────────────────────────────────────
     path("levels/",                             LevelListCreateView.as_view(),      name="level-list"),
     path("levels/<int:pk>/",                    LevelDetailView.as_view(),          name="level-detail"),
+    path("levels/public/",                      PublicLevelListView.as_view(),       name="level-public-list"),
 
     path("grades/",                             GradeListCreateView.as_view(),      name="grade-list"),
     path("grades/<int:pk>/",                    GradeDetailView.as_view(),          name="grade-detail"),
+    path("grades/public/",                      PublicGradeListView.as_view(),       name="grade-public-list"),
 
     path("courses/",                            CourseListCreateView.as_view(),     name="course-list"),
     path("courses/<int:pk>/",                   CourseDetailView.as_view(),         name="course-detail"),

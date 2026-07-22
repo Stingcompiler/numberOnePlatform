@@ -11,7 +11,7 @@ Views الكاملة للهيكل الأكاديمي
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -544,3 +544,46 @@ class MyProgressView(APIView):
         return Response(LessonProgressSerializer(progresses, many=True).data)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Public Endpoints — صفحة التسجيل العامة (بدون مصادقة)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PublicLevelListView(generics.ListAPIView):
+    """
+    GET /api/academic/levels/public/
+    يُعيد قائمة المراحل الدراسية النشطة للزوار غير المُسجَّلين
+    (يُستخدم في صفحة تسجيل الطلاب الجديدة).
+    """
+
+    serializer_class   = LevelSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        qs = Level.objects.filter(is_active=True).order_by("display_order", "name")
+        st = self.request.query_params.get("system_type")
+        if st:
+            qs = qs.filter(system_type=st)
+        return qs
+
+
+class PublicGradeListView(generics.ListAPIView):
+    """
+    GET /api/academic/grades/public/?level=<id>
+    يُعيد قائمة الفصول/الصفوف النشطة للزوار غير المُسجَّلين.
+    يدعم الفلترة بالمرحلة (level) ونوع النظام (system_type).
+    """
+
+    serializer_class   = GradeSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        qs = Grade.objects.filter(is_active=True).select_related("level").order_by(
+            "level__display_order", "display_order", "name"
+        )
+        level_id = self.request.query_params.get("level")
+        st       = self.request.query_params.get("system_type")
+        if level_id:
+            qs = qs.filter(level_id=level_id)
+        if st:
+            qs = qs.filter(system_type=st)
+        return qs
