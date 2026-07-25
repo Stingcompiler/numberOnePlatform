@@ -13,7 +13,7 @@ import { SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../src/theme/tokens';
 import { ShieldCheck, User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react-native';
 import { rs, rf, hp, isTablet } from '../src/utils/responsive';
 
-const logo = require('../src/assets/logo_official.jpg');
+const logo = require('../src/assets/onelogo.png');
 
 
 // ─── Animated input field ─────────────────────────────────────

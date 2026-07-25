@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Number One",
+    "name": "نمبر ون",
     "slug": "number-one-student",
-    "icon": "./src/assets/logo_official.png",
+    "icon": "./src/assets/onelogo.png",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -13,7 +13,7 @@
     "android": {
       "package": "com.numberoneschools.student",
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/logo_official.png",
+        "foregroundImage": "./src/assets/onelogo.png",
         "backgroundColor": "#000000"
       }
     },
@@ -22,7 +22,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./src/assets/logo_official.png",
+          "icon": "./src/assets/onelogo.png",
           "color": "#000000"
         }
       ]
