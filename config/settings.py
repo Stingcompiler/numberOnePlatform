@@ -270,7 +270,17 @@ STORAGES = {
 MEDIA_URL  = "/media/"
 _default_media_root = BASE_DIR / "media"
 MEDIA_ROOT = Path(config("MEDIA_ROOT", default=str(_default_media_root)))
-os.makedirs(MEDIA_ROOT, exist_ok=True)
+
+# إنشاء مجلد الوسائط إن أمكن — دون إسقاط الإقلاع إن تعذّر.
+# على Render لا يُركَّب القرص الدائم أثناء مرحلة البناء (يُركَّب وقت التشغيل فقط)،
+# فيكون /var/data للقراءة فقط حينها. استدعاء makedirs بلا حماية كان يُفشل
+# البناء بـ OSError: [Errno 30] Read-only file system.
+# وقت التشغيل يكون القرص مُركَّباً فيُنشأ المجلد طبيعياً، كما أن
+# FileSystemStorage ينشئ المجلدات الفرعية تلقائياً عند أول رفع.
+try:
+    os.makedirs(MEDIA_ROOT, exist_ok=True)
+except OSError:
+    pass
 
 # ─────────────────────────────────────────────────────────────────────────────
 # مجلد تخزين النسخ الاحتياطية
