@@ -6,7 +6,7 @@
  */
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import api from '../api/axiosInstance'
+import api, { ensureCsrfToken } from '../api/axiosInstance'
 
 const AuthContext = createContext(null)
 
@@ -17,6 +17,8 @@ export function AuthProvider({ children }) {
   // ── جلب بيانات المستخدم الحالي من الـ Cookie ──────────────────────
   const fetchMe = useCallback(async () => {
     try {
+      // تمهيد كوكي CSRF أولاً كي تعمل الطلبات المُغيِّرة للحالة لاحقاً
+      await ensureCsrfToken()
       const { data } = await api.get('/auth/me/')
       setUser(data)
     } catch {
@@ -35,6 +37,8 @@ export function AuthProvider({ children }) {
 
     const { data } = await api.post('/auth/login/', payload)
     setUser(data.user)
+    // تجديد كوكي CSRF بعد الدخول (تغيّرت الجلسة)
+    await ensureCsrfToken()
     return data.user
   }
 

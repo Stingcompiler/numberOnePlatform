@@ -44,6 +44,40 @@ DIST_DIR   = Path(settings.BASE_DIR) / "frontend" / "dist"
 ASSETS_DIR = DIST_DIR / "assets"
 
 
+def serve_protected_media(request, path):
+    """
+    يخدم ملفات /media/ مع حماية مجلد registrations/ الحسّاس.
+
+    مجلد registrations/ يحوي وثائق شخصية للطلاب (هوية، شهادة ميلاد، إيصال دفع)
+    وكان مكشوفاً للعموم. الآن يُقصر على مدير/مدير النظام فقط عبر كوكي JWT.
+    بقية الوسائط (شعار الموقع، الصور العامة، الأفاتار، الصور المصغّرة...) تُخدَّم
+    كما كانت دون أي تغيير في السلوك.
+    """
+    normalized = path.replace("\\", "/").lstrip("/")
+    if normalized.startswith("registrations/"):
+        from accounts.authentication import CookieJWTAuthentication
+        from accounts.models import CustomUser
+        from django.http import HttpResponseForbidden
+
+        user = None
+        try:
+            result = CookieJWTAuthentication().authenticate(request)
+            if result is not None:
+                user = result[0]
+        except Exception:
+            user = None
+
+        allowed = bool(
+            user
+            and getattr(user, "is_authenticated", False)
+            and getattr(user, "role", None) in (CustomUser.Roles.ADMIN, CustomUser.Roles.MANAGER)
+        )
+        if not allowed:
+            return HttpResponseForbidden("Forbidden")
+
+    return serve(request, path, document_root=str(settings.MEDIA_ROOT))
+
+
 def serve_frontend_assets(request, path):
     """يخدم ملفات JS/CSS/Images من frontend/dist/assets/"""
     return serve(request, path, document_root=str(ASSETS_DIR))
@@ -93,7 +127,7 @@ urlpatterns = [
     # ── خدمة ملفات الـ Media (الصور المرفوعة) ─────────────────────────────────
     # WhiteNoise تخدم /static/ فقط. ملفات /media/ يُخدِّمها Django مباشرةً
     # عبر django.views.static.serve في كلتا البيئتين (DEBUG=True / DEBUG=False).
-    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    re_path(r'^media/(?P<path>.*)$', serve_protected_media),
 
     # Catch-all للـ SPA — يُعيد index.html لكل مسار لا يبدأ بـ api أو admin أو static أو media
     re_path(r'^(?!api/|admin/|static/|media/).*$',

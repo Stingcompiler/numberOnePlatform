@@ -72,6 +72,26 @@ class IsAdminOrReadOnly(BasePermission):
         )
 
 
+class IsStaffReadAdminWrite(BasePermission):
+    """
+    قراءة (SAFE_METHODS): أي عضو طاقم مصادَق عليه (مدير/مدير نظام/أستاذ/مشرف كورسات).
+    كتابة (POST/PUT/PATCH/DELETE): مدير أو مدير نظام فقط.
+
+    يمنع الطلاب صراحةً من نقاط الهيكل الأكاديمي الإدارية (levels/grades/units)،
+    إذ يصل الطالب لمحتواه عبر نقاط my-* أو نقاط الكورسات المفلترة على مستوى الكائن.
+    بديل آمن لـ IsAdminOrReadOnly الذي كان يمنح القراءة لأي مصادَق عليه شاملاً الطالب.
+    """
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.user.role == CustomUser.Roles.STUDENT:
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.role in (CustomUser.Roles.ADMIN, CustomUser.Roles.MANAGER)
+
+
 class IsOwnerStudentOrAdmin(BasePermission):
     """
     الطالب يرى بياناته فقط.

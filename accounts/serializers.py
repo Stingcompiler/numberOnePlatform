@@ -157,10 +157,25 @@ class LoginSerializer(serializers.Serializer):
                 code="inactive",
             )
 
-        # ── Device Binding (للطالب من الموبايل) ─────────────────────────────
-        if device_id and user.is_student:
+        # ── Device Binding (إلزامي للطالب — التطبيق فقط) ────────────────────
+        # الطلاب يستخدمون المنصة عبر تطبيق الهاتف حصراً، والتطبيق يُرسل device_id
+        # دائماً. جعله إلزامياً يمنع تجاوز "جهاز واحد لكل طالب" بحذف الحقل أو
+        # مخاطبة الـ API مباشرةً. المستخدمون غير الطلاب (إدارة/معلمون) لا يتأثرون.
+        if user.is_student:
+            if not device_id:
+                raise serializers.ValidationError(
+                    _("يجب تسجيل الدخول من تطبيق الهاتف الرسمي."),
+                    code="device_required",
+                )
             try:
-                user.student_profile.bind_device(device_id)
+                profile = user.student_profile
+            except StudentProfile.DoesNotExist:
+                raise serializers.ValidationError(
+                    _("تعذّر التحقق من الجهاز. يرجى التواصل مع الإدارة."),
+                    code="no_profile",
+                )
+            try:
+                profile.bind_device(device_id)
             except PermissionError as exc:
                 raise serializers.ValidationError(str(exc), code="device_mismatch")
 

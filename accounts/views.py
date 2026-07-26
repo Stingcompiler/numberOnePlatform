@@ -18,6 +18,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -48,6 +49,25 @@ from .serializers import (
 # ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 JWT_SETTINGS = getattr(settings, "SIMPLE_JWT", {})
+
+
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
+
+
+@method_decorator(ensure_csrf_cookie, name="get")
+class CSRFTokenView(APIView):
+    """
+    GET /api/auth/csrf/
+    يضبط كوكي csrftoken في المتصفح كي تُرسله الواجهة كترويسة X-CSRFToken
+    في الطلبات المُغيِّرة للحالة (POST/PUT/PATCH/DELETE). للويب فقط؛ لا يمسّ الموبايل.
+    """
+
+    permission_classes = [AllowAny]
+    throttle_classes = []
+
+    def get(self, request):
+        return Response({"detail": "CSRF cookie set"})
 
 
 def _set_auth_cookies(response: Response, refresh_token) -> None:
@@ -97,6 +117,9 @@ class LoginView(APIView):
     """POST /api/auth/login/"""
 
     permission_classes = [AllowAny]
+    # حدّ معدّل على تسجيل الدخول (حسب IP) لإبطاء تخمين كلمات المرور
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
     def post(self, request):
         serializer = LoginSerializer(
@@ -161,6 +184,10 @@ class TokenRefreshCookieView(APIView):
     """
 
     permission_classes = [AllowAny]
+    # لا مصادقة DRF: الـ view يتحقق من Refresh Token يدوياً من الكوكي أو الجسم.
+    # تعطيلها يمنع تفعيل فحص CSRF على هذه النقطة، وهو ضروري لأن استدعاء التجديد
+    # في تطبيق الموبايل يتم عبر axios خام بلا ترويسة Authorization (يعتمد الكوكي).
+    authentication_classes = []
 
     def post(self, request):
         refresh_cookie_name = JWT_SETTINGS.get("AUTH_COOKIE_REFRESH", "refresh_token")
@@ -234,6 +261,8 @@ class ChangePasswordView(APIView):
     """POST /api/auth/change-password/"""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "change_password"
 
     def post(self, request):
         serializer = ChangePasswordSerializer(

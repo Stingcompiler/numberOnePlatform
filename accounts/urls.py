@@ -7,7 +7,7 @@ accounts/urls.py
 from django.urls import path
 from .views import (
     LoginView, LogoutView, TokenRefreshCookieView,
-    MeView, ChangePasswordView, AdminResetPasswordView,
+    MeView, ChangePasswordView, AdminResetPasswordView, CSRFTokenView,
     StudentListCreateView, StudentDetailView, StudentUnbindDeviceView,
     TeacherListCreateView, TeacherDetailView,
     SupervisorListCreateView, SupervisorDetailView,
@@ -22,6 +22,7 @@ from .views import (
 
 urlpatterns = [
     # ── المصادقة ──────────────────────────────────────────────────────────────
+    path("auth/csrf/",            CSRFTokenView.as_view(),          name="auth-csrf"),
     path("auth/login/",           LoginView.as_view(),              name="auth-login"),
     path("auth/logout/",          LogoutView.as_view(),             name="auth-logout"),
     path("auth/refresh/",         TokenRefreshCookieView.as_view(), name="auth-refresh"),
