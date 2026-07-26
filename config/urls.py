@@ -35,6 +35,7 @@ from django.views.static import serve
 
 # ── استيراد الـ URL patterns المقسّمة من site_settings ──────────────────────
 from site_settings.urls import public_urlpatterns, admin_urlpatterns
+from site_settings.seo_views import landing_ssr, robots_txt, sitemap_xml
 
 # ─────────────────────────────────────────────────────────────────────────────
 # دوال مساعدة — خدمة ملفات React المبنية (frontend/dist/)
@@ -128,6 +129,15 @@ urlpatterns = [
     # WhiteNoise تخدم /static/ فقط. ملفات /media/ يُخدِّمها Django مباشرةً
     # عبر django.views.static.serve في كلتا البيئتين (DEBUG=True / DEBUG=False).
     re_path(r'^media/(?P<path>.*)$', serve_protected_media),
+
+    # ── SEO ───────────────────────────────────────────────────────────────────
+    # يجب أن تسبق الـ catch-all، وإلا ابتلعها وأعاد index.html بدلاً منها
+    # (كان robots.txt و sitemap.xml يُقدَّمان كـ text/html فعلياً).
+    path('robots.txt',  robots_txt,  name='robots-txt'),
+    path('sitemap.xml', sitemap_xml, name='sitemap-xml'),
+
+    # صفحة الهبوط مُصيَّرة من الخادم (Meta + محتوى دلالي داخل الـ HTML)
+    path('', landing_ssr, name='landing-ssr'),
 
     # Catch-all للـ SPA — يُعيد index.html لكل مسار لا يبدأ بـ api أو admin أو static أو media
     re_path(r'^(?!api/|admin/|static/|media/).*$',
