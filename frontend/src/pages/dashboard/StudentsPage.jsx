@@ -11,6 +11,7 @@ import {
   UserCheck, PrinterCheck, Filter, DollarSign, Wallet,
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 import { AddPaymentModal, UpdateFinanceProfileModal } from './FinancePage'
 
 /* ─ نافذة إنشاء طالب ──────────────────────────────────────────── */
@@ -321,16 +322,16 @@ export default function StudentsPage() {
 
   useEffect(() => { load() }, [load])
 
-  // خيارات المراحل والفصول والمشرفات
+  // خيارات المراحل والفصول والمشرفات — تُجلب كاملةً لا أول صفحة فقط
   useEffect(() => {
     Promise.all([
-      api.get('/academic/levels/').catch(() => ({ data: [] })),
-      api.get('/academic/grades/').catch(() => ({ data: [] })),
-      api.get('/supervisors/').catch(() => ({ data: [] })),
+      fetchAll('/academic/levels/').catch(() => []),
+      fetchAll('/academic/grades/').catch(() => []),
+      fetchAll('/supervisors/').catch(() => []),
     ]).then(([l, g, s]) => {
-      setLevels(l.data.results || l.data)
-      setGrades(g.data.results || g.data)
-      setSupervisors(s.data.results || s.data)
+      setLevels(l)
+      setGrades(g)
+      setSupervisors(s)
     })
   }, [])
 

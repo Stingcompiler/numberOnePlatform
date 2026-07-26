@@ -12,6 +12,7 @@ import { lazy, Suspense } from 'react'
 import LandingPage from './pages/public/LandingPage'
 import LoginPage from './pages/public/LoginPage'
 import StudentRegistrationPage from './pages/public/StudentRegistrationPage'
+import StudentAppOnlyPage from './pages/public/StudentAppOnlyPage'
 
 // Dashboard Layout
 import DashboardLayout from './components/layout/DashboardLayout'
@@ -63,13 +64,16 @@ const PageLoader = () => (
   </div>
 )
 
+/* ── مسار صفحة "الوصول غير متاح عبر المتصفح" (للطلاب) ─────────── */
+const STUDENT_BLOCKED_PATH = '/student-app-only'
+
 /* ── حارس المسارات الخاصة ─────────────────────────────────────── */
 function PrivateRoute({ children, roles }) {
   const { user, loading } = useAuth()
   if (loading) return <PageLoader />
   if (!user) return <Navigate to="/login" replace />
-  // Students have no web dashboard — redirect to login
-  if (user.role === 'student') return <Navigate to="/login" replace />
+  // الطلاب: المنصة عبر تطبيق الهاتف فقط — لا وصول للوحة التحكم من المتصفح
+  if (user.role === 'student') return <Navigate to={STUDENT_BLOCKED_PATH} replace />
   if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />
   return children
 }
@@ -78,6 +82,8 @@ function PrivateRoute({ children, roles }) {
 function PublicRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return null
+  // الطالب المسجَّل لا يُعاد للوحة التحكم (يمنع حلقة إعادة التوجيه)
+  if (user?.role === 'student') return <Navigate to={STUDENT_BLOCKED_PATH} replace />
   if (user) return <Navigate to="/dashboard" replace />
   return children
 }
@@ -111,6 +117,7 @@ function AppRoutes() {
       <Route path="/login" element={
         <PublicRoute><LoginPage /></PublicRoute>
       } />
+      <Route path={STUDENT_BLOCKED_PATH} element={<StudentAppOnlyPage />} />
 
       {/* ── Dashboard — الرئيسية ───────────────────────────────── */}
       <Route path="/dashboard"

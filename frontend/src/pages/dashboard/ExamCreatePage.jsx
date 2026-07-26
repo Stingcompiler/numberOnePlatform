@@ -19,7 +19,7 @@ import {
   Image, ImagePlus, FileImage,
 } from 'lucide-react'
 import { createExam, fetchExam, updateExam } from '../../api/examService'
-import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 
 /* ═══════════════════════════════════════════════════════════════════
    أنواع الأسئلة المتاحة
@@ -487,8 +487,8 @@ export default function ExamCreatePage() {
 
   // تحميل الكورسات
   useEffect(() => {
-    api.get('/academic/courses/', { params: { page_size: 200 } })
-      .then(r => setCourses(r.data.results || r.data))
+    fetchAll('/academic/courses/')
+      .then(setCourses)
       .catch(() => {})
   }, [])
 

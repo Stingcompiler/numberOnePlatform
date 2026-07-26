@@ -9,6 +9,7 @@ import {
   ToggleLeft, ToggleRight, Users, BookMarked, Filter,
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 
 /* ── نافذة منح وصول ────────────────────────────────────────────── */
 function GrantAccessModal({ onClose, onGranted }) {
@@ -22,11 +23,11 @@ function GrantAccessModal({ onClose, onGranted }) {
   const [searchCourse, setSearchCourse] = useState('')
 
   useEffect(() => {
-    api.get('/students/', { params: { page_size: 500, system_type: 'flash' } })
-      .then(({ data }) => setStudents(data.results || data))
+    fetchAll('/students/', { system_type: 'flash' })
+      .then(setStudents)
       .catch(() => {})
-    api.get('/academic/courses/', { params: { page_size: 500, system_type: 'flash' } })
-      .then(({ data }) => setCourses(data.results || data))
+    fetchAll('/academic/courses/', { system_type: 'flash' })
+      .then(setCourses)
       .catch(() => {})
   }, [])
 
@@ -200,8 +201,8 @@ export default function StudentCourseAccessPage() {
 
   // تحميل الكورسات للفلتر (فلاش فقط)
   useEffect(() => {
-    api.get('/academic/courses/', { params: { page_size: 500, system_type: 'flash' } })
-      .then(({ data }) => setCourses(data.results || data))
+    fetchAll('/academic/courses/', { system_type: 'flash' })
+      .then(setCourses)
       .catch(() => {})
   }, [])
 

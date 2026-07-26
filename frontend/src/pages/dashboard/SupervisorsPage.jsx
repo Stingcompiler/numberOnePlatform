@@ -12,6 +12,7 @@ import {
   Calendar, ExternalLink, ChevronsLeft, ChevronsRight,
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 
 /* ─ helpers ─────────────────────────────────────────────────────── */
 const MONTHS_AR = [
@@ -495,6 +496,8 @@ export default function SupervisorsPage() {
 
   /* ── List state ── */
   const [supervisors, setSupervisors] = useState([])
+  // قائمة كاملة بالمشرفات لفلتر التقارير (مستقلة عن ترقيم صفحات الجدول)
+  const [allSupervisors, setAllSupervisors] = useState([])
   const [loading, setLoading]   = useState(true)
   const [search,  setSearch]    = useState('')
   const [modal,   setModal]     = useState(null)
@@ -525,6 +528,11 @@ export default function SupervisorsPage() {
   }, [page, search])
 
   useEffect(() => { load() }, [load])
+
+  /* ── Load all supervisors once (report filter dropdown) ── */
+  useEffect(() => {
+    fetchAll('/supervisors/').then(setAllSupervisors).catch(() => {})
+  }, [])
 
   const destroy = async id => {
     if (!window.confirm('هل أنت متأكد من حذف هذه المشرفة؟')) return
@@ -794,7 +802,7 @@ export default function SupervisorsPage() {
               onChange={setReportFilters}
               onApply={() => { setReportPage(1); loadReport(reportFilters, 1, reportPageSize) }}
               loading={reportLoading}
-              supervisors={supervisors}
+              supervisors={allSupervisors}
             />
 
             <div className="glass-card overflow-hidden">

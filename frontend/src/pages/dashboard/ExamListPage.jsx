@@ -9,7 +9,7 @@ import {
   Clock, Award, BookOpen, Eye, BarChart3,
 } from 'lucide-react'
 import { fetchExams, deleteExam } from '../../api/examService'
-import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 import Pagination from '../../components/ui/Pagination'
 
 export default function ExamListPage() {
@@ -24,8 +24,8 @@ export default function ExamListPage() {
 
   // تحميل الكورسات للفلتر
   useEffect(() => {
-    api.get('/academic/courses/', { params: { page_size: 200 } })
-      .then(r => setCourses(r.data.results || r.data))
+    fetchAll('/academic/courses/')
+      .then(setCourses)
       .catch(() => {})
   }, [])
 

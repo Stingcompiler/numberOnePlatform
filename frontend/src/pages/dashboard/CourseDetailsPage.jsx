@@ -4,6 +4,7 @@ import {
   BookOpen, Plus, Loader2, X, GraduationCap, ArrowLeft, Pencil, Trash2, BookMarked, Settings2
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 import Pagination from '../../components/ui/Pagination'
 import { useAuth } from '../../context/AuthContext'
 
@@ -106,13 +107,12 @@ export default function CourseDetailsPage() {
     Promise.all([
       api.get(`/academic/courses/${id}/`),
       api.get('/academic/units/', { params: { course: id, page } }),
-      api.get('/teachers/').catch(() => ({ data: [] }))
-    ]).then(([cRes, uRes, tRes]) => {
+      fetchAll('/teachers/').catch(() => [])
+    ]).then(([cRes, uRes, rawTeachers]) => {
       setCourse(cRes.data)
       setUnits(uRes.data.results || uRes.data)
       setTotalUnits(uRes.data.count || 0)
 
-      const rawTeachers = tRes.data.results || tRes.data
       setTeachers(rawTeachers.map(t => ({
         id: t.id,
         full_name: t.user?.full_name || `أستاذ #${t.id}`,

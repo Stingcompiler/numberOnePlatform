@@ -32,10 +32,9 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const user = await login(form.username, form.password)
-      // توجيه بحسب الدور
-      if (['admin', 'manager'].includes(user.role)) navigate('/dashboard')
-      else if (user.role === 'teacher') navigate('/dashboard')
-      else navigate('/dashboard/my-courses')
+      // توجيه بحسب الدور — الطلاب يستخدمون تطبيق الهاتف فقط
+      if (user.role === 'student') navigate('/student-app-only', { replace: true })
+      else navigate('/dashboard')
     } catch (err) {
       const msg = err.response?.data
       if (typeof msg === 'object') {

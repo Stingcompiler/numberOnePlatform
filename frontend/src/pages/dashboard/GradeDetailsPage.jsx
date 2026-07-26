@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BookOpen, BookMarked, ArrowLeft, Loader2, GraduationCap, Link, Plus, X, Edit, Trash2 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 import Pagination from '../../components/ui/Pagination'
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -112,12 +113,11 @@ export default function GradeDetailsPage() {
     Promise.all([
       api.get(`/academic/grades/${id}/`),
       api.get('/academic/courses/', { params: { grade: id, page } }),
-      api.get('/teachers/').catch(() => ({ data: [] }))
-    ]).then(([gradeRes, coursesRes, tRes]) => {
+      fetchAll('/teachers/').catch(() => [])
+    ]).then(([gradeRes, coursesRes, rawTeachers]) => {
       setGrade(gradeRes.data)
       setCourses(coursesRes.data.results || coursesRes.data)
       setTotalCourses(coursesRes.data.count || 0)
-      const rawTeachers = tRes.data.results || tRes.data
       setTeachers(rawTeachers.map(t => ({
         id: t.id,
         full_name: t.user?.full_name || `أستاذ #${t.id}`,

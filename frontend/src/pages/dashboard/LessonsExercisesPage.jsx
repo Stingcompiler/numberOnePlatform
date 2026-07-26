@@ -5,6 +5,7 @@ import {
   ClipboardList, ArrowLeft, FileText, Search, Filter, SlidersHorizontal, Eye
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 import Pagination from '../../components/ui/Pagination'
 
 /* ─── Generic Modal ─────────────────────────────────────────────── */
@@ -250,23 +251,23 @@ export default function LessonsExercisesPage() {
 
   // Load filter options
   useEffect(() => {
-    api.get('/academic/grades/', { params: { page_size: 100 } })
-      .then(r => setGrades(r.data.results || r.data)).catch(() => {})
+    fetchAll('/academic/grades/')
+      .then(setGrades).catch(() => {})
   }, [])
 
   useEffect(() => {
-    const params = { page_size: 100 }
+    const params = {}
     if (filterGrade) params.grade = filterGrade
-    api.get('/academic/courses/', { params })
-      .then(r => setCourses(r.data.results || r.data)).catch(() => {})
+    fetchAll('/academic/courses/', params)
+      .then(setCourses).catch(() => {})
     setFilterCourse('')
     setFilterUnit('')
   }, [filterGrade])
 
   useEffect(() => {
     if (!filterCourse) { setUnits([]); setFilterUnit(''); return }
-    api.get('/academic/units/', { params: { course: filterCourse, page_size: 100 } })
-      .then(r => setUnits(r.data.results || r.data)).catch(() => {})
+    fetchAll('/academic/units/', { course: filterCourse })
+      .then(setUnits).catch(() => {})
     setFilterUnit('')
   }, [filterCourse])
 

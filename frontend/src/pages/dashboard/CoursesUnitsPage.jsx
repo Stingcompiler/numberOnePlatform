@@ -4,6 +4,7 @@ import {
   X, Settings2, ArrowLeft, BookMarked, GraduationCap, Trash2
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 import { useNavigate } from 'react-router-dom'
 import Pagination from '../../components/ui/Pagination'
 import { useAuth } from '../../context/AuthContext'
@@ -139,11 +140,10 @@ export default function CoursesUnitsPage() {
     setLoading(true)
     Promise.all([
       api.get('/academic/grades/', { params: { system_type: activeSystemType, page } }),
-      api.get('/teachers/').catch(() => ({ data: [] })),
-    ]).then(([gRes, tRes]) => {
+      fetchAll('/teachers/').catch(() => []),
+    ]).then(([gRes, rawTeachers]) => {
       setGrades(gRes.data.results || gRes.data)
       setTotalCount(gRes.data.count || 0)
-      const rawTeachers = tRes.data.results || tRes.data
       setTeachers(rawTeachers.map(t => ({
         id: t.id,
         full_name: t.user?.full_name || `أستاذ #${t.id}`,

@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 
 /* ═══════════════════════════════════════════════════════════════════
    نافذة إنشاء/تعديل عامة (Generic Modal)
@@ -100,9 +101,9 @@ export default function LevelsGradesPage() {
 
   const loadLevels = useCallback(() => {
     setLoading(true)
-    api.get(`/academic/levels/?system_type=${activeSystemType}`)
-      .then((res) => {
-        setLevels(res.data.results || res.data)
+    fetchAll(`/academic/levels/?system_type=${activeSystemType}`)
+      .then((data) => {
+        setLevels(data)
       }).catch(console.error)
       .finally(() => setLoading(false))
   }, [activeSystemType])
