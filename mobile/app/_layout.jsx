@@ -129,7 +129,7 @@ function AppShell() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     'Cairo-Light': Cairo_300Light,
     'Cairo-Regular': Cairo_400Regular,
     'Cairo-Medium': Cairo_500Medium,
@@ -142,8 +142,15 @@ export default function RootLayout() {
     'Tajawal-Black': Tajawal_900Black,
   });
 
-  if (!fontsLoaded) {
+  // ننتظر تحميل الخطوط، لكن لا نعلّق التطبيق إن فشل التحميل:
+  // بدون فحص fontError كان التطبيق يبقى على شاشة فارغة إلى الأبد عند أي
+  // فشل في تحميل الخطوط. الآن نتابع بخط النظام بدل تعطيل التطبيق كلياً.
+  if (!fontsLoaded && !fontError) {
     return null;
+  }
+
+  if (fontError) {
+    console.warn('[Fonts] تعذّر تحميل الخطوط، سيُستخدم خط النظام:', fontError?.message);
   }
 
   // ── Device compatibility gate ──────────────────────────────────────────
