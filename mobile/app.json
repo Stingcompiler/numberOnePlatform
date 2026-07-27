@@ -3,7 +3,7 @@
     "name": "نمبر ون",
     "slug": "n1",
     "owner": "singspp",
-    "icon": "./src/assets/onelogo.png",
+    "icon": "./src/assets/numberOneLogo.png",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -17,7 +17,7 @@
         "android.permission.POST_NOTIFICATIONS"
       ],
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/onelogo.png",
+        "foregroundImage": "./src/assets/numberOneLogo.png",
         "backgroundColor": "#000000"
       }
     },
@@ -26,7 +26,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./src/assets/onelogo.png",
+          "icon": "./src/assets/numberOneLogo.png",
           "color": "#000000"
         }
       ]

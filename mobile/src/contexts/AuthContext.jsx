@@ -16,12 +16,35 @@ export const AuthProvider = ({ children }) => {
           const userData = await authService.getCurrentUser();
           if (userData && userData.role === 'student') {
             setUser(userData);
+            // تحديث النسخة المخزَّنة لتبقى مطابقة لبيانات الخادم
+            SecureStore.setItemAsync('student_user', JSON.stringify(userData)).catch(() => {});
           } else {
             await authService.logout();
           }
         }
       } catch (e) {
-        console.error('[AuthContext checkAuth Error]:', e, e.stack);
+        // التمييز بين حالتين مختلفتين جوهرياً:
+        //  • e.response موجود  ⇒ الخادم ردّ برفض (401 بعد فشل التجديد مثلاً)
+        //    ⇒ الجلسة انتهت فعلاً، ومعترض apiClient يكون قد مسح التوكنات.
+        //  • e.response غير موجود ⇒ خطأ شبكة أو انتهاء مهلة، والتوكنات سليمة.
+        //    كان هذا يُظهر شاشة الدخول رغم صلاحية الجلسة — نستعيد الملف المخزَّن
+        //    بدلاً من ذلك، ويتكفّل أول طلب لاحق بتجديد التوكن.
+        const isNetworkError = !e?.response;
+        if (isNetworkError) {
+          try {
+            const cached = await SecureStore.getItemAsync('student_user');
+            if (cached) {
+              const cachedUser = JSON.parse(cached);
+              if (cachedUser && cachedUser.role === 'student') {
+                setUser(cachedUser);
+              }
+            }
+          } catch (restoreError) {
+            console.warn('[AuthContext] تعذّرت استعادة الجلسة المخزَّنة:', restoreError?.message);
+          }
+        } else {
+          console.error('[AuthContext checkAuth Error]:', e, e.stack);
+        }
       } finally {
         setLoading(false);
       }
@@ -32,6 +55,7 @@ export const AuthProvider = ({ children }) => {
     global.onSessionExpired = () => {
       setUser(null);
       SecureStore.deleteItemAsync('student_logged_in').catch(() => {});
+      SecureStore.deleteItemAsync('student_user').catch(() => {});
     };
 
     return () => {
