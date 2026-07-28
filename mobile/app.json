@@ -16,6 +16,10 @@
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
       ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/numberOneLogo.png",
         "backgroundColor": "#000000"
