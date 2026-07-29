@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
 import fetchAll from '../../api/fetchAll'
+import { useAuth } from '../../context/AuthContext'
 import { AddPaymentModal, UpdateFinanceProfileModal } from './FinancePage'
 
 /* ─ نافذة إنشاء طالب ──────────────────────────────────────────── */
@@ -288,6 +289,7 @@ function DeleteStudentModal({ student, onClose, onDeleted }) {
 /* ─ الصفحة الرئيسية ────────────────────────────────────────────── */
 export default function StudentsPage() {
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
   const [students, setStudents] = useState([])
   const [grades, setGrades] = useState([])
   const [supervisors, setSupervisors] = useState([])
@@ -335,6 +337,37 @@ export default function StudentsPage() {
     })
   }, [])
 
+  // فكّ ارتباط الأجهزة عن كل الطلاب دفعة واحدة.
+  // يلزم عند تغيّر مفتاح توقيع التطبيق (مثل الانتقال إلى Play App Signing):
+  // معرّف الجهاز على أندرويد مرتبط بمفتاح التوقيع، فيتغيّر للجميع دفعةً واحدة
+  // ويُمنع كل الطلاب من الدخول. تأكيدان لأن الأثر يشمل كل الحسابات.
+  const [unbindingAll, setUnbindingAll] = useState(false)
+
+  const unbindAllDevices = async () => {
+    if (!window.confirm(
+      'سيتم فكّ ارتباط الأجهزة عن جميع الطلاب.\n\n' +
+      'سيتمكن كل طالب من الدخول من أي جهاز مرة واحدة، ثم يُربط بالجهاز الذي يدخل منه.\n\n' +
+      'هل تريد المتابعة؟'
+    )) return
+    if (!window.confirm('تأكيد أخير: هذا الإجراء يشمل كل الطلاب ولا يمكن التراجع عنه.')) return
+
+    setUnbindingAll(true)
+    try {
+      const { data } = await api.post('/students/unbind-all-devices/', { confirm: true })
+      window.alert(`تم فكّ ارتباط ${data.unbound_count ?? 0} جهازاً.`)
+      load()
+    } catch (err) {
+      const d = err.response?.data
+      window.alert(
+        err.response?.status === 403
+          ? 'هذا الإجراء متاح لمدير النظام فقط.'
+          : (typeof d?.detail === 'string' ? d.detail : 'تعذّر تنفيذ العملية.')
+      )
+    } finally {
+      setUnbindingAll(false)
+    }
+  }
+
   const unbindDevice = async (id) => {
     if (!window.confirm('هل أنت متأكد من فك ارتباط الجهاز؟')) return
     await api.post(`/students/${id}/unbind-device/`, { confirm: true })
@@ -359,9 +392,24 @@ export default function StudentsPage() {
             إجمالي: <span className="text-brand-blue font-medium">{total}</span> طالب
           </p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary">
-          <Plus size={16} /> طالب جديد
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* يظهر لمدير النظام فقط — الخادم يفرض ذلك أيضاً */}
+          {isAdmin && (
+            <button
+              onClick={unbindAllDevices}
+              disabled={unbindingAll}
+              title="فكّ ارتباط الأجهزة عن جميع الطلاب — يُستخدم عند تغيّر مفتاح توقيع التطبيق"
+              className="btn-secondary"
+            >
+              {unbindingAll
+                ? <><Loader2 size={16} className="animate-spin" /> جارٍ التنفيذ...</>
+                : <><SmartphoneNfc size={16} /> فكّ ارتباط كل الأجهزة</>}
+            </button>
+          )}
+          <button onClick={() => setShowCreate(true)} className="btn-primary">
+            <Plus size={16} /> طالب جديد
+          </button>
+        </div>
       </div>
 
       {/* شريط البحث والفلاتر */}

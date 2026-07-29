@@ -67,11 +67,19 @@ const PageLoader = () => (
 /* ── مسار صفحة "الوصول غير متاح عبر المتصفح" (للطلاب) ─────────── */
 const STUDENT_BLOCKED_PATH = '/student-app-only'
 
+/* ── مسار تسجيل الدخول ─────────────────────────────────────────
+   مسار غير معلن: لا يظهر أي زر أو رابط يقود إليه في الموقع العام،
+   وهو مستبعد من sitemap ومحجوب في robots.txt. لتغييره لاحقاً
+   يكفي تعديل هذا السطر — كل الإحالات تشتق منه.
+   ملاحظة: هذا إخفاء لا حماية؛ الحماية الفعلية هي المصادقة وحدّ
+   معدّل المحاولات على /api/auth/login/. */
+export const LOGIN_PATH = '/np-access'
+
 /* ── حارس المسارات الخاصة ─────────────────────────────────────── */
 function PrivateRoute({ children, roles }) {
   const { user, loading } = useAuth()
   if (loading) return <PageLoader />
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to={LOGIN_PATH} replace />
   // الطلاب: المنصة عبر تطبيق الهاتف فقط — لا وصول للوحة التحكم من المتصفح
   if (user.role === 'student') return <Navigate to={STUDENT_BLOCKED_PATH} replace />
   if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />
@@ -114,7 +122,7 @@ function AppRoutes() {
       {/* ── صفحات Public ───────────────────────────────────────── */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/register" element={<StudentRegistrationPage />} />
-      <Route path="/login" element={
+      <Route path={LOGIN_PATH} element={
         <PublicRoute><LoginPage /></PublicRoute>
       } />
       <Route path={STUDENT_BLOCKED_PATH} element={<StudentAppOnlyPage />} />

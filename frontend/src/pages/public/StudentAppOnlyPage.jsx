@@ -19,14 +19,15 @@ export default function StudentAppOnlyPage() {
   const { user, logout } = useAuth()
   const [leaving, setLeaving] = useState(false)
 
-  // إنهاء جلسة المتصفح ثم العودة لتسجيل الدخول
+  // إنهاء جلسة المتصفح ثم العودة للصفحة الرئيسية
   // (لا يؤثر على جلسة تطبيق الهاتف — لكلٍّ منهما توكن مستقل)
   const backToLogin = async () => {
     setLeaving(true)
     try {
       if (user) await logout()
     } finally {
-      navigate('/login', { replace: true })
+      // الطالب لا يستخدم لوحة الويب — نعيده للصفحة الرئيسية بدل صفحة الدخول
+      navigate('/', { replace: true })
     }
   }
 
@@ -92,7 +93,7 @@ export default function StudentAppOnlyPage() {
               >
                 {leaving
                   ? <><Loader2 size={16} className="animate-spin" /> جاري الخروج...</>
-                  : <><ArrowRight size={16} /> العودة لتسجيل الدخول</>
+                  : <><ArrowRight size={16} /> إنهاء الجلسة والخروج</>
                 }
               </button>
               <Link to="/" className="btn-secondary flex-1 justify-center py-3">

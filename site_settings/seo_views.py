@@ -205,10 +205,8 @@ def _build_body(request, s, logo_url, announcements, staff) -> str:
             parts.append(f"<li>{escape(label)}: {escape(value)}</li>")
         parts.append("</ul></section>")
 
-    parts.append(
-        '<nav><a href="/register">تسجيل طالب جديد</a>'
-        ' <a href="/login">تسجيل الدخول</a></nav>'
-    )
+    # لا رابط لصفحة تسجيل الدخول: مسارها غير معلن ومخصص للطاقم فقط
+    parts.append('<nav><a href="/register">تسجيل طالب جديد</a></nav>')
     parts.append("</div>")
     return "".join(parts)
 
@@ -435,6 +433,7 @@ def robots_txt(request):
         "Disallow: /api/",
         "Disallow: /admin/",
         "Disallow: /dashboard/",
+        "Disallow: /np-access",
         "Disallow: /media/registrations/",
         "",
         f"Sitemap: {sitemap}",
@@ -453,7 +452,8 @@ def sitemap_xml(request):
     except Exception:
         lastmod = None
 
-    pages = [("/", "1.0"), ("/register", "0.8"), ("/privacy", "0.6"), ("/login", "0.5")]
+    # صفحة تسجيل الدخول مستبعدة عمداً: مسارها غير معلن ولا يُراد فهرسته
+    pages = [("/", "1.0"), ("/register", "0.8"), ("/privacy", "0.6")]
     out = ['<?xml version="1.0" encoding="UTF-8"?>',
            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for path, priority in pages:

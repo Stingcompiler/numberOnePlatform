@@ -9,6 +9,7 @@ from .views import (
     LoginView, LogoutView, TokenRefreshCookieView,
     MeView, ChangePasswordView, AdminResetPasswordView, CSRFTokenView,
     StudentListCreateView, StudentDetailView, StudentUnbindDeviceView,
+    StudentUnbindAllDevicesView,
     TeacherListCreateView, TeacherDetailView,
     SupervisorListCreateView, SupervisorDetailView,
     SupervisorStudentReportView, AllSupervisorsReportView,
@@ -33,6 +34,8 @@ urlpatterns = [
     # ── الطلاب ───────────────────────────────────────────────────────────────
     path("students/",                          StudentListCreateView.as_view(),  name="student-list"),
     path("students/<int:pk>/",                 StudentDetailView.as_view(),      name="student-detail"),
+    # يجب أن يسبق مسارات <int:pk> وإلا فُسِّر "unbind-all-devices" كمعرّف رقمي
+    path("students/unbind-all-devices/",       StudentUnbindAllDevicesView.as_view(), name="student-unbind-all"),
     path("students/<int:pk>/unbind-device/",   StudentUnbindDeviceView.as_view(), name="student-unbind-device"),
 
     # ── الأساتذة ─────────────────────────────────────────────────────────────

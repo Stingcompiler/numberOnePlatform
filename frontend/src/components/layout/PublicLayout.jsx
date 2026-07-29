@@ -99,14 +99,9 @@ export default function PublicLayout({ children, settings }) {
           </ul>
 
           {/* أزرار الهيدر */}
+          {/* أُزيل زر "تسجيل الدخول": لوحة التحكم مخصصة للطاقم، والطلاب
+              يستخدمون تطبيق الهاتف. المسار غير معلن ويُدخل إليه مباشرةً. */}
           <div className="flex items-center gap-3">
-            <Link
-              to="/login"
-              id="navbar-login-btn"
-              className="lp-btn-primary hidden sm:inline-flex"
-            >
-              تسجيل الدخول
-            </Link>
             <button
               id="navbar-mobile-toggle"
               className="md:hidden p-2 rounded-lg transition-all duration-200"
@@ -146,13 +141,6 @@ export default function PublicLayout({ children, settings }) {
                 {link.label}
               </a>
             ))}
-            <Link
-              to="/login"
-              className="lp-btn-primary w-full justify-center mt-4"
-              onClick={() => setMobileOpen(false)}
-            >
-              تسجيل الدخول
-            </Link>
           </div>
         )}
       </header>

@@ -377,6 +377,39 @@ class StudentDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response(serializer.data)
 
 
+class StudentUnbindAllDevicesView(APIView):
+    """
+    POST /api/students/unbind-all-devices/  — فكّ ارتباط الأجهزة عن كل الطلاب.
+
+    يُستخدم عند تغيّر مفتاح توقيع التطبيق (مثل الانتقال إلى Play App Signing):
+    معرّف ANDROID_ID مرتبط بمفتاح التوقيع منذ أندرويد 8، فيتغيّر معرّف كل
+    الأجهزة دفعةً واحدة ويُمنع جميع الطلاب من الدخول. هذه النقطة تُعيد ضبط
+    الارتباط لتُتيح لهم الدخول من التثبيت الجديد، ثم يُعاد الربط تلقائياً
+    عند أول تسجيل دخول.
+
+    مقصورة على مدير النظام، وتتطلب تأكيداً صريحاً في الجسم لمنع الاستدعاء
+    العرضي، لأن أثرها يشمل كل الحسابات.
+    """
+
+    permission_classes = [IsAdmin]
+
+    def post(self, request):
+        if request.data.get("confirm") is not True:
+            return Response(
+                {"detail": _("التأكيد مطلوب: أرسل confirm=true.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        bound = StudentProfile.objects.exclude(device_id__isnull=True).exclude(device_id="")
+        count = bound.count()
+        bound.update(device_id=None, device_bound_at=None)
+
+        return Response({
+            "detail": _("تم فكّ ارتباط الأجهزة عن جميع الطلاب."),
+            "unbound_count": count,
+        })
+
+
 class StudentUnbindDeviceView(APIView):
     """POST /api/students/<id>/unbind-device/ ??? ???????????? ??????"""
 
