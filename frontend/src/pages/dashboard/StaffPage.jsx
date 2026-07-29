@@ -10,6 +10,8 @@ import {
   Image,
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
+import Pagination from '../../components/ui/Pagination'
 
 /* ─ مودال إنشاء/تعديل ──────────────────────────────────────────── */
 function StaffModal({ item, onClose, onSaved }) {
@@ -211,15 +213,25 @@ export default function StaffPage() {
   const [modal,   setModal]   = useState(null)
   const [filter,  setFilter]  = useState('')  // '' | 'academic' | 'administrative'
 
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 10
+
+  // نقطة /admin/staff/ مُجزَّأة من الخادم وكانت الصفحة تعرض أول 10 بطاقات فقط.
+  // نجلبها كاملة ثم نُرقّمها محلياً، لأن تبويبات التصنيف وعدّادات
+  // (هيئة أكاديمية / إدارية) تُحسب من القائمة كلها — والترقيم الخادمي كان
+  // سيجعلها تعكس الصفحة الحالية فقط، وهو انحدار في الوظيفة.
   const load = useCallback(() => {
     setLoading(true)
-    api.get('/admin/staff/')
-      .then(({ data }) => setStaff(data.results || data))
+    fetchAll('/admin/staff/')
+      .then(setStaff)
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // العودة للصفحة الأولى عند تغيير التصنيف
+  useEffect(() => { setPage(1) }, [filter])
 
   const destroy = async (id) => {
     if (!window.confirm('هل أنت متأكد من حذف هذه البطاقة؟')) return
@@ -230,6 +242,9 @@ export default function StaffPage() {
   const filtered = filter ? staff.filter(s => s.card_type === filter) : staff
   const academic = staff.filter(s => s.card_type === 'academic').length
   const admin    = staff.filter(s => s.card_type === 'administrative').length
+
+  // شريحة الصفحة الحالية بعد تطبيق التصنيف
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -282,7 +297,7 @@ export default function StaffPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((item) => (
+          {paged.map((item) => (
             <StaffCard
               key={item.id}
               item={item}
@@ -290,6 +305,16 @@ export default function StaffPage() {
               onDelete={destroy}
             />
           ))}
+
+          <p className="text-white/40 text-xs text-center pt-2">
+            إجمالي البطاقات: <span className="text-brand-blue font-medium">{filtered.length}</span>
+          </p>
+          <Pagination
+            count={filtered.length}
+            pageSize={PAGE_SIZE}
+            currentPage={page}
+            onPageChange={setPage}
+          />
         </div>
       )}
 

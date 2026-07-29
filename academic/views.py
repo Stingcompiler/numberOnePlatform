@@ -9,6 +9,7 @@ Views الكاملة للهيكل الأكاديمي
 ================================================================================
 """
 
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -366,11 +367,21 @@ class StudentCourseAccessListCreateView(generics.ListCreateAPIView):
         ).filter(student__system_type="flash")
         student_id = self.request.query_params.get("student")
         course_id  = self.request.query_params.get("course")
+        search     = self.request.query_params.get("search")
         if student_id:
             qs = qs.filter(student_id=student_id)
         if course_id:
             qs = qs.filter(course_id=course_id)
-        return qs
+        # البحث على الخادم: كانت الواجهة تُصفّي محلياً، وهو ما يعني — مع ترقيم
+        # الصفحات — البحث داخل السجلات المعروضة فقط. نقله للخادم يجعله يشمل
+        # كل السجلات. ترتيب ثابت مطلوب أيضاً وإلا تكرّرت/سقطت سجلات بين الصفحات.
+        if search:
+            qs = qs.filter(
+                Q(student__user__full_name__icontains=search)
+                | Q(student__user__username__icontains=search)
+                | Q(course__name__icontains=search)
+            )
+        return qs.order_by("-granted_at", "-id")
 
     def perform_create(self, serializer):
         serializer.save(granted_by=self.request.user)

@@ -5,6 +5,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axiosInstance'
 import fetchAll from '../../api/fetchAll'
+import Pagination from '../../components/ui/Pagination'
 
 /* ═══════════════════════════════════════════════════════════════════
    نافذة إنشاء/تعديل عامة (Generic Modal)
@@ -98,6 +99,9 @@ export default function LevelsGradesPage() {
 
   // فلاتر الفصول
   const [filterLevel, setFilterLevel] = useState('')
+  // ترقيم صفحات الفصول — النقطة مُجزَّأة من الخادم وكانت تعرض أول 10 فقط
+  const [gradePage, setGradePage] = useState(1)
+  const [gradeTotal, setGradeTotal] = useState(0)
 
   const loadLevels = useCallback(() => {
     setLoading(true)
@@ -110,15 +114,20 @@ export default function LevelsGradesPage() {
 
   const loadGrades = useCallback(() => {
     setLoading(true)
-    const params = { system_type: activeSystemType }
+    const params = { system_type: activeSystemType, page: gradePage }
     if (filterLevel) params.level = filterLevel
 
     api.get('/academic/grades/', { params })
       .then((res) => {
         setGrades(res.data.results || res.data)
+        setGradeTotal(res.data.count ?? (Array.isArray(res.data) ? res.data.length : 0))
       }).catch(console.error)
       .finally(() => setLoading(false))
-  }, [filterLevel, activeSystemType])
+  }, [filterLevel, activeSystemType, gradePage])
+
+  // العودة للصفحة الأولى عند تغيير الفلتر أو النظام حتى لا يبقى المستخدم
+  // على رقم صفحة غير موجود في النتائج الجديدة
+  useEffect(() => { setGradePage(1) }, [filterLevel, activeSystemType])
 
   useEffect(() => {
     if (activeTab === 'levels') loadLevels()
@@ -334,6 +343,8 @@ export default function LevelsGradesPage() {
                 ))}
              </div>
            )}
+
+           <Pagination count={gradeTotal} currentPage={gradePage} onPageChange={setGradePage} />
          </div>
       )}
 

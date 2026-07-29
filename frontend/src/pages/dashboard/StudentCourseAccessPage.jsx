@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
 import fetchAll from '../../api/fetchAll'
+import Pagination from '../../components/ui/Pagination'
 
 /* ── نافذة منح وصول ────────────────────────────────────────────── */
 function GrantAccessModal({ onClose, onGranted }) {
@@ -187,15 +188,33 @@ export default function StudentCourseAccessPage() {
   const [courses, setCourses]       = useState([])
   const [filterCourse, setFilterCourse] = useState('')
 
+  // ترقيم صفحات من الخادم — كانت الصفحة تعرض أول 10 سجلات فقط بلا وسيلة لبقيتها
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  // البحث انتقل إلى الخادم كي يشمل كل السجلات لا الصفحة المعروضة فقط
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350)
+    return () => clearTimeout(t)
+  }, [search])
+
+  // العودة للصفحة الأولى عند تغيير البحث أو الفلتر
+  useEffect(() => { setPage(1) }, [debouncedSearch, filterCourse])
+
   const load = useCallback(() => {
     setLoading(true)
-    const params = {}
+    const params = { page }
     if (filterCourse) params.course = filterCourse
+    if (debouncedSearch) params.search = debouncedSearch
     api.get('/academic/access/', { params })
-      .then(({ data }) => setAccesses(data.results || data))
+      .then(({ data }) => {
+        setAccesses(data.results || data)
+        setTotal(data.count ?? (Array.isArray(data) ? data.length : 0))
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [filterCourse])
+  }, [filterCourse, page, debouncedSearch])
 
   useEffect(() => { load() }, [load])
 
@@ -223,14 +242,10 @@ export default function StudentCourseAccessPage() {
     } catch (e) { console.error(e) }
   }
 
-  // فلتر بحث محلي
-  const filtered = search
-    ? accesses.filter(a =>
-        (a.student_name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (a.course_name || '').toLowerCase().includes(search.toLowerCase())
-      )
-    : accesses
+  // البحث صار على الخادم (يشمل كل السجلات لا الصفحة الحالية فقط)
+  const filtered = accesses
 
+  // ملاحظة: هذه إحصاءات الصفحة الحالية، والإجمالي الكلي يظهر أسفل القائمة
   const activeCount   = accesses.filter(a => a.is_active).length
   const inactiveCount = accesses.length - activeCount
 
@@ -373,6 +388,13 @@ export default function StudentCourseAccessPage() {
               )}
             </tbody>
           </table>
+
+          <div className="px-4 pb-4">
+            <p className="text-white/40 text-xs text-center mb-2">
+              إجمالي السجلات: <span className="text-brand-blue font-medium">{total}</span>
+            </p>
+            <Pagination count={total} currentPage={page} onPageChange={setPage} />
+          </div>
         </div>
       )}
 

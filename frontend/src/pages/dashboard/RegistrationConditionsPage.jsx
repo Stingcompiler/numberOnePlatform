@@ -4,21 +4,26 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Shield, Plus, Edit3, Trash2, Loader2, Save, X, GripVertical, Eye, EyeOff } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import Pagination from '../../components/ui/Pagination'
 
 export default function RegistrationConditionsPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null) // {id,title,content,display_order,is_active} or {isNew:true,...}
   const [saving, setSaving] = useState(false)
+  // ترقيم صفحات — النقطة مُجزَّأة من الخادم وكانت تعرض أول 10 شروط فقط
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
 
   const fetch = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await api.get('/registration-conditions/')
+      const { data } = await api.get('/registration-conditions/', { params: { page } })
       setItems(data.results || data)
+      setTotal(data.count ?? (Array.isArray(data) ? data.length : 0))
     } catch { setItems([]) }
     setLoading(false)
-  }, [])
+  }, [page])
 
   useEffect(() => { fetch() }, [fetch])
 
@@ -107,6 +112,11 @@ export default function RegistrationConditionsPage() {
               </div>
             </div>
           ))}
+
+          <p className="text-white/40 text-xs text-center pt-2">
+            إجمالي الشروط: <span className="text-brand-blue font-medium">{total}</span>
+          </p>
+          <Pagination count={total} currentPage={page} onPageChange={setPage} />
         </div>
       )}
 
