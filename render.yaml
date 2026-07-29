@@ -68,6 +68,12 @@ services:
       - key: COOKIE_SECURE
         value: "True"
 
+      # حساب مراجعة متجر Google Play — اسم مستخدم واحد يُستثنى من ربط الجهاز
+      # كي يتمكن المراجع من الدخول من أي جهاز. يُضبط يدوياً في اللوحة عند
+      # تقديم التطبيق للمراجعة، ويُحذف بعد الموافقة.
+      # - key: REVIEW_ACCOUNT_USERNAME
+      #   value: "play_reviewer"
+
       # DATABASE_URL: يُحقن تلقائياً من قاعدة البيانات المرتبطة أدناه
       - key: DATABASE_URL
         fromDatabase:

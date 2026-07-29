@@ -4,6 +4,7 @@ accounts/serializers.py
 ================================================================================
 """
 
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -161,7 +162,12 @@ class LoginSerializer(serializers.Serializer):
         # الطلاب يستخدمون المنصة عبر تطبيق الهاتف حصراً، والتطبيق يُرسل device_id
         # دائماً. جعله إلزامياً يمنع تجاوز "جهاز واحد لكل طالب" بحذف الحقل أو
         # مخاطبة الـ API مباشرةً. المستخدمون غير الطلاب (إدارة/معلمون) لا يتأثرون.
-        if user.is_student:
+        # استثناء حساب مراجعة متجر Play: يدخل من أي جهاز ولا يُربط بأيٍّ منها.
+        # مضبوط باسم مستخدم واحد فقط عبر متغيّر بيئة، ومعطّل ما لم يُضبط.
+        review_username = getattr(settings, "REVIEW_ACCOUNT_USERNAME", "") or ""
+        is_review_account = bool(review_username) and user.username == review_username
+
+        if user.is_student and not is_review_account:
             if not device_id:
                 raise serializers.ValidationError(
                     _("يجب تسجيل الدخول من تطبيق الهاتف الرسمي."),

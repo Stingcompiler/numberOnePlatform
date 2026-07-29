@@ -17,6 +17,19 @@ import * as Device from 'expo-device';
 const MAX_SUPPORTED_DIAGONAL_INCHES = 11.0;
 
 /**
+ * يُفعَّل في بناء الإنتاج (متجر Google Play) فقط عبر eas.json.
+ *
+ * السبب: مراجعو Google يختبرون التطبيقات على محاكيات في كثير من الأحيان. إبقاء
+ * الحجب في نسخة المتجر يجعل المراجع يرى شاشة "جهاز غير مدعوم" فيستنتج أن
+ * التطبيق معطّل ⇒ رفض بموجب سياسة Broken Functionality.
+ *
+ * نسخة التوزيع المباشر (profile الـ preview) تُبنى بدون هذا المتغيّر، فيبقى
+ * الحجب فعّالاً للطلاب. وفي الحالتين يظل ربط الحساب بجهاز واحد قائماً وهو
+ * خط الدفاع الأقوى.
+ */
+const ALLOW_EMULATOR = process.env.EXPO_PUBLIC_ALLOW_EMULATOR === '1';
+
+/**
  * Compute the physical screen diagonal in inches using the dp-to-inches
  * formula: 1 dp = 1/160 inch on the Android baseline density.
  *
@@ -96,10 +109,16 @@ export function isDeviceSupported() {
     return false; // Blocks web, windows, macos, etc.
   }
 
+  // في بناء المتجر نكتفي بحجب الويب وسطح المكتب أعلاه، ونسمح بالمحاكيات
+  // والشاشات الكبيرة كي يتمكن مراجع Google من تشغيل التطبيق واختباره.
+  if (ALLOW_EMULATOR) {
+    return true;
+  }
+
   // 2. Block Simulators and Emulators using Expo's native check
   // `isDevice` is true for physical devices, false for emulators/simulators.
   if (!Device.isDevice) {
-    return false; 
+    return false;
   }
 
   // 2.5 Block Apple Silicon Macs running the iOS app natively ("Designed for iPad")

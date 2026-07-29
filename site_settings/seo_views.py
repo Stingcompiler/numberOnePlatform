@@ -264,6 +264,166 @@ def landing_ssr(request):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 1.b سياسة الخصوصية — إلزامية لنشر التطبيق على Google Play
+# ─────────────────────────────────────────────────────────────────────────────
+# تُقدَّم كصفحة مستقلة مُصيَّرة من الخادم بالكامل (لا تعتمد على JavaScript)،
+# لأن مراجعي Google والزواحف يجب أن يصلوا إليها دائماً وبلا تسجيل دخول.
+# محتواها مبنيّ على ما يجمعه النظام فعلياً، ويجب أن يطابق نموذج Data Safety.
+
+PRIVACY_SECTIONS = [
+    ("البيانات التي نجمعها", [
+        ("بيانات الحساب",
+         "الاسم الكامل، اسم المستخدم، رقم الهاتف، والصورة الشخصية للحساب إن رُفعت."),
+        ("بيانات ولي الأمر",
+         "اسم ولي الأمر ورقم هاتفه وعنوان السكن، لأغراض التواصل الإداري."),
+        ("مستندات التسجيل",
+         "عند التقديم للتسجيل: صورة الرقم الوطني للطالب والأب والأم، شهادة الميلاد، "
+         "آخر نتيجة دراسية، صورة شخصية، وإيصال سداد الرسوم. تُستخدم للتحقق من الهوية "
+         "واستكمال إجراءات القبول فقط."),
+        ("معرّف الجهاز",
+         "معرّف الجهاز الذي يوفّره نظام أندرويد، ويُستخدم حصراً لربط حساب الطالب بجهاز "
+         "واحد منعاً لمشاركة الحسابات. لا نجمع رقم الهاتف التسلسلي ولا موقع الجهاز."),
+        ("بيانات الاستخدام الأكاديمي",
+         "المحاضرات المُشاهَدة، حالة إكمالها، إجابات التمارين، ومحاولات الاختبارات ودرجاتها."),
+        ("البيانات المالية",
+         "سجلات الرسوم والدفعات المسجَّلة من الإدارة. لا نجمع بيانات بطاقات بنكية "
+         "ولا تتم أي عملية دفع داخل التطبيق."),
+        ("رموز الإشعارات",
+         "رمز الإشعارات الذي تصدره خدمة Expo، لإرسال تنبيهات المحاضرات والنتائج."),
+    ]),
+    ("كيف نستخدم البيانات", [
+        ("", "تقديم الخدمة التعليمية: عرض المقررات والمحاضرات والاختبارات وتسجيل التقدّم."),
+        ("", "التحقق من الهوية واستكمال إجراءات التسجيل والقبول."),
+        ("", "حماية الحساب عبر ربطه بجهاز واحد ومنع الاستخدام غير المصرّح به."),
+        ("", "إرسال إشعارات متعلقة بالدراسة والنتائج والرسوم."),
+        ("", "التواصل الإداري مع الطالب أو ولي أمره عند الحاجة."),
+    ]),
+    ("ما لا نفعله", [
+        ("", "لا نبيع بياناتك الشخصية لأي جهة."),
+        ("", "لا نشارك بياناتك مع معلنين ولا نعرض إعلانات داخل التطبيق."),
+        ("", "لا نجمع موقعك الجغرافي ولا جهات اتصالك ولا رسائلك."),
+        ("", "لا نصل إلى الكاميرا أو الميكروفون."),
+    ]),
+    ("مشاركة البيانات", [
+        ("", "تُشارَك البيانات داخلياً مع الكادر الإداري والمشرفين والمعلمين المخوّلين "
+             "بالقدر اللازم لأداء عملهم فقط."),
+        ("", "نستعين بمزوّدي خدمة تقنيين لتشغيل المنصة: استضافة الخوادم وقاعدة البيانات، "
+             "وخدمة الإشعارات (Expo)، وخدمة استضافة الفيديو التعليمي."),
+        ("", "قد نُفصح عن البيانات إذا ألزمنا القانون بذلك."),
+    ]),
+    ("حماية البيانات", [
+        ("", "الاتصال بالخادم مشفَّر عبر HTTPS."),
+        ("", "تُخزَّن رموز الدخول في التخزين الآمن للنظام (Keystore / Keychain)."),
+        ("", "مستندات التسجيل محمية ولا تُتاح إلا لحسابات الإدارة المخوّلة."),
+        ("", "كلمات المرور مُخزَّنة مُجزَّأة (hashed) ولا يمكن استرجاعها كنص."),
+    ]),
+    ("الاحتفاظ بالبيانات", [
+        ("", "نحتفظ ببيانات الطالب طوال مدة ارتباطه بالمؤسسة، وبالسجلات الأكاديمية "
+             "والمالية للمدة التي تقتضيها الأنظمة الإدارية والقانونية."),
+    ]),
+    ("حقوقك", [
+        ("", "طلب الاطلاع على بياناتك أو تصحيحها."),
+        ("", "طلب حذف حسابك وبياناتك، ضمن ما تسمح به الالتزامات الإدارية والقانونية."),
+        ("", "سحب موافقتك على الإشعارات في أي وقت من إعدادات الجهاز."),
+        ("", "لممارسة أي من هذه الحقوق تواصل معنا عبر البيانات أدناه."),
+    ]),
+    ("خصوصية القاصرين", [
+        ("", "المنصة موجّهة لطلاب المؤسسة، وقد يكون بعضهم قاصراً. يتم التسجيل عبر "
+             "المؤسسة وبعلم ولي الأمر الذي تُجمع بياناته ضمن استمارة التسجيل. "
+             "لولي الأمر حق الاطلاع على بيانات ابنه أو طلب حذفها بالتواصل مع الإدارة."),
+    ]),
+]
+
+
+def privacy_policy(request):
+    """GET /privacy — صفحة سياسة الخصوصية (عامة، بلا تسجيل دخول، بلا JavaScript)."""
+    try:
+        s = SiteSettings.get_settings()
+        name = _txt(getattr(s, "institution_name", ""), "مدارس ومعاهد نمبر ون")
+        email = _txt(getattr(s, "primary_email", ""))
+        phone = _txt(getattr(s, "primary_phone", ""))
+        address = _txt(getattr(s, "address_text", ""))
+    except Exception:
+        name, email, phone, address = "مدارس ومعاهد نمبر ون", "", "", ""
+
+    body = []
+    for title, items in PRIVACY_SECTIONS:
+        body.append(f"<h2>{escape(title)}</h2>")
+        simple = all(not sub for sub, _ in items)
+        if simple:
+            body.append("<ul>")
+            for _sub, text in items:
+                body.append(f"<li>{escape(text)}</li>")
+            body.append("</ul>")
+        else:
+            for sub, text in items:
+                if sub:
+                    body.append(f"<h3>{escape(sub)}</h3>")
+                body.append(f"<p>{escape(text)}</p>")
+
+    contact = ["<h2>التواصل معنا</h2>", "<ul>"]
+    if email:
+        contact.append(f'<li>البريد الإلكتروني: <a href="mailto:{escape(email)}">{escape(email)}</a></li>')
+    if phone:
+        contact.append(f"<li>الهاتف: {escape(phone)}</li>")
+    if address:
+        contact.append(f"<li>العنوان: {escape(address)}</li>")
+    contact.append("</ul>")
+    if not (email or phone):
+        contact.append("<p>يرجى التواصل مع إدارة المؤسسة.</p>")
+
+    canonical = request.build_absolute_uri("/privacy")
+    html = f"""<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>سياسة الخصوصية — {escape(name)}</title>
+<meta name="description" content="سياسة الخصوصية الخاصة بمنصة {escape(name)}: البيانات التي نجمعها وكيفية استخدامها وحمايتها وحقوقك." />
+<link rel="canonical" href="{escape(canonical)}" />
+<meta name="robots" content="index, follow" />
+<style>
+  :root {{ color-scheme: dark; }}
+  body {{ margin:0; padding:0; background:#070B14; color:#E6EAF2;
+         font-family:'Tajawal','Segoe UI',system-ui,sans-serif; line-height:1.9; }}
+  .wrap {{ max-width:860px; margin:0 auto; padding:40px 20px 80px; }}
+  header {{ border-bottom:1px solid rgba(255,255,255,.1); padding-bottom:24px; margin-bottom:32px; }}
+  h1 {{ font-size:1.9rem; margin:0 0 8px; color:#fff; }}
+  .sub {{ color:#94A3B8; font-size:.95rem; margin:0; }}
+  h2 {{ font-size:1.25rem; color:#fff; margin:36px 0 12px;
+        border-right:3px solid #1A56DB; padding-right:12px; }}
+  h3 {{ font-size:1rem; color:#2563EB; margin:20px 0 6px; }}
+  p, li {{ color:#CBD5E1; font-size:.98rem; }}
+  ul {{ padding-right:22px; }}
+  li {{ margin-bottom:8px; }}
+  a {{ color:#2563EB; }}
+  footer {{ margin-top:48px; padding-top:24px; border-top:1px solid rgba(255,255,255,.1);
+            color:#64748B; font-size:.85rem; }}
+  .home {{ display:inline-block; margin-top:12px; color:#2563EB; text-decoration:none; }}
+  @media (max-width:600px) {{ h1 {{ font-size:1.5rem; }} .wrap {{ padding:24px 16px 60px; }} }}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>سياسة الخصوصية</h1>
+    <p class="sub">{escape(name)}</p>
+  </header>
+  <p>توضّح هذه السياسة البيانات التي نجمعها عبر منصة {escape(name)} وتطبيقها على الهاتف،
+     وكيفية استخدامها وحمايتها، وحقوقك تجاهها.</p>
+  {''.join(body)}
+  {''.join(contact)}
+  <footer>
+    <p>قد نُحدِّث هذه السياسة عند تغيّر خدماتنا، وسيظهر أي تحديث على هذه الصفحة.</p>
+    <a class="home" href="/">← العودة للصفحة الرئيسية</a>
+  </footer>
+</div>
+</body>
+</html>"""
+    return HttpResponse(html, content_type="text/html; charset=utf-8")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 2. robots.txt — كان يُرجع HTML بسبب مسار الـ catch-all
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -293,7 +453,7 @@ def sitemap_xml(request):
     except Exception:
         lastmod = None
 
-    pages = [("/", "1.0"), ("/register", "0.8"), ("/login", "0.5")]
+    pages = [("/", "1.0"), ("/register", "0.8"), ("/privacy", "0.6"), ("/login", "0.5")]
     out = ['<?xml version="1.0" encoding="UTF-8"?>',
            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for path, priority in pages:

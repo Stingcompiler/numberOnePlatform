@@ -35,7 +35,7 @@ from django.views.static import serve
 
 # ── استيراد الـ URL patterns المقسّمة من site_settings ──────────────────────
 from site_settings.urls import public_urlpatterns, admin_urlpatterns
-from site_settings.seo_views import landing_ssr, robots_txt, sitemap_xml
+from site_settings.seo_views import landing_ssr, robots_txt, sitemap_xml, privacy_policy
 
 # ─────────────────────────────────────────────────────────────────────────────
 # دوال مساعدة — خدمة ملفات React المبنية (frontend/dist/)
@@ -135,6 +135,11 @@ urlpatterns = [
     # (كان robots.txt و sitemap.xml يُقدَّمان كـ text/html فعلياً).
     path('robots.txt',  robots_txt,  name='robots-txt'),
     path('sitemap.xml', sitemap_xml, name='sitemap-xml'),
+
+    # سياسة الخصوصية — إلزامية لنشر التطبيق على Google Play.
+    # يجب أن تسبق الـ catch-all كي تُقدَّم كصفحة حقيقية لا كقشرة SPA.
+    path('privacy',  privacy_policy, name='privacy-policy'),
+    path('privacy/', privacy_policy),
 
     # صفحة الهبوط مُصيَّرة من الخادم (Meta + محتوى دلالي داخل الـ HTML)
     path('', landing_ssr, name='landing-ssr'),
