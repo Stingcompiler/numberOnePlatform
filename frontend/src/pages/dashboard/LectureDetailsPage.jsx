@@ -285,7 +285,7 @@ export default function LectureDetailsPage() {
       setLesson(data)
       setQuestions(data.exercise?.questions || [])
     } catch (err) {
-      if (err.response?.status === 404) navigate('/dashboard/academic/lessons')
+      if (err.response?.status === 404) navigate('/np-panel/academic/lessons')
       else setError('حدث خطأ في تحميل بيانات المحاضرة.')
     } finally { setLoading(false) }
   }, [id, navigate])

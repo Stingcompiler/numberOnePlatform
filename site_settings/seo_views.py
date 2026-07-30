@@ -432,7 +432,7 @@ def robots_txt(request):
         "Allow: /",
         "Disallow: /api/",
         "Disallow: /admin/",
-        "Disallow: /dashboard/",
+        "Disallow: /np-panel/",
         "Disallow: /np-access",
         "Disallow: /media/registrations/",
         "",

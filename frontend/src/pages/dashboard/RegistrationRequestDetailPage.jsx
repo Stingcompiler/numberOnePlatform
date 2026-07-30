@@ -55,7 +55,7 @@ export default function RegistrationRequestDetailPage() {
   useEffect(() => {
     api.get(`/student-registration/${id}/`)
       .then(r => { setData(r.data); setNotes(r.data.admin_notes || ''); setStatusVal(r.data.status) })
-      .catch(() => navigate('/dashboard/student-requests'))
+      .catch(() => navigate('/np-panel/student-requests'))
       .finally(() => setLoading(false))
   }, [id, navigate])
 
@@ -79,7 +79,7 @@ export default function RegistrationRequestDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/dashboard/student-requests')} className="btn-ghost p-2 rounded-xl"><ArrowRight size={18} /></button>
+          <button onClick={() => navigate('/np-panel/student-requests')} className="btn-ghost p-2 rounded-xl"><ArrowRight size={18} /></button>
           <div>
             <h1 className="font-cairo font-bold text-xl text-white">تفاصيل طلب التسجيل</h1>
             <p className="text-white/40 text-sm mt-0.5">#{data.id} — {data.student_full_name}</p>

@@ -144,7 +144,7 @@ export default function GradeDetailsPage() {
     return (
       <div className="glass-card p-12 text-center text-white/30 space-y-4">
         <p className="text-brand-red">{error || 'لم يتم العثور على الفصل.'}</p>
-        <button onClick={() => navigate('/dashboard/academic/levels')} className="btn-secondary mx-auto">
+        <button onClick={() => navigate('/np-panel/academic/levels')} className="btn-secondary mx-auto">
           العودة للمراحل والفصول
         </button>
       </div>
@@ -156,7 +156,7 @@ export default function GradeDetailsPage() {
       {/* Header Back Button */}
       <div className="flex items-center gap-3">
         <button 
-          onClick={() => navigate('/dashboard/academic/levels')}
+          onClick={() => navigate('/np-panel/academic/levels')}
           className="flex items-center gap-1.5 text-white/50 hover:text-white text-sm transition-colors"
         >
           <ArrowLeft size={16} /> العودة للاستكشاف
@@ -200,7 +200,7 @@ export default function GradeDetailsPage() {
                   إضافة كورس <Plus size={12} />
                </button>
                <button 
-                 onClick={() => navigate('/dashboard/academic/courses')} 
+                 onClick={() => navigate('/np-panel/academic/courses')} 
                  className="btn-ghost text-brand-blue text-xs flex items-center gap-1 ml-2 border border-brand-blue/30 px-2 py-1 rounded"
                >
                   مدير الكورسات <Link size={12} />
@@ -261,7 +261,7 @@ export default function GradeDetailsPage() {
                               <Trash2 size={14} />
                            </button>
                            <button 
-                              onClick={() => navigate(`/dashboard/academic/courses/${c.id}`)}
+                              onClick={() => navigate(`/np-panel/academic/courses/${c.id}`)}
                               className="btn-ghost border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10 py-1 px-3 text-[10px] sm:text-xs shrink-0 flex items-center gap-1 rounded-md mr-1"
                            >
                               التفاصيل <ArrowLeft size={12} />

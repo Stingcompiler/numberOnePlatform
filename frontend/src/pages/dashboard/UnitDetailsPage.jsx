@@ -322,7 +322,7 @@ export default function UnitDetailsPage() {
       setLessons(detailed)
     }).catch((err) => {
       console.error(err)
-      if (err.response?.status === 404) navigate('/dashboard/academic/courses')
+      if (err.response?.status === 404) navigate('/np-panel/academic/courses')
     }).finally(() => setLoading(false))
   }, [id, navigate, page])
 

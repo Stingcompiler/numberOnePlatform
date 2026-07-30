@@ -524,7 +524,7 @@ export default function StudentsPage() {
                       <button onClick={() => setEditFinance({ id: s.id, name: s.user?.full_name })} title="الملف المالي (المطلوب)" className="btn-ghost p-1.5 text-brand-blue hover:bg-brand-blue/10 rounded-lg">
                         <Wallet size={15} />
                       </button>
-                      <button onClick={() => navigate(`/dashboard/students/${s.id}`)} title="تفاصيل كاملة" className="btn-ghost p-1.5 text-brand-blue hover:bg-brand-blue/10 rounded-lg">
+                      <button onClick={() => navigate(`/np-panel/students/${s.id}`)} title="تفاصيل كاملة" className="btn-ghost p-1.5 text-brand-blue hover:bg-brand-blue/10 rounded-lg">
                         <Eye size={15} />
                       </button>
                       <button onClick={() => setEditStudent(s)} title="تعديل" className="btn-ghost p-1.5 text-amber-400 hover:bg-amber-400/10 rounded-lg">

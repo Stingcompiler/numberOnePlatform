@@ -69,7 +69,7 @@ export default function ExamSubmissionsPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate('/dashboard/exams')}
+          onClick={() => navigate('/np-panel/exams')}
           className="btn-ghost p-2"
         >
           <ArrowRight size={18} />
@@ -160,7 +160,7 @@ export default function ExamSubmissionsPage() {
                   <tr
                     key={attempt.id}
                     className="cursor-pointer hover:bg-white/03 transition-colors"
-                    onClick={() => navigate(`/dashboard/exams/attempts/${attempt.id}`)}
+                    onClick={() => navigate(`/np-panel/exams/attempts/${attempt.id}`)}
                   >
                     <td className="text-white/30 text-xs">{idx + 1}</td>
                     <td>
@@ -211,7 +211,7 @@ export default function ExamSubmissionsPage() {
               <div
                 key={attempt.id}
                 className="glass-card p-4 cursor-pointer active:scale-[0.98] transition-transform"
-                onClick={() => navigate(`/dashboard/exams/attempts/${attempt.id}`)}
+                onClick={() => navigate(`/np-panel/exams/attempts/${attempt.id}`)}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">

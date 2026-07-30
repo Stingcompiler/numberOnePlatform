@@ -742,7 +742,7 @@ export default function SupervisorsPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
-                        onClick={() => navigate(`/dashboard/supervisors/${s.id}`)}
+                        onClick={() => navigate(`/np-panel/supervisors/${s.id}`)}
                         title="عرض التفاصيل والتقارير"
                         className="btn-ghost p-2 text-white/40 hover:text-neon-cyan"
                       >

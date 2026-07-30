@@ -273,7 +273,7 @@ export default function LectureSupervisorsPage() {
               <SupervisorCard
                 key={p.id}
                 profile={p}
-                onView={id => navigate(`/dashboard/lecture-supervisors/${id}`)}
+                onView={id => navigate(`/np-panel/lecture-supervisors/${id}`)}
                 onToggle={handleToggle}
                 onDelete={setDeleteTarget}
               />

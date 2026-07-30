@@ -621,7 +621,7 @@ export default function ExamCreatePage() {
       } else {
         await createExam(payload)
         setSuccess('تم إنشاء الاختبار بنجاح!')
-        setTimeout(() => navigate('/dashboard/exams'), 1500)
+        setTimeout(() => navigate('/np-panel/exams'), 1500)
       }
     } catch (err) {
       const d = err.response?.data
@@ -657,7 +657,7 @@ export default function ExamCreatePage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate('/dashboard/exams')}
+          onClick={() => navigate('/np-panel/exams')}
           className="btn-ghost p-2"
         >
           <ArrowRight size={18} />
@@ -795,7 +795,7 @@ export default function ExamCreatePage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/dashboard/exams')}
+            onClick={() => navigate('/np-panel/exams')}
             className="btn-secondary px-6"
           >
             إلغاء

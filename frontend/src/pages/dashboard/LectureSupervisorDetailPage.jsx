@@ -109,7 +109,7 @@ export default function LectureSupervisorDetailPage() {
     try {
       await api.delete(`/lecture-supervisors/${id}/`)
       notify('تم الحذف')
-      setTimeout(() => navigate('/dashboard/lecture-supervisors'), 800)
+      setTimeout(() => navigate('/np-panel/lecture-supervisors'), 800)
     } catch { notify('فشل الحذف', 'error') }
     finally { setDeleting(false) }
   }
@@ -143,7 +143,7 @@ export default function LectureSupervisorDetailPage() {
 
         {/* ── Header ── */}
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={() => navigate('/dashboard/lecture-supervisors')} className="btn-ghost p-2 rounded-xl">
+          <button onClick={() => navigate('/np-panel/lecture-supervisors')} className="btn-ghost p-2 rounded-xl">
             <ArrowRight size={18} />
           </button>
           <div className="flex items-center gap-3">

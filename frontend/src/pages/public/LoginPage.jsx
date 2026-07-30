@@ -34,7 +34,7 @@ export default function LoginPage() {
       const user = await login(form.username, form.password)
       // توجيه بحسب الدور — الطلاب يستخدمون تطبيق الهاتف فقط
       if (user.role === 'student') navigate('/student-app-only', { replace: true })
-      else navigate('/dashboard')
+      else navigate('/np-panel')
     } catch (err) {
       const msg = err.response?.data
       if (typeof msg === 'object') {
@@ -86,7 +86,6 @@ export default function LoginPage() {
                     value={form.username}
                     onChange={handleChange}
                     type="text"
-                    placeholder="admin"
                     required
                     autoComplete="username"
                     className="input-glass pr-10"
@@ -105,7 +104,6 @@ export default function LoginPage() {
                     value={form.password}
                     onChange={handleChange}
                     type={showPass ? 'text' : 'password'}
-                    placeholder="••••••••"
                     required
                     className="input-glass pr-10 pl-10"
                   />

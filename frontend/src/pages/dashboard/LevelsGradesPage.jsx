@@ -333,7 +333,7 @@ export default function LevelsGradesPage() {
                       <div className="flex items-center gap-2 pt-2 border-t border-white/05">
                          <span className="text-white/40 text-xs">الكورسات المرتبطة: {grade.courses?.length || 0}</span>
                          <button 
-                           onClick={() => navigate(`/dashboard/academic/grades/${grade.id}`)}
+                           onClick={() => navigate(`/np-panel/academic/grades/${grade.id}`)}
                            className="btn-ghost mr-auto text-xs text-brand-blue py-1 px-2 border border-brand-blue/30 rounded flex items-center gap-1"
                          >
                             التفاصيل <ArrowLeft size={10} />

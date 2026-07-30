@@ -419,7 +419,7 @@ export default function SupervisorDetailPage() {
     setSvLoading(true)
     api.get(`/supervisors/${id}/`)
       .then(({ data }) => setSupervisor(data))
-      .catch(() => navigate('/dashboard/supervisors', { replace: true }))
+      .catch(() => navigate('/np-panel/supervisors', { replace: true }))
       .finally(() => setSvLoading(false))
   }, [id])
 
@@ -549,7 +549,7 @@ export default function SupervisorDetailPage() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/dashboard/supervisors')}
+            onClick={() => navigate('/np-panel/supervisors')}
             className="btn-ghost p-2 text-white/50 hover:text-white"
             title="العودة"
           >

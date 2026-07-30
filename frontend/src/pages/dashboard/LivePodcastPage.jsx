@@ -269,7 +269,7 @@ function RoomCard({ room, onEditRoom, onDeleteRoom, onToggle, onRefresh }) {
         
         {/* Navigation to details */}
         <button 
-          onClick={() => navigate(`/dashboard/academic/live-podcast/rooms/${room.id}`)} 
+          onClick={() => navigate(`/np-panel/academic/live-podcast/rooms/${room.id}`)} 
           className="ml-2 px-4 py-2 rounded-xl bg-brand-blue/10 text-brand-blue font-semibold text-sm hover:bg-brand-blue/20 transition-colors flex items-center gap-2">
           إدارة الجلسات
           <ArrowLeft size={14} />

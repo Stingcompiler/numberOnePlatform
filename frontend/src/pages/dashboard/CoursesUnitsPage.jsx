@@ -251,7 +251,7 @@ export default function CoursesUnitsPage() {
                     <p className="text-white/25 text-xs text-center py-3">لا توجد كورسات في هذا الفصل</p>
                   ) : (
                     grade.courses?.map(c => (
-                      <CourseCard key={c.id} course={c} onManage={(c) => navigate(`/dashboard/academic/courses/${c.id}`)} />
+                      <CourseCard key={c.id} course={c} onManage={(c) => navigate(`/np-panel/academic/courses/${c.id}`)} />
                     ))
                   )}
                 </div>

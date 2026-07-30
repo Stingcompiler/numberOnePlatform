@@ -110,13 +110,13 @@ function AdminDashboard() {
           label="إجمالي المطلوب"
           value={summary ? `${Number(summary.total_required_sdg).toLocaleString()} ج.س` : null}
           icon={DollarSign} color="blue" loading={loading}
-          href="/dashboard/finance"
+          href="/np-panel/finance"
         />
         <StatCard
           label="إجمالي المحصّل"
           value={summary ? `${Number(summary.total_paid_sdg).toLocaleString()} ج.س` : null}
           icon={TrendingUp} color="cyan" loading={loading}
-          href="/dashboard/finance"
+          href="/np-panel/finance"
         />
         <StatCard
           label="المتبقي"
@@ -134,18 +134,18 @@ function AdminDashboard() {
       <div>
         <h2 className="font-cairo font-semibold text-white/70 text-sm mb-3">وصول سريع</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <QuickLink label="إدارة الطلاب" desc="تسجيل وعرض الطلاب" icon={Users} href="/dashboard/students" color="blue" />
-          <QuickLink label="طلبات التسجيل" desc="الطلبات الواردة من النافذة العامة" icon={UserPlus} href="/dashboard/student-requests" color="cyan" />
-          <QuickLink label="الملفات المالية" desc="دفعات وأقساط" icon={DollarSign} href="/dashboard/finance" color="cyan" />
-          <QuickLink label=" المراحل والفصول" desc="الهيكل الأكاديمي" icon={BookOpen} href="/dashboard/academic/levels" color="blue" />
-          <QuickLink label="  الكورسات والوحدات " desc="الهيكل الأكاديمي" icon={BookOpen} href="/dashboard/academic/courses" color="blue" />
-          <QuickLink label="البودكاست المباشر" desc="بث وإدارة الزووم" icon={Radio} href="/dashboard/academic/live-podcast" color="cyan" />
-          <QuickLink label="الأساتذة" desc="إدارة هيئة التدريس" icon={GraduationCap} href="/dashboard/teachers" color="red" />
-          <QuickLink label="المشرفات" desc="تقارير المشرفات" icon={UserCheck} href="/dashboard/supervisors" color="cyan" />
-          <QuickLink label="صندوق الوارد" desc="رسائل الزوار" icon={Inbox} href="/dashboard/inbox" color="blue" />
-          <QuickLink label="التقارير المالية" desc="يومي / شهري / سنوي" icon={BarChart3} href="/dashboard/reports" color="cyan" />
-          <QuickLink label="الإعلانات" desc="إدارة Slider الصفحة" icon={GraduationCap} href="/dashboard/announcements" color="red" />
-          <QuickLink label="إعدادات الموقع" desc="الهوية والرؤية" icon={GraduationCap} href="/dashboard/settings" color="blue" />
+          <QuickLink label="إدارة الطلاب" desc="تسجيل وعرض الطلاب" icon={Users} href="/np-panel/students" color="blue" />
+          <QuickLink label="طلبات التسجيل" desc="الطلبات الواردة من النافذة العامة" icon={UserPlus} href="/np-panel/student-requests" color="cyan" />
+          <QuickLink label="الملفات المالية" desc="دفعات وأقساط" icon={DollarSign} href="/np-panel/finance" color="cyan" />
+          <QuickLink label=" المراحل والفصول" desc="الهيكل الأكاديمي" icon={BookOpen} href="/np-panel/academic/levels" color="blue" />
+          <QuickLink label="  الكورسات والوحدات " desc="الهيكل الأكاديمي" icon={BookOpen} href="/np-panel/academic/courses" color="blue" />
+          <QuickLink label="البودكاست المباشر" desc="بث وإدارة الزووم" icon={Radio} href="/np-panel/academic/live-podcast" color="cyan" />
+          <QuickLink label="الأساتذة" desc="إدارة هيئة التدريس" icon={GraduationCap} href="/np-panel/teachers" color="red" />
+          <QuickLink label="المشرفات" desc="تقارير المشرفات" icon={UserCheck} href="/np-panel/supervisors" color="cyan" />
+          <QuickLink label="صندوق الوارد" desc="رسائل الزوار" icon={Inbox} href="/np-panel/inbox" color="blue" />
+          <QuickLink label="التقارير المالية" desc="يومي / شهري / سنوي" icon={BarChart3} href="/np-panel/reports" color="cyan" />
+          <QuickLink label="الإعلانات" desc="إدارة Slider الصفحة" icon={GraduationCap} href="/np-panel/announcements" color="red" />
+          <QuickLink label="إعدادات الموقع" desc="الهوية والرؤية" icon={GraduationCap} href="/np-panel/settings" color="blue" />
         </div>
       </div>
 
@@ -172,7 +172,7 @@ function AdminDashboard() {
             <h2 className="font-cairo font-semibold text-white/70 text-sm flex items-center gap-2">
               <Megaphone size={16} className="text-brand-blue" /> الإعلانات النشطة
             </h2>
-            <Link to="/dashboard/announcements" className="text-brand-blue text-xs hover:underline">الكل</Link>
+            <Link to="/np-panel/announcements" className="text-brand-blue text-xs hover:underline">الكل</Link>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {announcements.slice(0, 3).map((ann) => (
@@ -201,7 +201,7 @@ function AdminDashboard() {
             <h2 className="font-cairo font-semibold text-white/70 text-sm flex items-center gap-2">
               <Users size={16} className="text-brand-blue" /> الكادر المعروض
             </h2>
-            <Link to="/dashboard/staff" className="text-brand-blue text-xs hover:underline">الكل</Link>
+            <Link to="/np-panel/staff" className="text-brand-blue text-xs hover:underline">الكل</Link>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {staff.slice(0, 4).map((s) => (
@@ -277,13 +277,13 @@ function CoursesSupervisorDashboard() {
           label="إجمالي الكورسات"
           value={loading ? null : courses.length}
           icon={BookOpen} color="blue" loading={loading}
-          href="/dashboard/academic/courses"
+          href="/np-panel/academic/courses"
         />
         <StatCard
           label="إجمالي المحاضرات"
           value={loading ? null : lessons.length}
           icon={TrendingUp} color="cyan" loading={loading}
-          href="/dashboard/academic/lessons"
+          href="/np-panel/academic/lessons"
         />
         <StatCard
           label="المراحل الدراسية"
@@ -301,9 +301,9 @@ function CoursesSupervisorDashboard() {
       <div>
         <h2 className="font-cairo font-semibold text-white/70 text-sm mb-3">وصول سريع</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <QuickLink label="جميع الكورسات" desc="تصفح وعرض محتوى الكورسات" icon={BookOpen} href="/dashboard/academic/courses" color="blue" />
-          <QuickLink label="إدارة المحاضرات" desc="إضافة وتعديل المحاضرات" icon={TrendingUp} href="/dashboard/academic/lessons" color="cyan" />
-          <QuickLink label="البودكاست المباشر" desc="بث وإدارة الزووم" icon={Radio} href="/dashboard/academic/live-podcast" color="cyan" />
+          <QuickLink label="جميع الكورسات" desc="تصفح وعرض محتوى الكورسات" icon={BookOpen} href="/np-panel/academic/courses" color="blue" />
+          <QuickLink label="إدارة المحاضرات" desc="إضافة وتعديل المحاضرات" icon={TrendingUp} href="/np-panel/academic/lessons" color="cyan" />
+          <QuickLink label="البودكاست المباشر" desc="بث وإدارة الزووم" icon={Radio} href="/np-panel/academic/live-podcast" color="cyan" />
         </div>
       </div>
 
@@ -342,7 +342,7 @@ function CoursesSupervisorDashboard() {
           <h2 className="font-cairo font-semibold text-white/70 text-sm flex items-center gap-2">
             <BookOpen size={16} className="text-brand-blue" /> الكورسات
           </h2>
-          <Link to="/dashboard/academic/courses" className="text-brand-blue text-xs hover:underline">عرض الكل</Link>
+          <Link to="/np-panel/academic/courses" className="text-brand-blue text-xs hover:underline">عرض الكل</Link>
         </div>
         {loading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -356,7 +356,7 @@ function CoursesSupervisorDashboard() {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredCourses.slice(0, 6).map(course => (
-              <Link key={course.id} to={`/dashboard/academic/courses/${course.id}`}
+              <Link key={course.id} to={`/np-panel/academic/courses/${course.id}`}
                 className="glass-card p-4 group hover:border-brand-blue/30 transition-all">
                 {course.thumbnail && (
                   <img src={`/media/${course.thumbnail}`} alt={course.name}
@@ -385,11 +385,11 @@ function CoursesSupervisorDashboard() {
             <h2 className="font-cairo font-semibold text-white/70 text-sm flex items-center gap-2">
               <TrendingUp size={16} className="text-neon-cyan" /> آخر المحاضرات المضافة
             </h2>
-            <Link to="/dashboard/academic/lessons" className="text-brand-blue text-xs hover:underline">عرض الكل</Link>
+            <Link to="/np-panel/academic/lessons" className="text-brand-blue text-xs hover:underline">عرض الكل</Link>
           </div>
           <div className="space-y-2">
             {lessons.slice(0, 5).map(lesson => (
-              <Link key={lesson.id} to={`/dashboard/academic/lessons/${lesson.id}`}
+              <Link key={lesson.id} to={`/np-panel/academic/lessons/${lesson.id}`}
                 className="glass-card p-4 flex items-center gap-3 group hover:border-brand-blue/20 transition-all">
                 <div className="w-8 h-8 rounded-xl bg-brand-blue/10 flex items-center justify-center shrink-0">
                   <TrendingUp size={14} className="text-brand-blue" />
