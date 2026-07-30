@@ -488,9 +488,11 @@ class NewStudentRegistrationSerializer(serializers.ModelSerializer):
             "has_siblings", "siblings_info",
             # Additional
             "residence", "date_of_birth", "student_phone",
-            # Files
+            # Files — سبعة مستندات في النموذج.
+            # كان student_id_image غائباً عن هذه القائمة، فلم يصل للواجهة إطلاقاً
+            # رغم أن الطالب يرفعه إجبارياً ويُخزَّن في قاعدة البيانات.
             "academic_result_image", "birth_certificate_image",
-            "personal_photo", "father_id_image",
+            "personal_photo", "student_id_image", "father_id_image",
             "mother_id_image", "payment_receipt_image",
             # Guardian
             "guardian_name", "guardian_phone",

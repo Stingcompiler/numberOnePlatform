@@ -25,6 +25,18 @@ function InfoItem({ label, value }) {
   )
 }
 
+/* المستندات السبعة كما هي مُعرَّفة في NewStudentRegistration بالـ Backend.
+   مصدر واحد للحقيقة يمنع تكرار خطأ إغفال حقل عند العرض. */
+const DOCUMENT_FIELDS = [
+  { key: 'academic_result_image',   label: 'النتيجة الدراسية' },
+  { key: 'birth_certificate_image', label: 'شهادة الميلاد' },
+  { key: 'personal_photo',          label: 'صورة شخصية' },
+  { key: 'student_id_image',        label: 'الرقم الوطني للطالب' },
+  { key: 'father_id_image',         label: 'بطاقة الأب' },
+  { key: 'mother_id_image',         label: 'بطاقة الأم' },
+  { key: 'payment_receipt_image',   label: 'إيصال الدفع' },
+]
+
 function ImagePreview({ label, url }) {
   if (!url) return null
   const full = url.startsWith('http') ? url : `/media/${url.replace(/^\/?(media\/)?/, '')}`
@@ -139,16 +151,15 @@ export default function RegistrationRequestDetailPage() {
           {/* Files */}
           <div className="glass-card p-5">
             <div className="flex items-center gap-2 text-brand-blue mb-4"><FileText size={16} /><span className="font-cairo font-bold text-white text-sm">المستندات المرفقة</span></div>
+            {/* تُبنى من DOCUMENT_FIELDS بدل تعداد يدوي: كان الحقل
+                student_id_image منسياً هنا فلم يظهر للإدارة إطلاقاً.
+                إضافة أي مستند جديد مستقبلاً تصير سطراً واحداً في القائمة. */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <ImagePreview label="النتيجة الدراسية" url={data.academic_result_image} />
-              <ImagePreview label="شهادة الميلاد" url={data.birth_certificate_image} />
-              <ImagePreview label="صورة شخصية" url={data.personal_photo} />
-              <ImagePreview label="بطاقة الأب" url={data.father_id_image} />
-              <ImagePreview label="بطاقة الأم" url={data.mother_id_image} />
-              <ImagePreview label="إيصال الدفع" url={data.payment_receipt_image} />
+              {DOCUMENT_FIELDS.map(({ key, label }) =>
+                data[key] ? <ImagePreview key={key} label={label} url={data[key]} /> : null
+              )}
             </div>
-            {!data.academic_result_image && !data.birth_certificate_image && !data.personal_photo &&
-             !data.father_id_image && !data.mother_id_image && !data.payment_receipt_image && (
+            {!DOCUMENT_FIELDS.some(({ key }) => data[key]) && (
               <p className="text-white/30 text-sm text-center py-6">لا توجد مستندات مرفقة</p>
             )}
           </div>
