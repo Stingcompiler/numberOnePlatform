@@ -72,3 +72,13 @@ Thumbs.db
 mobile/node_modules/
 mobile/.expo/
 mobile/dist/
+
+# ── مفاتيح توقيع التطبيق — لا تُرفع إلى git إطلاقاً ─────────────────────────
+# فقدان هذا المفتاح أو تسريبه لا يمكن التراجع عنه: من يملكه يستطيع توقيع
+# تحديثات تبدو صادرة منك، وفقدانه يمنعك من تحديث التطبيق على المتجر نهائياً.
+*.jks
+*.keystore
+!mobile/android/app/debug.keystore
+*.p12
+*.pepk
+credentials.json
