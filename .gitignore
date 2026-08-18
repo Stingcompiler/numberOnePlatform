@@ -82,3 +82,7 @@ mobile/dist/
 *.p12
 *.pepk
 credentials.json
+
+# حزم البناء — تُنزَّل من EAS عند الحاجة ولا داعي لتضخيم المستودع
+*.aab
+*.apk
