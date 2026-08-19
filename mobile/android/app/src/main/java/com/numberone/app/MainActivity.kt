@@ -1,4 +1,4 @@
-package com.numberoneschools.student
+package com.numberone.app
 
 import android.os.Build
 import android.os.Bundle

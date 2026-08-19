@@ -9,10 +9,10 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.numberoneschools.student"
+      "bundleIdentifier": "com.numberone.app"
     },
     "android": {
-      "package": "com.numberoneschools.student",
+      "package": "com.numberone.app",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
       ],
