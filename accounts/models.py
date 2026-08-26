@@ -234,27 +234,59 @@ class StudentProfile(models.Model):
         return f"{self.user.full_name} — {self.get_system_type_display()}"
 
     # ── منطق ربط الجهاز ──────────────────────────────────────────────────────
-    def bind_device(self, device_id: str):
+    @staticmethod
+    def detect_device_type(device_id: str) -> str:
         """
-        يُنفَّذ عند أول دخول من الموبايل.
+        يستنتج نوع الجهاز من سابقة المعرّف التي يرسلها العميل.
+        يسمح بتعبئة device_type لعملاء الموبايل المنشورين دون تحديثهم.
+        """
+        prefix_map = (
+            ("hw-android-",  "Android"),
+            ("gen-android-", "Android"),
+            ("hw-ios-",      "iOS"),
+            ("gen-ios-",     "iOS"),
+            ("hw-win-",      "Windows"),
+            ("hw-mac-",      "macOS"),
+        )
+        for prefix, label in prefix_map:
+            if device_id.startswith(prefix):
+                return label
+        return "غير معروف"
+
+    def bind_device(self, device_id: str, device_type: str = None):
+        """
+        يُنفَّذ عند أول دخول من التطبيق (موبايل أو ديسكتوب).
         يرفض ربط جهاز جديد إذا كان الجهاز مقيّداً مسبقاً.
+
+        device_type اختياري: إن لم يُرسله العميل يُستنتَج من سابقة device_id،
+        فيبقى العملاء المنشورون حالياً متوافقين دون أي تعديل.
         """
         if self.device_id and self.device_id != device_id:
             raise PermissionError(
                 _("هذا الحساب مرتبط بجهاز آخر. يرجى التواصل مع الإدارة لفك الارتباط.")
             )
         if not self.device_id:
-            self.device_id = device_id
+            # الجهاز ذاته قد يكون مرتبطاً بحساب طالب آخر (حاسوب مشترك مثلاً).
+            # نفحص مسبقاً لتفادي IntegrityError على قيد unique وإرجاع رسالة مفهومة.
+            if StudentProfile.objects.filter(
+                device_id=device_id
+            ).exclude(pk=self.pk).exists():
+                raise PermissionError(
+                    _("هذا الجهاز مرتبط بحساب طالب آخر. يرجى التواصل مع الإدارة.")
+                )
+            self.device_id       = device_id
             self.device_bound_at = timezone.now()
-            self.save(update_fields=["device_id", "device_bound_at"])
+            self.device_type     = device_type or self.detect_device_type(device_id)
+            self.save(update_fields=["device_id", "device_bound_at", "device_type"])
 
     def unbind_device(self):
         """
         فك ربط الجهاز — يُستدعى فقط من قِبَل مدير النظام.
         """
-        self.device_id = None
+        self.device_id       = None
         self.device_bound_at = None
-        self.save(update_fields=["device_id", "device_bound_at"])
+        self.device_type     = None
+        self.save(update_fields=["device_id", "device_bound_at", "device_type"])
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -135,11 +135,15 @@ class LoginSerializer(serializers.Serializer):
     username  = serializers.CharField(max_length=150)
     password  = serializers.CharField(write_only=True)
     device_id = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    # اختياري — يرسله عميل الديسكتوب. عملاء الموبايل الحاليون لا يرسلونه،
+    # فيُستنتَج النوع من سابقة device_id داخل bind_device.
+    device_type = serializers.CharField(max_length=100, required=False, allow_blank=True)
 
     def validate(self, attrs):
-        username  = attrs.get("username")
-        password  = attrs.get("password")
-        device_id = attrs.get("device_id", "")
+        username    = attrs.get("username")
+        password    = attrs.get("password")
+        device_id   = attrs.get("device_id", "")
+        device_type = attrs.get("device_type", "")
 
         user = authenticate(
             request=self.context.get("request"),
@@ -160,7 +164,7 @@ class LoginSerializer(serializers.Serializer):
         # ── Device Binding (للطالب من الموبايل) ─────────────────────────────
         if device_id and user.is_student:
             try:
-                user.student_profile.bind_device(device_id)
+                user.student_profile.bind_device(device_id, device_type or None)
             except PermissionError as exc:
                 raise serializers.ValidationError(str(exc), code="device_mismatch")
 

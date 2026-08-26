@@ -27,6 +27,7 @@ from .serializers import (
     CourseSerializer, CourseListSerializer,
     UnitSerializer,
     LessonSerializer, LessonListSerializer,
+    StudentCourseSerializer, StudentLessonSerializer,
     ExerciseSerializer, ExerciseStudentSerializer,
     StudentCourseAccessSerializer,
     SubmissionCreateSerializer, SubmissionSerializer,
@@ -370,7 +371,7 @@ class MyCoursesView(APIView):
             "course__units__lessons"
         )
         courses = [acc.course for acc in access_qs]
-        serializer = CourseSerializer(courses, many=True)
+        serializer = StudentCourseSerializer(courses, many=True)
         return Response(serializer.data)
 
 
@@ -396,7 +397,7 @@ class MyCourseDetailView(APIView):
         course = Course.objects.prefetch_related(
             "units__lessons__exercise__questions__choices"
         ).get(pk=course_id)
-        return Response(CourseSerializer(course).data)
+        return Response(StudentCourseSerializer(course).data)
 
 
 class MyLessonDetailView(APIView):
@@ -439,10 +440,13 @@ class MyLessonDetailView(APIView):
         LessonProgress.objects.get_or_create(student=student, lesson=lesson)
 
         # إعادة بيانات المحاضرة مع التمرين بدون is_correct
-        data = LessonSerializer(lesson).data
+        data = StudentLessonSerializer(lesson).data
         # استبدال التمرين بالنسخة الآمنة للطالب
-        if lesson.exercise:
-            data["exercise"] = ExerciseStudentSerializer(lesson.exercise).data
+        # المحاضرة قد لا تملك تمريناً — الوصول المباشر للعلاقة العكسية
+        # OneToOne يرمي RelatedObjectDoesNotExist لا None.
+        exercise = getattr(lesson, "exercise", None)
+        if exercise:
+            data["exercise"] = ExerciseStudentSerializer(exercise).data
 
         return Response(data)
 
