@@ -6,6 +6,7 @@ accounts/serializers.py
 
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -276,6 +277,7 @@ class StudentCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(_("اسم المستخدم مسجّل مسبقاً."))
         return value
 
+    @transaction.atomic  # الحساب والملف الشخصي معاً أو لا شيء
     def create(self, validated_data):
         from academic.models import Grade
 
@@ -345,6 +347,7 @@ class TeacherCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(_("اسم المستخدم مسجّل مسبقاً."))
         return value
 
+    @transaction.atomic  # الحساب والملف الشخصي معاً أو لا شيء
     def create(self, validated_data):
         user_data = {
             "username":  validated_data.pop("username"),
@@ -569,6 +572,7 @@ class LectureSupervisorCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(_("اسم المستخدم مسجّل مسبقاً."))
         return value
 
+    @transaction.atomic  # الحساب والملف الشخصي معاً أو لا شيء
     def create(self, validated_data):
         courses = validated_data.pop("assigned_courses", [])
         user_data = {
