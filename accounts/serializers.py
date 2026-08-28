@@ -474,9 +474,12 @@ class NewStudentRegistrationSerializer(serializers.ModelSerializer):
             "has_siblings", "siblings_info",
             # Additional
             "residence", "date_of_birth", "student_phone",
-            # Files
+            # Files — السبعة كلها.
+            # student_id_image أُضيف للموديل وللنموذج العام (وهو مطلوب فيه)
+            # ولم يُضَف هنا، وهذا السيريالايزر يخدم الإنشاء والقراءة معاً —
+            # فكان الملف يصل من المتصفح ويُهمَل بصمت ولا يُحفَظ إطلاقاً.
             "academic_result_image", "birth_certificate_image",
-            "personal_photo", "father_id_image",
+            "personal_photo", "student_id_image", "father_id_image",
             "mother_id_image", "payment_receipt_image",
             # Guardian
             "guardian_name", "guardian_phone",

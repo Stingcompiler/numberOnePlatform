@@ -143,12 +143,14 @@ export default function RegistrationRequestDetailPage() {
               <ImagePreview label="النتيجة الدراسية" url={data.academic_result_image} />
               <ImagePreview label="شهادة الميلاد" url={data.birth_certificate_image} />
               <ImagePreview label="صورة شخصية" url={data.personal_photo} />
+              <ImagePreview label="الرقم الوطني للطالب" url={data.student_id_image} />
               <ImagePreview label="بطاقة الأب" url={data.father_id_image} />
               <ImagePreview label="بطاقة الأم" url={data.mother_id_image} />
               <ImagePreview label="إيصال الدفع" url={data.payment_receipt_image} />
             </div>
             {!data.academic_result_image && !data.birth_certificate_image && !data.personal_photo &&
-             !data.father_id_image && !data.mother_id_image && !data.payment_receipt_image && (
+             !data.student_id_image && !data.father_id_image && !data.mother_id_image &&
+             !data.payment_receipt_image && (
               <p className="text-white/30 text-sm text-center py-6">لا توجد مستندات مرفقة</p>
             )}
           </div>
