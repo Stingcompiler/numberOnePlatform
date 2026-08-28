@@ -160,6 +160,19 @@ function BackupsTab({ showToast }) {
   const [showForm, setShowForm]   = useState(false)
   const [confirmRestore, setConfirmRestore] = useState(null)
   const [deleteConfirm, setDeleteConfirm]   = useState(null)
+  const [downloadingId, setDownloadingId]   = useState(null)
+
+  // النسخ والاستعادة والتنزيل عمليات دقائق لا ثوانٍ، ومهلة axios
+  // الافتراضية (١٥ ثانية) مضبوطة لنداءات الواجهة العادية. كانت النسخة
+  // تكتمل على الخادم بينما يستسلم المتصفح ويعرض "فشل".
+  const LONG_OP = { timeout: 15 * 60 * 1000 }
+
+  // رسالة الخادم إن وُجدت؛ ومهلة العميل ليست فشلاً — العملية قد تكون
+  // ما زالت جارية، فادّعاء الفشل يدفع المستخدم لإعادتها بلا داعٍ.
+  const failureText = (e, fallback) => {
+    if (e?.code === 'ECONNABORTED' || /timeout/i.test(e?.message || '')) return null
+    return e?.response?.data?.detail || fallback
+  }
 
   const fetchBackups = useCallback(async () => {
     try {
@@ -174,29 +187,47 @@ function BackupsTab({ showToast }) {
   const handleCreate = async () => {
     setCreating(true)
     try {
-      await api.post('/backups/create/', { backup_type: newType, notes: newNotes })
+      await api.post(
+        '/backups/create/', { backup_type: newType, notes: newNotes }, LONG_OP,
+      )
       showToast('success', 'تم إنشاء النسخة الاحتياطية بنجاح!')
       setShowForm(false); setNewNotes('')
       fetchBackups()
-    } catch { showToast('error', 'فشل إنشاء النسخة الاحتياطية.') }
+    } catch (e) {
+      const msg = failureText(e, 'فشل إنشاء النسخة الاحتياطية.')
+      showToast(
+        msg ? 'error' : 'success',
+        msg || 'النسخة قيد الإنشاء على الخادم — حدّث القائمة بعد قليل.',
+      )
+      setShowForm(false)
+      fetchBackups()
+    }
     finally { setCreating(false) }
   }
 
   const handleDownload = async (b) => {
+    setDownloadingId(b.id)
     try {
-      const res = await api.get(`/backups/${b.id}/download/`, { responseType: 'blob' })
+      const res = await api.get(
+        `/backups/${b.id}/download/`, { responseType: 'blob', ...LONG_OP },
+      )
       const url = window.URL.createObjectURL(new Blob([res.data]))
       const a = document.createElement('a'); a.href = url; a.download = b.filename
       document.body.appendChild(a); a.click(); a.remove()
       window.URL.revokeObjectURL(url)
-    } catch { showToast('error', 'فشل تحميل الملف.') }
+    } catch (e) {
+      showToast('error', failureText(e, 'فشل تحميل الملف.') || 'انقطع التحميل — أعد المحاولة.')
+    }
+    finally { setDownloadingId(null) }
   }
 
   const handleRestore = async () => {
     if (!confirmRestore) return
     setRestoring(true)
     try {
-      const { data } = await api.post(`/backups/${confirmRestore.id}/restore/`, { confirm: true })
+      const { data } = await api.post(
+        `/backups/${confirmRestore.id}/restore/`, { confirm: true }, LONG_OP,
+      )
       showToast(data.status === 'success' ? 'success' : 'error',
         data.status === 'success' ? 'تمت الاستعادة بنجاح!' : 'فشلت عملية الاستعادة.')
     } catch { showToast('error', 'فشلت عملية الاستعادة.') }
@@ -290,9 +321,15 @@ function BackupsTab({ showToast }) {
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
-                <button onClick={() => handleDownload(b)} title="تحميل"
-                  className="btn-ghost p-2 text-brand-blue hover:bg-brand-blue/10 rounded-lg">
-                  <Download size={16} />
+                <button
+                  onClick={() => handleDownload(b)}
+                  disabled={downloadingId === b.id}
+                  title={downloadingId === b.id ? 'جارٍ التحميل…' : 'تحميل'}
+                  className="btn-ghost p-2 text-brand-blue hover:bg-brand-blue/10 rounded-lg disabled:opacity-60"
+                >
+                  {downloadingId === b.id
+                    ? <Loader2 size={16} className="animate-spin" />
+                    : <Download size={16} />}
                 </button>
                 <button onClick={() => setConfirmRestore(b)} title="استعادة"
                   className="btn-ghost p-2 text-neon-cyan hover:bg-neon-cyan/10 rounded-lg">

@@ -20,10 +20,14 @@ services:
 
     # ── الخيارات المتعلقة بالبناء ──────────────────────────────────────────
     buildCommand: "./build.sh"
+    # ‎--timeout 600‎ لا 120: ضغط الوسائط كلها في نسخة احتياطية يتجاوز
+    # الدقيقتين، فكان gunicorn يقتل الـ worker في منتصف العمل — وهو سبب
+    # فشل النسخة "الكاملة" و"الملفات فقط" بينما تنجح "قاعدة البيانات".
+    #
     # ‎--threads 6‎ لا 2: تنزيل حزمة من المتجر يحتجز خيطاً لدقائق على
     # اتصال بطيء، وأربع فتحات تعني أن أربعة تنزيلات متزامنة توقف المنصة
     # كلها. الخيوط شبه مجانية ذاكرياً لأنها تتشارك مساحة الـ worker.
-    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 6 --timeout 120 --log-level info"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 6 --timeout 600 --log-level info"
 
     # ── التخزين الدائم لملفات الوسائط ─────────────────────────────────────
     disk:
