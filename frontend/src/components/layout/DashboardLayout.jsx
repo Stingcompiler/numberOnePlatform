@@ -18,7 +18,7 @@ import {
   BookMarked, ClipboardList, Link2, LayoutList, TrendingUp,
   Play, ShieldCheck, UserPlus, FileCheck, HardDrive,
   ChevronLeft, Mail, MailOpen, Loader2, Layers, UserCog,
-  KeyRound, Radio,
+  KeyRound, Radio, Store,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axiosInstance'
@@ -77,6 +77,7 @@ const ADMIN_NAV_GROUPS = [
       { label: 'الإعلانات',         icon: Megaphone,      href: '/dashboard/announcements' },
       { label: 'صندوق الوارد',      icon: Inbox,          href: '/dashboard/inbox' },
       { label: 'أدوات التواصل',     icon: Link2,          href: '/dashboard/contact-tools' },
+      { label: 'إدارة المتجر',      icon: Store,          href: '/dashboard/store' },
     ],
   },
   {

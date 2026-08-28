@@ -124,6 +124,65 @@ class CourseSerializer(serializers.ModelSerializer):
         ]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Serializers الطالب — بدون youtube_url الخام
+# ─────────────────────────────────────────────────────────────────────────────
+# الطالب يحصل على youtube_embed_url فقط. حصر youtube_url في واجهات الإدارة
+# يمنع سحب روابط الكورس كاملةً من استجابة API واحدة.
+# ملاحظة توافق: تطبيق الموبايل المنشور يقرأ
+#   lesson.youtube_url || lesson.youtube_embed_url
+# فيسقط تلقائياً على embed_url، وregex الاستخراج عنده يدعم مسار /embed/.
+
+class StudentLessonListSerializer(serializers.ModelSerializer):
+    """ملخص المحاضرة في قوائم الطالب."""
+    youtube_embed_url = serializers.CharField(read_only=True)
+
+    class Meta:
+        model  = Lesson
+        fields = [
+            "id", "title", "youtube_embed_url",
+            "pdf_file", "display_order", "duration_minutes", "is_active",
+        ]
+
+
+class StudentLessonSerializer(serializers.ModelSerializer):
+    """تفاصيل المحاضرة للطالب."""
+    youtube_embed_url = serializers.CharField(read_only=True)
+    exercise          = ExerciseSerializer(read_only=True)
+
+    class Meta:
+        model  = Lesson
+        fields = [
+            "id", "unit", "title", "description", "youtube_embed_url",
+            "pdf_file", "display_order", "duration_minutes",
+            "is_active", "exercise",
+        ]
+
+
+class StudentUnitSerializer(serializers.ModelSerializer):
+    lessons = StudentLessonListSerializer(many=True, read_only=True)
+
+    class Meta:
+        model  = Unit
+        fields = ["id", "course", "name", "display_order", "is_active", "lessons"]
+
+
+class StudentCourseSerializer(serializers.ModelSerializer):
+    units        = StudentUnitSerializer(many=True, read_only=True)
+    teacher_name = serializers.CharField(
+        source="teacher.full_name", read_only=True, default=None
+    )
+    grade_name   = serializers.CharField(source="grade.__str__", read_only=True)
+
+    class Meta:
+        model  = Course
+        fields = [
+            "id", "name", "description", "grade", "grade_name",
+            "teacher", "teacher_name", "thumbnail",
+            "display_order", "is_active", "units", "system_type",
+        ]
+
+
 class CourseListSerializer(serializers.ModelSerializer):
     """ملخص مختصر للكورس في القوائم."""
     teacher_name = serializers.CharField(

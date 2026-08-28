@@ -16,17 +16,20 @@ services:
     name: number-platform-api
     runtime: python
     region: frankfurt         # اختر المنطقة الأقرب لمستخدميك
-    plan: free                # free | starter | standard | pro
+    plan: starter             # free | starter | standard | pro
 
     # ── الخيارات المتعلقة بالبناء ──────────────────────────────────────────
     buildCommand: "./build.sh"
-    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120 --log-level info"
+    # ‎--threads 6‎ لا 2: تنزيل حزمة من المتجر يحتجز خيطاً لدقائق على
+    # اتصال بطيء، وأربع فتحات تعني أن أربعة تنزيلات متزامنة توقف المنصة
+    # كلها. الخيوط شبه مجانية ذاكرياً لأنها تتشارك مساحة الـ worker.
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 6 --timeout 120 --log-level info"
 
     # ── التخزين الدائم لملفات الوسائط ─────────────────────────────────────
     disk:
       name: media-storage
       mountPath: /var/data/media
-      sizeGB: 1
+      sizeGB: 10
 
     # ── متغيرات البيئة ─────────────────────────────────────────────────────
     envVars:
@@ -43,6 +46,12 @@ services:
       # مسار التخزين الدائم للملفات الوسائطية المرفوعة
       - key: MEDIA_ROOT
         value: "/var/data/media"
+
+      # النسخ الاحتياطية على نفس القرص الدائم، داخل مجلد مخفي.
+      # config/urls.py يستثني ".backups" من مسار /media/ العام حتى لا
+      # تُنزَّل نسخة قاعدة البيانات بلا مصادقة.
+      - key: BACKUP_STORAGE_DIR
+        value: "/var/data/media/.backups"
 
       # ALLOWED_HOSTS: يُضاف دومين Render تلقائياً + أي دومين مخصص
       # استبدل number-platform-api.onrender.com بالدومين الفعلي بعد النشر
@@ -72,4 +81,4 @@ databases:
     databaseName: number_platform
     user: number_platform_user
     region: frankfurt
-    plan: free                # free | starter (اختر حسب الحاجة)
+    plan: basic-256mb         # يطابق الخطة القائمة فعلاً

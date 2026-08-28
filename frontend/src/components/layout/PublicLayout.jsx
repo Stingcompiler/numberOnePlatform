@@ -22,12 +22,21 @@ export default function PublicLayout({ children, settings }) {
 
   useEffect(() => setMobileOpen(false), [pathname])
 
+  // المراسي تعمل داخل صفحة الهبوط فقط. من صفحة أخرى (المتجر مثلاً) تُسبَق
+  // بـ '/' كي تعود إلى الهبوط ثم تنتقل للقسم، بدل ألا تفعل شيئاً.
+  const anchor = (hash) => (pathname === '/' ? hash : `/${hash}`)
+
   const navLinks = [
-    { label: 'الرئيسية',   href: '#hero' },
-    { label: 'عن المؤسسة', href: '#about' },
-    { label: 'الكادر',     href: '#staff' },
-    { label: 'تواصل معنا', href: '#contact' },
+    { label: 'الرئيسية',   href: anchor('#hero') },
+    { label: 'عن المؤسسة', href: anchor('#about') },
+    { label: 'الكادر',     href: anchor('#staff') },
+    { label: 'المتجر',     to:   '/store' },
+    { label: 'تواصل معنا', href: anchor('#contact') },
   ]
+
+  // رابط المتجر صفحة لا مرساة، فيُرسم بـ <Link>. البقية تبقى <a>.
+  const navTag = (link) => (link.to ? Link : 'a')
+  const navProps = (link) => (link.to ? { to: link.to } : { href: link.href })
 
   const logoSrc = settings?.logo
     ? (settings.logo.startsWith('http') ? settings.logo : `/media/${settings.logo}`)
@@ -79,10 +88,12 @@ export default function PublicLayout({ children, settings }) {
 
           {/* قائمة Desktop */}
           <ul className="hidden md:flex items-center gap-0.5">
-            {navLinks.map((link) => (
-              <li key={link.href}>
-                <a
-                  href={link.href}
+            {navLinks.map((link) => {
+              const Tag = navTag(link)
+              return (
+              <li key={link.to || link.href}>
+                <Tag
+                  {...navProps(link)}
                   className="relative px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 group"
                   style={{ color: 'var(--lp-text-secondary)' }}
                   onMouseEnter={e => { e.currentTarget.style.color = 'var(--brand-blue)'; e.currentTarget.style.background = 'var(--brand-blue-soft)'; }}
@@ -93,9 +104,10 @@ export default function PublicLayout({ children, settings }) {
                     className="absolute inset-x-4 -bottom-0.5 h-0.5 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform origin-right duration-300"
                     style={{ background: 'var(--brand-red)' }}
                   />
-                </a>
+                </Tag>
               </li>
-            ))}
+              )
+            })}
           </ul>
 
           {/* أزرار الهيدر */}
@@ -130,10 +142,12 @@ export default function PublicLayout({ children, settings }) {
               borderTop: '1px solid var(--lp-border)',
             }}
           >
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
+            {navLinks.map((link) => {
+              const Tag = navTag(link)
+              return (
+              <Tag
+                key={link.to || link.href}
+                {...navProps(link)}
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center py-3 font-semibold text-sm transition-colors duration-200"
                 style={{
@@ -144,8 +158,9 @@ export default function PublicLayout({ children, settings }) {
                 onMouseLeave={e => { e.currentTarget.style.color = 'var(--lp-text-secondary)'; }}
               >
                 {link.label}
-              </a>
-            ))}
+              </Tag>
+              )
+            })}
             <Link
               to="/login"
               className="lp-btn-primary w-full justify-center mt-4"
@@ -183,18 +198,21 @@ export default function PublicLayout({ children, settings }) {
 
           {/* Nav links */}
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
+            {navLinks.map((link) => {
+              const Tag = navTag(link)
+              return (
+              <Tag
+                key={link.to || link.href}
+                {...navProps(link)}
                 className="text-xs font-medium transition-colors duration-200"
                 style={{ color: 'rgba(255,255,255,0.45)' }}
                 onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.85)'; }}
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
               >
                 {link.label}
-              </a>
-            ))}
+              </Tag>
+              )
+            })}
           </div>
 
           {/* Copyright */}

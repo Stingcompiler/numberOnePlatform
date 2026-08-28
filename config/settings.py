@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "backups",
     "notifications",
     "live",              # نظام البث المباشر (Live Rooms & Sessions)
+    "store",             # متجر التطبيقات (تنزيل تطبيقات المنصة)
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -265,6 +266,13 @@ os.makedirs(MEDIA_ROOT, exist_ok=True)
 # ─────────────────────────────────────────────────────────────────────────────
 # مجلد تخزين النسخ الاحتياطية
 # ─────────────────────────────────────────────────────────────────────────────
-BACKUP_STORAGE_DIR = BASE_DIR / "backups_storage"
+# يجب أن يقع على قرص دائم في الإنتاج، وإلا اختفت النسخ مع كل نشر.
+# على Render القرص مركّب على MEDIA_ROOT، لذا يُضبط المتغيّر إلى مجلد مخفي
+# داخله ("‎.backups") — و config/urls.py يمنع خدمة هذا المجلد عبر /media/
+# حتى لا تُنزَّل نسخة قاعدة البيانات من الإنترنت بلا مصادقة.
+BACKUP_STORAGE_DIR = Path(
+    config("BACKUP_STORAGE_DIR", default=str(BASE_DIR / "backups_storage"))
+)
+os.makedirs(BACKUP_STORAGE_DIR, exist_ok=True)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
