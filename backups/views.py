@@ -98,12 +98,6 @@ class CreateBackupView(APIView):
                 if backup_type in ("full", "db_only"):
                     self._backup_database(tmp)
 
-                # ── نسخ الملفات المرفوعة ──────────────────────────────────
-                if backup_type in ("full", "media_only"):
-                    media_src = str(MEDIA_ROOT)
-                    if os.path.isdir(media_src):
-                        shutil.copytree(media_src, os.path.join(tmp, "media"))
-
                 # ── إنشاء الأرشيف المضغوط ────────────────────────────────
                 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
                     for root, _dirs, files in os.walk(tmp):
@@ -111,6 +105,14 @@ class CreateBackupView(APIView):
                             abs_path = os.path.join(root, f)
                             arc_name = os.path.relpath(abs_path, tmp)
                             zf.write(abs_path, arc_name)
+
+                    # الوسائط تُضغَط من مكانها مباشرةً.
+                    #
+                    # كانت تُنسَخ أولاً إلى المجلد المؤقت — وهو على القرص
+                    # المؤقت للحاوية لا على القرص الدائم — فيلزم فراغ بحجم
+                    # الوسائط كلها قبل بدء الضغط أصلاً.
+                    if backup_type in ("full", "media_only"):
+                        self._add_media(zf, zip_path)
 
             # ── حفظ السجل ─────────────────────────────────────────────
             size = os.path.getsize(zip_path)
@@ -151,6 +153,38 @@ class CreateBackupView(APIView):
             )
 
     # ── مساعدات ───────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _add_media(zf, zip_path):
+        """
+        يضيف محتوى MEDIA_ROOT إلى الأرشيف تحت مجلد "media".
+
+        يتخطّى أرشيفات النسخ نفسها: حين يقع BACKUP_STORAGE_DIR داخل
+        MEDIA_ROOT — أو يساويه — تكون النسخ السابقة من "الوسائط"، فتُضغَط
+        نسخة داخل نسخة وينمو الحجم أُسّياً حتى يمتلئ القرص. والأرشيف الجاري
+        كتابته يقع في المسار نفسه، فقراءته أثناء الكتابة عبث.
+        """
+        media_root = str(MEDIA_ROOT)
+        if not os.path.isdir(media_root):
+            return
+
+        backup_dir = os.path.normpath(str(BACKUP_DIR))
+        current = os.path.normpath(zip_path)
+
+        for root, dirs, files in os.walk(media_root):
+            # لا ننزل داخل مجلد النسخ إن كان مجلداً مستقلاً (‎.backups‎)
+            if os.path.normpath(root) == backup_dir and backup_dir != os.path.normpath(media_root):
+                dirs[:] = []
+                continue
+
+            for f in files:
+                abs_path = os.path.join(root, f)
+                if os.path.normpath(abs_path) == current:
+                    continue
+                if f.startswith("backup_") and f.endswith(".zip"):
+                    continue
+                rel = os.path.relpath(abs_path, media_root)
+                zf.write(abs_path, os.path.join("media", rel))
 
     @staticmethod
     def _backup_database(dest_dir):

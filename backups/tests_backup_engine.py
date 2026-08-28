@@ -24,7 +24,7 @@ import tempfile
 import zipfile
 from unittest import mock
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import Resolver404, resolve
 from rest_framework.test import APIClient
 
@@ -176,6 +176,83 @@ class BackupEngineTests(TestCase):
     def test_anonymous_cannot_list_backups(self):
         res = APIClient().get("/api/backups/")
         self.assertIn(res.status_code, (401, 403))
+
+
+class MediaArchivingTests(TestCase):
+    """
+    الإعداد الفعلي في الإنتاج يضع BACKUP_STORAGE_DIR على MEDIA_ROOT نفسه،
+    فالنسخ السابقة تصير جزءاً من "الوسائط" التي تُضغَط في النسخة التالية.
+    """
+
+    def setUp(self):
+        self.admin = CustomUser.objects.create_user(
+            username="ma_admin", password="pass12345",
+            full_name="مدير", role=CustomUser.Roles.ADMIN,
+        )
+        self.client_admin = APIClient()
+        self.client_admin.force_authenticate(user=self.admin)
+
+        # قرص واحد للوسائط وللنسخ — كما هو مضبوط على Render
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = self._tmp.name
+
+        os.makedirs(os.path.join(self.root, "avatars"), exist_ok=True)
+        with open(os.path.join(self.root, "avatars", "a.png"), "wb") as fh:
+            fh.write(b"image-bytes")
+
+        for patcher in (
+            mock.patch.object(backup_views, "BACKUP_DIR", self.root),
+            mock.patch.object(backup_views, "MEDIA_ROOT", self.root),
+        ):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+        # override_settings يستخدم enable/disable لا start/stop
+        settings_override = override_settings(MEDIA_ROOT=self.root)
+        settings_override.enable()
+        self.addCleanup(settings_override.disable)
+
+    def _create(self, backup_type):
+        return self.client_admin.post("/api/backups/create/", {
+            "backup_type": backup_type,
+        })
+
+    def _names(self, record):
+        with zipfile.ZipFile(os.path.join(self.root, record.filename)) as zf:
+            return zf.namelist()
+
+    def test_media_is_archived(self):
+        res = self._create("media_only")
+        self.assertEqual(res.status_code, 201, res.data)
+
+        names = self._names(BackupFile.objects.get(pk=res.data["id"]))
+        self.assertTrue(
+            any(n.replace("\\", "/") == "media/avatars/a.png" for n in names),
+            f"الوسائط غير موجودة في الأرشيف: {names}",
+        )
+
+    def test_a_backup_never_contains_another_backup(self):
+        """
+        بلا استثناء، كل نسخة تبتلع سابقتها فينمو الحجم أُسّياً حتى يمتلئ
+        القرص — والقرص هنا هو نفسه الذي تعيش عليه وسائط الطلاب.
+        """
+        first = self._create("full")
+        self.assertEqual(first.status_code, 201, first.data)
+
+        second = self._create("full")
+        self.assertEqual(second.status_code, 201, second.data)
+
+        names = self._names(BackupFile.objects.get(pk=second.data["id"]))
+        nested = [n for n in names if "backup_" in n and n.endswith(".zip")]
+        self.assertEqual(nested, [], f"نسخة داخل نسخة: {nested}")
+
+    def test_full_backup_carries_both_parts(self):
+        res = self._create("full")
+        names = self._names(BackupFile.objects.get(pk=res.data["id"]))
+
+        self.assertIn("db_dump.json", names)
+        self.assertTrue(any(n.startswith("media") for n in names))
 
 
 class BackupStorageExposureTests(TestCase):
