@@ -35,6 +35,10 @@ from django.views.static import serve
 
 # ── استيراد الـ URL patterns المقسّمة من site_settings ──────────────────────
 from site_settings.urls import public_urlpatterns, admin_urlpatterns
+from store.urls import (
+    public_urlpatterns as store_public_urlpatterns,
+    admin_urlpatterns as store_admin_urlpatterns,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # دوال مساعدة — خدمة ملفات React المبنية (frontend/dist/)
@@ -81,6 +85,10 @@ urlpatterns = [
 
     # ── Public: صفحة الهبوط (بدون مصادقة) ────────────────────────────────────
     path("api/public/", include((public_urlpatterns, "public"))),
+
+    # ── Store: متجر التطبيقات (عام + إدارة) ──────────────────────────────────
+    path("api/public/store/", include((store_public_urlpatterns, "store-public"))),
+    path("api/admin/store/",  include((store_admin_urlpatterns, "store-admin"))),
 
     # ── Admin Site Settings: لوحة التحكم ─────────────────────────────────────
     path("api/admin/", include((admin_urlpatterns, "admin-site"))),
