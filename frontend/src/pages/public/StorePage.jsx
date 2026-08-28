@@ -120,7 +120,13 @@ export default function StorePage() {
 
     api.get('/public/store/apps/', { params })
       .then(({ data }) => setApps(data))
-      .catch(() => setError(true))
+      .catch((e) => {
+        // الزائر لا يُعرَض عليه عطل تقني. فشل الطلب وقائمة فارغة يبدوان له
+        // سواءً: لا تطبيقات ليأخذها. يبقى الخطأ في الـ console للتشخيص.
+        console.warn('[store] تعذّر جلب التطبيقات:', e?.message)
+        setApps([])
+        setError(true)
+      })
       .finally(() => setLoading(false))
   }, [search, platform])
 
@@ -195,16 +201,20 @@ export default function StorePage() {
           <div className="flex justify-center py-20">
             <Loader2 size={26} className="animate-spin" style={{ color: 'var(--brand-blue)' }} />
           </div>
-        ) : error ? (
-          <EmptyState
-            title="تعذّر تحميل التطبيقات"
-            body="تحقّق من اتصالك ثم أعد المحاولة."
-          />
         ) : apps.length === 0 ? (
-          <EmptyState
-            title={search || platform ? 'لا توجد تطبيقات مطابقة' : 'لا توجد تطبيقات بعد'}
-            body={search || platform ? 'جرّب تعديل البحث أو الفلتر.' : 'سيتم إضافة التطبيقات قريباً.'}
-          />
+          // بحث بلا نتيجة حالة مختلفة عن متجر فارغ — إلا عند فشل الطلب،
+          // فحينها لا نعرف إن كان الفلتر هو السبب فنعرض رسالة الانتظار.
+          (search || platform) && !error ? (
+            <EmptyState
+              title="لا توجد تطبيقات مطابقة"
+              body="جرّب تعديل البحث أو الفلتر."
+            />
+          ) : (
+            <EmptyState
+              title="قريباً"
+              body="سيتم إضافة التطبيقات هنا قريباً. تابعنا للحصول عليها فور توفّرها."
+            />
+          )
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {apps.map((app) => <AppCard key={app.id} app={app} />)}
