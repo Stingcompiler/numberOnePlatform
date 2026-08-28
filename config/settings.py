@@ -258,10 +258,26 @@ STORAGES = {
 # ─────────────────────────────────────────────────────────────────────────────
 # ملفات الوسائط (صور مرفوعة)
 # ─────────────────────────────────────────────────────────────────────────────
+def _ensure_dir(path):
+    """
+    ينشئ المجلد إن أمكن، ويتجاهل الفشل بصمت.
+
+    أقراص Render تُركَّب وقت التشغيل لا وقت البناء، فمسار مثل
+    /var/data/media غير موجود أثناء `collectstatic` و`migrate` والجذر
+    للقراءة فقط — وكان ذلك يُسقط استيراد الإعدادات ويُفشل النشر كله.
+    وقت التشغيل يكون القرص مركّباً فيُنشأ المجلد؛ وإن تعذّر حتى حينها،
+    فإن FileSystemStorage في Django ينشئ ما يلزم عند أول حفظ.
+    """
+    try:
+        os.makedirs(path, exist_ok=True)
+    except OSError:
+        pass
+
+
 MEDIA_URL  = "/media/"
 _default_media_root = BASE_DIR / "media"
 MEDIA_ROOT = Path(config("MEDIA_ROOT", default=str(_default_media_root)))
-os.makedirs(MEDIA_ROOT, exist_ok=True)
+_ensure_dir(MEDIA_ROOT)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # مجلد تخزين النسخ الاحتياطية
@@ -273,6 +289,6 @@ os.makedirs(MEDIA_ROOT, exist_ok=True)
 BACKUP_STORAGE_DIR = Path(
     config("BACKUP_STORAGE_DIR", default=str(BASE_DIR / "backups_storage"))
 )
-os.makedirs(BACKUP_STORAGE_DIR, exist_ok=True)
+_ensure_dir(BACKUP_STORAGE_DIR)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
