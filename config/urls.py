@@ -105,7 +105,10 @@ urlpatterns = [
     # الأقراص الدائمة (Render). هذا المسار عام بلا مصادقة، فلولا الاستثناء
     # لأمكن تنزيل نسخة قاعدة البيانات كاملةً من الإنترنت. التنزيل المشروع
     # يمرّ عبر /api/backups/<id>/download/ المحمي بـ IsAdminOrManager.
-    re_path(r'^media/(?!\.backups/)(?P<path>.*)$', serve,
+    # يُحجب مساران: مجلد ‎.backups‎ المخصص، وأي أرشيف نسخ أينما وقع.
+    # الثاني شبكة أمان: ضبط BACKUP_STORAGE_DIR على MEDIA_ROOT نفسه — وهو
+    # خطأ سهل — كان يضع قاعدة البيانات كاملةً تحت رابط عام.
+    re_path(r'^media/(?!\.backups/)(?!.*backup_[^/]*\.zip$)(?P<path>.*)$', serve,
             {'document_root': settings.MEDIA_ROOT}),
 
     # Catch-all للـ SPA — يُعيد index.html لكل مسار لا يبدأ بـ api أو admin أو static أو media

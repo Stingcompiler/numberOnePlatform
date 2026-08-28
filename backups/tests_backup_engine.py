@@ -197,6 +197,25 @@ class BackupStorageExposureTests(TestCase):
         with self.assertRaises(Resolver404):
             resolve("/media/.backups/nested/dump.json")
 
+    def test_backup_archive_is_blocked_wherever_it_sits(self):
+        """
+        شبكة أمان: ضبط BACKUP_STORAGE_DIR على MEDIA_ROOT نفسه بدل مجلد
+        ‎.backups‎ خطأ سهل، وكان يضع قاعدة البيانات كاملةً تحت رابط عام.
+        """
+        for path in (
+            "/media/backup_full_20260828_a1b2c3d4.zip",
+            "/media/backup_db_only_20260828_ffffffff.zip",
+            "/media/sub/dir/backup_full_x.zip",
+        ):
+            with self.subTest(path=path):
+                with self.assertRaises(Resolver404):
+                    resolve(path)
+
+    def test_a_normal_file_named_backup_still_serves(self):
+        """الحجب يستهدف الأرشيفات لا كل ما بدأ بـ backup."""
+        match = resolve("/media/registrations/backup_photo.png")
+        self.assertEqual(match.kwargs.get("path"), "registrations/backup_photo.png")
+
 
 class RetentionTests(TestCase):
     """

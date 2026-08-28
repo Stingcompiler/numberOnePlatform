@@ -7,6 +7,7 @@ backups/views.py
 ================================================================================
 """
 
+import logging
 import os
 import shutil
 import tempfile
@@ -32,6 +33,8 @@ from .serializers import (
     CreateBackupSerializer,
     RestoreLogSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 # ── المسارات المساعدة ─────────────────────────────────────────────────────────
 
@@ -131,8 +134,19 @@ class CreateBackupView(APIView):
             # حذف الأرشيف المعطوب إن وُجد
             if os.path.exists(zip_path):
                 os.remove(zip_path)
+
+            # التتبّع كاملاً في سجلات الخادم: رسالة الواجهة وحدها لا تكفي
+            # لتشخيص عطل يقع على قرص الإنتاج.
+            logger.exception(
+                "فشل إنشاء نسخة احتياطية (type=%s, dir=%s)",
+                backup_type, BACKUP_DIR,
+            )
+
+            # اسم الاستثناء مع نصّه: بعض الاستثناءات (OSError بلا رسالة،
+            # MemoryError) نصّها فارغ فتصل الواجهة رسالة مبتورة بلا سبب.
+            reason = f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__
             return Response(
-                {"detail": f"فشل إنشاء النسخة الاحتياطية: {exc}"},
+                {"detail": f"فشل إنشاء النسخة الاحتياطية — {reason}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
