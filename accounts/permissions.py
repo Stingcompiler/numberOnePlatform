@@ -142,13 +142,18 @@ class LectureWritePermission(BasePermission):
     """
     صلاحية الكتابة على المحاضرات:
     - القراءة (GET/HEAD/OPTIONS): مدير، أستاذ، مشرف الكورسات
-    - الإنشاء/التعديل (POST/PATCH/PUT): مدير + مشرف الكورسات
+    - الإنشاء/التعديل (POST/PATCH/PUT): مدير + أستاذ + مشرف الكورسات
     - الحذف (DELETE): مدير فقط (admin/manager)
+
+    الأستاذ يُنشئ المحاضرات ويعدّلها ولا يحذفها؛ الحذف يبقى بيد الإدارة.
+    كان مستبعَداً من الكتابة سابقاً بينما تعرض له الواجهة صفحة المحاضرات،
+    فكان يصطدم بـ 403 صامت.
     """
 
     WRITE_ROLES = (
         CustomUser.Roles.ADMIN,
         CustomUser.Roles.MANAGER,
+        CustomUser.Roles.TEACHER,
         CustomUser.Roles.LECTURE_SUPERVISOR,
     )
 
