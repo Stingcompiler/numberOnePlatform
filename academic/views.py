@@ -11,10 +11,12 @@ Views الكاملة للهيكل الأكاديمي
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.models import CustomUser
 from accounts.permissions import IsAdminOrManager, IsAdminOrReadOnly, IsStudent, LectureWritePermission, IsLectureSupervisor
 from .models import (
     Level, Grade, Course, Unit, Lesson,
@@ -203,18 +205,51 @@ class UnitDetailView(generics.RetrieveUpdateDestroyAPIView):
 # 5. Lesson — المحاضرات
 # ─────────────────────────────────────────────────────────────────────────────
 
-class LessonListCreateView(generics.ListCreateAPIView):
+class LectureScopeMixin:
+    """
+    يحصر مشرف الكورسات في الكورسات المخصصة له.
+
+    assigned_courses تصف "الكورسات التي يملك هذا المشرف صلاحية إدارة
+    محاضراتها"، والواجهة تخبره بذلك، لكن الحصر لم يكن مطبَّقاً: كان أي
+    مشرف يقرأ ويعدّل محاضرات أي كورس في النظام.
+
+    بقية الأدوار (مدير / مانجر / أستاذ) غير محصورة هنا.
+    """
+
+    @staticmethod
+    def assigned_course_ids(user):
+        """
+        معرّفات الكورسات المخصصة للمشرف، أو None إذا كان الدور غير محصور.
+        قائمة فارغة تعني مشرفاً بلا تخصيص: لا يرى شيئاً ولا يكتب شيئاً.
+        """
+        if not (user and user.is_authenticated):
+            return []
+        if user.role != CustomUser.Roles.LECTURE_SUPERVISOR:
+            return None
+        profile = getattr(user, "lecture_supervisor_profile", None)
+        if profile is None:
+            return []
+        return profile.get_assigned_course_ids()
+
+    def scope_lessons(self, qs):
+        ids = self.assigned_course_ids(self.request.user)
+        if ids is None:
+            return qs
+        return qs.filter(unit__course_id__in=ids)
+
+
+class LessonListCreateView(LectureScopeMixin, generics.ListCreateAPIView):
     """
     GET  /api/academic/lessons/?unit=<id> — قائمة المحاضرات
-      • الإدارة + الأساتذة + مشرفو المحاضرات: يرون نتائج (مفلترة)
+      • الإدارة + الأساتذة: كل المحاضرات
+      • مشرف الكورسات: محاضرات كورساته المخصصة فقط
     POST /api/academic/lessons/            — إنشاء محاضرة
-      • الإدارة + مشرفو المحاضرات (للكورسات المخصصة فقط)
+      • الإدارة + الأساتذة + مشرفو الكورسات (كل ضمن نطاقه)
     """
 
     permission_classes = [LectureWritePermission]
 
     def get_queryset(self):
-        from accounts.models import CustomUser
         qs = Lesson.objects.select_related("unit__course").prefetch_related(
             "exercise__questions__choices"
         )
@@ -222,11 +257,17 @@ class LessonListCreateView(generics.ListCreateAPIView):
         if unit_id:
             qs = qs.filter(unit_id=unit_id)
 
-        # مشرف الكورسات: يرى جميع المحاضرات (بدون فلتر)
-        return qs.order_by("display_order")
+        return self.scope_lessons(qs).order_by("display_order")
 
     def create(self, request, *args, **kwargs):
-        """\u0645شرف الكورسات يستطيع إضافة محاضرات لأي كورس في النظام."""
+        """يرفض إضافة محاضرة لكورس خارج نطاق المشرف."""
+        ids = self.assigned_course_ids(request.user)
+        if ids is not None:
+            unit_id = request.data.get("unit")
+            if not Unit.objects.filter(pk=unit_id, course_id__in=ids).exists():
+                raise PermissionDenied(
+                    _("لا تملك صلاحية إضافة محاضرات لهذا الكورس.")
+                )
         return super().create(request, *args, **kwargs)
 
     def get_serializer_class(self):
@@ -235,22 +276,24 @@ class LessonListCreateView(generics.ListCreateAPIView):
         return LessonSerializer
 
 
-class LessonDetailView(generics.RetrieveUpdateDestroyAPIView):
+class LessonDetailView(LectureScopeMixin, generics.RetrieveUpdateDestroyAPIView):
     """
     GET   /api/academic/lessons/<id>/  — عرض محاضرة
     PATCH /api/academic/lessons/<id>/  — تعديل محاضرة
     DELETE /api/academic/lessons/<id>/ — حذف (الإدارة فقط)
+
+    مشرف الكورسات محصور في كورساته المخصصة؛ ما خرج عنها يرجع 404 لا 403
+    حتى لا يكشف وجود محاضرات خارج نطاقه.
     """
 
-    queryset = Lesson.objects.select_related("unit__course").prefetch_related(
-        "exercise__questions__choices"
-    )
     serializer_class   = LessonSerializer
     permission_classes = [LectureWritePermission]
 
-    def get_object(self):
-        """مشرف الكورسات يستطيع الوصول لأي محاضرة في النظام."""
-        return super().get_object()
+    def get_queryset(self):
+        qs = Lesson.objects.select_related("unit__course").prefetch_related(
+            "exercise__questions__choices"
+        )
+        return self.scope_lessons(qs)
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True

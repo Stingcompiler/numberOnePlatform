@@ -30,6 +30,14 @@ def _user(username, role):
     )
 
 
+def _rows(res):
+    """صفوف الاستجابة سواء كانت مُصفَّحة أم لا (قائمة فارغة ليست غياباً)."""
+    data = res.data
+    if isinstance(data, dict) and "results" in data:
+        return data["results"]
+    return data
+
+
 class LectureWritePermissionTests(TestCase):
 
     def setUp(self):
@@ -45,6 +53,14 @@ class LectureWritePermissionTests(TestCase):
             "teacher":    _user("lp_teacher",    CustomUser.Roles.TEACHER),
             "supervisor": _user("lp_supervisor", CustomUser.Roles.LECTURE_SUPERVISOR),
         }
+
+        # المشرف محصور في assigned_courses، فيلزم تخصيصه لهذا الكورس
+        # حتى تختبر هذه الحالات الصلاحية لا الحصر.
+        from accounts.models import LectureSupervisorProfile
+        profile = LectureSupervisorProfile.objects.create(
+            user=self.roles["supervisor"]
+        )
+        profile.assigned_courses.add(self.course)
 
     def _client(self, role):
         c = APIClient()
@@ -162,3 +178,123 @@ class CourseAndUnitWriteTests(TestCase):
             with self.subTest(role=role):
                 res = self._client(role).get("/api/academic/courses/")
                 self.assertEqual(res.status_code, 200)
+
+
+class SupervisorCourseScopeTests(TestCase):
+    """
+    مشرف الكورسات محصور في assigned_courses.
+
+    كان الحصر موصوفاً في الموديل وفي الواجهة لكنه غير مطبَّق: أي مشرف
+    كان يقرأ ويعدّل ويضيف محاضرات لأي كورس في النظام.
+    """
+
+    def setUp(self):
+        self.level = Level.objects.create(name="مرحلة")
+        self.grade = Grade.objects.create(level=self.level, name="صف")
+
+        self.mine = Course.objects.create(grade=self.grade, name="كورسي")
+        self.other = Course.objects.create(grade=self.grade, name="كورس غيري")
+
+        self.unit_mine = Unit.objects.create(course=self.mine, name="وحدتي")
+        self.unit_other = Unit.objects.create(course=self.other, name="وحدة غيري")
+
+        self.lesson_mine = Lesson.objects.create(
+            unit=self.unit_mine, title="محاضرة داخل نطاقي"
+        )
+        self.lesson_other = Lesson.objects.create(
+            unit=self.unit_other, title="محاضرة خارج نطاقي"
+        )
+
+        from accounts.models import LectureSupervisorProfile
+        self.supervisor = _user("sc_supervisor", CustomUser.Roles.LECTURE_SUPERVISOR)
+        profile = LectureSupervisorProfile.objects.create(user=self.supervisor)
+        profile.assigned_courses.add(self.mine)
+
+        self.client_sup = APIClient()
+        self.client_sup.force_authenticate(user=self.supervisor)
+
+    # ── القراءة ──────────────────────────────────────────────────────────────
+
+    def test_list_shows_only_assigned_courses(self):
+        res = self.client_sup.get("/api/academic/lessons/")
+        self.assertEqual(res.status_code, 200)
+
+        titles = {row["title"] for row in _rows(res)}
+        self.assertIn("محاضرة داخل نطاقي", titles)
+        self.assertNotIn("محاضرة خارج نطاقي", titles)
+
+    def test_detail_of_out_of_scope_lesson_is_404(self):
+        res = self.client_sup.get(f"/api/academic/lessons/{self.lesson_other.id}/")
+        self.assertEqual(res.status_code, 404)
+
+    def test_detail_of_assigned_lesson_is_readable(self):
+        res = self.client_sup.get(f"/api/academic/lessons/{self.lesson_mine.id}/")
+        self.assertEqual(res.status_code, 200)
+
+    # ── الكتابة ──────────────────────────────────────────────────────────────
+
+    def test_cannot_create_lesson_outside_scope(self):
+        res = self.client_sup.post("/api/academic/lessons/", {
+            "unit": self.unit_other.id, "title": "تسلل",
+        })
+        self.assertEqual(res.status_code, 403)
+        self.assertFalse(Lesson.objects.filter(title="تسلل").exists())
+
+    def test_can_create_lesson_inside_scope(self):
+        res = self.client_sup.post("/api/academic/lessons/", {
+            "unit": self.unit_mine.id, "title": "محاضرة مشروعة",
+        })
+        self.assertEqual(res.status_code, 201, res.data)
+
+    def test_cannot_edit_lesson_outside_scope(self):
+        res = self.client_sup.patch(
+            f"/api/academic/lessons/{self.lesson_other.id}/",
+            {"title": "عبث"}, format="json",
+        )
+        self.assertEqual(res.status_code, 404)
+
+        self.lesson_other.refresh_from_db()
+        self.assertEqual(self.lesson_other.title, "محاضرة خارج نطاقي")
+
+    def test_can_edit_lesson_inside_scope(self):
+        res = self.client_sup.patch(
+            f"/api/academic/lessons/{self.lesson_mine.id}/",
+            {"title": "عنوان محدَّث"}, format="json",
+        )
+        self.assertEqual(res.status_code, 200, res.data)
+
+    # ── حالات حدّية ──────────────────────────────────────────────────────────
+
+    def test_supervisor_without_assignments_sees_nothing(self):
+        from accounts.models import LectureSupervisorProfile
+        lonely = _user("sc_lonely", CustomUser.Roles.LECTURE_SUPERVISOR)
+        LectureSupervisorProfile.objects.create(user=lonely)
+
+        c = APIClient()
+        c.force_authenticate(user=lonely)
+        res = c.get("/api/academic/lessons/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(_rows(res)), 0)
+
+    def test_supervisor_without_profile_is_denied(self):
+        """دور مشرف بلا ملف: لا ينهار الطلب ولا يُمنح وصولاً واسعاً."""
+        orphan = _user("sc_orphan", CustomUser.Roles.LECTURE_SUPERVISOR)
+        c = APIClient()
+        c.force_authenticate(user=orphan)
+
+        res = c.get("/api/academic/lessons/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(_rows(res)), 0)
+
+    def test_other_roles_are_not_scoped(self):
+        """المدير والأستاذ يريان كل المحاضرات."""
+        for name, role in (
+            ("sc_admin", CustomUser.Roles.ADMIN),
+            ("sc_teacher", CustomUser.Roles.TEACHER),
+        ):
+            with self.subTest(role=role):
+                c = APIClient()
+                c.force_authenticate(user=_user(name, role))
+                res = c.get("/api/academic/lessons/")
+                titles = {r["title"] for r in _rows(res)}
+                self.assertIn("محاضرة خارج نطاقي", titles)
