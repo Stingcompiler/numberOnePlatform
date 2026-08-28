@@ -31,7 +31,7 @@ from rest_framework.test import APIClient
 from accounts.models import CustomUser
 from academic.models import Level
 from backups import views as backup_views
-from backups.models import BackupFile
+from backups.models import BackupFile, BackupSettings
 
 
 class BackupEngineTests(TestCase):
@@ -196,3 +196,89 @@ class BackupStorageExposureTests(TestCase):
     def test_nested_backup_path_is_not_routed(self):
         with self.assertRaises(Resolver404):
             resolve("/media/.backups/nested/dump.json")
+
+
+class RetentionTests(TestCase):
+    """
+    سياسة الاحتفاظ كانت معلّقة على auto_backup_enabled (افتراضه False)،
+    ولا يوجد في المشروع مُشغّل للنسخ التلقائي أصلاً — فلم يكن keep_last_n
+    يُطبَّق أبداً وتتراكم النسخ بلا سقف على قرص يتشاركه مع الوسائط.
+    """
+
+    def setUp(self):
+        self.admin = CustomUser.objects.create_user(
+            username="rt_admin", password="pass12345",
+            full_name="مدير", role=CustomUser.Roles.ADMIN,
+        )
+        self.client_admin = APIClient()
+        self.client_admin.force_authenticate(user=self.admin)
+
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        patcher = mock.patch.object(backup_views, "BACKUP_DIR", self._tmp.name)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _settings(self, **kwargs):
+        cfg = BackupSettings.get_settings()
+        for k, v in kwargs.items():
+            setattr(cfg, k, v)
+        cfg.save()
+        return cfg
+
+    def _create(self, n):
+        for _ in range(n):
+            res = self.client_admin.post("/api/backups/create/", {
+                "backup_type": "db_only",
+            })
+            self.assertEqual(res.status_code, 201, res.data)
+
+    def test_retention_applies_with_auto_backup_disabled(self):
+        """الحالة الافتراضية في الإنتاج: التلقائي مطفأ."""
+        self._settings(auto_backup_enabled=False, keep_last_n=3)
+        self._create(5)
+
+        self.assertEqual(BackupFile.objects.count(), 3)
+
+    def test_retention_removes_files_from_disk_too(self):
+        self._settings(auto_backup_enabled=False, keep_last_n=2)
+        self._create(4)
+
+        on_disk = {f for f in os.listdir(self._tmp.name) if f.endswith(".zip")}
+        kept = set(BackupFile.objects.values_list("filename", flat=True))
+        self.assertEqual(len(kept), 2)
+        self.assertEqual(on_disk, kept, "بقيت ملفات يتيمة على القرص")
+
+    def test_each_backup_gets_a_unique_filename(self):
+        """
+        _timestamp() بدقة الثانية: نسخ تُنشأ في الثانية نفسها كانت تتشارك
+        الاسم، فتدهس إحداها ملف الأخرى ويحذف التنظيف ملفاً ما زال مرجعياً.
+        """
+        self._settings(auto_backup_enabled=False, keep_last_n=0)
+        self._create(4)
+
+        names = list(BackupFile.objects.values_list("filename", flat=True))
+        self.assertEqual(len(names), 4)
+        self.assertEqual(len(set(names)), 4, "أسماء ملفات متكررة")
+
+    def test_newest_backups_are_the_ones_kept(self):
+        self._settings(auto_backup_enabled=False, keep_last_n=2)
+        self._create(4)
+
+        remaining = list(BackupFile.objects.order_by("created_at"))
+        self.assertEqual(len(remaining), 2)
+
+        newest = BackupFile.objects.order_by("-created_at").first()
+        self.assertIn(newest.pk, [b.pk for b in remaining])
+
+    def test_zero_means_unlimited(self):
+        self._settings(auto_backup_enabled=False, keep_last_n=0)
+        self._create(4)
+
+        self.assertEqual(BackupFile.objects.count(), 4)
+
+    def test_retention_still_applies_when_auto_backup_enabled(self):
+        self._settings(auto_backup_enabled=True, keep_last_n=2)
+        self._create(4)
+
+        self.assertEqual(BackupFile.objects.count(), 2)

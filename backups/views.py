@@ -10,6 +10,7 @@ backups/views.py
 import os
 import shutil
 import tempfile
+import uuid
 import zipfile
 from datetime import datetime
 
@@ -81,8 +82,11 @@ class CreateBackupView(APIView):
         notes = serializer.validated_data.get("notes", "")
 
         _ensure_backup_dir()
+        # لاحقة عشوائية قصيرة: _timestamp() بدقة الثانية، فنسختان تُنشآن
+        # في الثانية نفسها كانتا تتشاركان الاسم — تدهس الثانية ملف الأولى،
+        # ثم يحذف التنظيف ملفاً ما زال سجلٌّ آخر يشير إليه.
         ts = _timestamp()
-        zip_name = f"backup_{backup_type}_{ts}.zip"
+        zip_name = f"backup_{backup_type}_{ts}_{uuid.uuid4().hex[:8]}.zip"
         zip_path = os.path.join(str(BACKUP_DIR), zip_name)
 
         try:
@@ -156,12 +160,22 @@ class CreateBackupView(APIView):
 
     @staticmethod
     def _enforce_retention():
-        """حذف النسخ الزائدة عن الحد المسموح."""
+        """
+        حذف النسخ الزائدة عن keep_last_n.
+
+        كان التنظيف معلّقاً على auto_backup_enabled، وافتراضه False، بينما
+        لا يوجد في المشروع أي مُشغّل للنسخ التلقائي أصلاً. فالنتيجة أن الحد
+        لم يكن يُطبَّق أبداً وتتراكم النسخ بلا سقف على قرص يتشاركه مع
+        الوسائط. الحد يُطبَّق الآن بعد كل نسخة أياً كان مصدرها.
+
+        keep_last_n = 0 تعني بلا حد.
+        """
         cfg = BackupSettings.get_settings()
-        if not cfg.auto_backup_enabled or cfg.keep_last_n <= 0:
+        if cfg.keep_last_n <= 0:
             return
-        backups = BackupFile.objects.order_by("-created_at")
-        to_delete = backups[cfg.keep_last_n:]
+        to_delete = list(
+            BackupFile.objects.order_by("-created_at")[cfg.keep_last_n:]
+        )
         for b in to_delete:
             path = os.path.join(str(BACKUP_DIR), b.filename)
             if os.path.exists(path):
