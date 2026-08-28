@@ -629,3 +629,76 @@ class QuestionChoiceScopeTests(TestCase):
             {"is_correct": False}, format="json",
         )
         self.assertEqual(res.status_code, 404)
+
+
+class SupervisorAssignmentApiTests(TestCase):
+    """
+    تخصيص الكورسات للمشرف عبر الـ API.
+
+    الحصر يعتمد على assigned_courses، ولم تكن هناك واجهة لملئها إطلاقاً —
+    فكل المشرفين بلا تخصيص، وكل المحاضرات محجوبة عنهم. هذه الاختبارات
+    تثبّت المسار الذي تبني عليه الواجهة.
+    """
+
+    def setUp(self):
+        from accounts.models import LectureSupervisorProfile
+
+        self.level = Level.objects.create(name="مرحلة")
+        self.grade = Grade.objects.create(level=self.level, name="صف")
+        self.a = Course.objects.create(grade=self.grade, name="الرياضيات")
+        self.b = Course.objects.create(grade=self.grade, name="الفيزياء")
+
+        self.admin = _user("as_admin", CustomUser.Roles.ADMIN)
+        self.sup_user = _user("as_sup", CustomUser.Roles.LECTURE_SUPERVISOR)
+        self.profile = LectureSupervisorProfile.objects.create(user=self.sup_user)
+
+        self.client_admin = APIClient()
+        self.client_admin.force_authenticate(user=self.admin)
+
+    def _patch(self, ids):
+        return self.client_admin.patch(
+            f"/api/lecture-supervisors/{self.profile.pk}/",
+            {"assigned_courses": ids}, format="json",
+        )
+
+    def test_admin_can_assign_courses(self):
+        res = self._patch([self.a.id, self.b.id])
+        self.assertEqual(res.status_code, 200, res.data)
+
+        self.assertEqual(
+            set(self.profile.assigned_courses.values_list("id", flat=True)),
+            {self.a.id, self.b.id},
+        )
+
+    def test_assignment_grants_lecture_access(self):
+        """الغاية من التخصيص: أن يستعيد المشرف وصوله."""
+        unit = Unit.objects.create(course=self.a, name="وحدة")
+        Lesson.objects.create(unit=unit, title="محاضرة")
+
+        c = APIClient()
+        c.force_authenticate(user=self.sup_user)
+        self.assertEqual(len(_rows(c.get("/api/academic/lessons/"))), 0)
+
+        self._patch([self.a.id])
+        self.assertEqual(len(_rows(c.get("/api/academic/lessons/"))), 1)
+
+    def test_assignment_can_be_cleared(self):
+        self._patch([self.a.id])
+        res = self._patch([])
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(self.profile.assigned_courses.count(), 0)
+
+    def test_response_carries_the_course_names(self):
+        """الواجهة تعرض الأسماء لا المعرّفات."""
+        res = self._patch([self.a.id])
+        names = {c["name"] for c in res.data["assigned_courses_detail"]}
+        self.assertEqual(names, {"الرياضيات"})
+
+    def test_only_admins_may_assign(self):
+        c = APIClient()
+        c.force_authenticate(user=self.sup_user)
+        res = c.patch(
+            f"/api/lecture-supervisors/{self.profile.pk}/",
+            {"assigned_courses": [self.a.id, self.b.id]}, format="json",
+        )
+        self.assertEqual(res.status_code, 403)

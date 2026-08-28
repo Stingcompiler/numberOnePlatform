@@ -14,6 +14,7 @@ import {
   Phone, Mail, User, Calendar, BookMarked, Plus, Minus,
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import fetchAll from '../../api/fetchAll'
 
 /* ── Toast ─────────────────────────────────────────────── */
 function Toast({ msg, type, onClose }) {
@@ -59,6 +60,8 @@ export default function LectureSupervisorDetailPage() {
   const [toggling, setToggling]       = useState(false)
   const [showDelete, setShowDelete]   = useState(false)
   const [deleting, setDeleting]       = useState(false)
+  const [courses, setCourses]         = useState([])
+  const [assigning, setAssigning]     = useState(null)   // معرّف الكورس الجاري تغييره
 
   const notify = (msg, type = 'success') => setToast({ msg, type })
 
@@ -79,6 +82,33 @@ export default function LectureSupervisorDetailPage() {
   }, [id])
 
   useEffect(() => { fetchProfile() }, [fetchProfile])
+
+  // كل الكورسات لاختيار ما يُخصَّص منها. غير مُجزَّأة عبر fetchAll وإلا
+  // ظهرت أول عشرة فقط.
+  useEffect(() => {
+    fetchAll('/academic/courses/').then(setCourses).catch(() => {})
+  }, [])
+
+  /* ── تخصيص الكورسات ─────────────────────────────────────── */
+  // الحصر في الباك إند يقرأ assigned_courses. مشرف بلا تخصيص لا يرى
+  // محاضرة واحدة — ولم تكن هناك واجهة لملئها إطلاقاً.
+  const assignedIds = (profile?.assigned_courses_detail || []).map(c => c.id)
+
+  const setAssigned = async (ids, courseId) => {
+    setAssigning(courseId)
+    try {
+      const { data } = await api.patch(
+        `/lecture-supervisors/${id}/`, { assigned_courses: ids },
+      )
+      setProfile(data)
+    } catch (e) {
+      notify(e?.response?.data?.detail || 'فشل تحديث الكورسات', 'error')
+    }
+    finally { setAssigning(null) }
+  }
+
+  const addCourse    = (courseId) => setAssigned([...assignedIds, courseId], courseId)
+  const removeCourse = (courseId) => setAssigned(assignedIds.filter(i => i !== courseId), courseId)
 
   /* ── حفظ التعديلات ──────────────────────────────────────── */
   const handleSave = async () => {
@@ -247,6 +277,69 @@ export default function LectureSupervisorDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ══ الكورسات المخصصة ═══════════════════════════════════ */}
+      <div className="glass-card p-5 mt-5">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+            <BookMarked size={15} className="text-brand-blue" /> الكورسات المخصصة
+          </h3>
+          <span className="text-white/40 text-xs">{assignedIds.length} كورس</span>
+        </div>
+        <p className="text-white/30 text-[11px] mb-4">
+          يدير المشرف محاضرات هذه الكورسات وحدها. بلا تخصيص لا يرى أي محاضرة.
+        </p>
+
+        {assignedIds.length === 0 && (
+          <div className="flex items-start gap-2 px-3 py-2.5 mb-4 rounded-xl bg-amber-500/05 border border-amber-500/15">
+            <AlertTriangle size={15} className="text-amber-400 mt-0.5 shrink-0" />
+            <p className="text-amber-400/80 text-xs leading-relaxed">
+              لا كورسات مخصصة — هذا المشرف لا يستطيع الوصول إلى أي محاضرة حالياً.
+            </p>
+          </div>
+        )}
+
+        {courses.length === 0 ? (
+          <p className="text-white/25 text-xs text-center py-4">لا توجد كورسات في النظام.</p>
+        ) : (
+          <div className="space-y-1.5 max-h-80 overflow-y-auto">
+            {courses.map(c => {
+              const on = assignedIds.includes(c.id)
+              const busy = assigning === c.id
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => (on ? removeCourse(c.id) : addCourse(c.id))}
+                  aria-pressed={on}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-right transition-colors disabled:opacity-50 ${
+                    on
+                      ? 'bg-brand-blue/08 border-brand-blue/25'
+                      : 'bg-white/02 border-white/06 hover:border-white/12'
+                  }`}
+                >
+                  <span className="shrink-0">
+                    {busy
+                      ? <Loader2 size={14} className="animate-spin text-brand-blue" />
+                      : on
+                        ? <Minus size={14} className="text-brand-blue" />
+                        : <Plus size={14} className="text-white/30" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block text-xs font-medium truncate ${on ? 'text-white' : 'text-white/70'}`}>
+                      {c.name}
+                    </span>
+                    {c.grade_name && (
+                      <span className="block text-white/30 text-[11px] truncate">{c.grade_name}</span>
+                    )}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* ══ Modal: تأكيد الحذف ═════════════════════════════════ */}
