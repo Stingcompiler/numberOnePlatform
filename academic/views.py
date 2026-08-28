@@ -17,7 +17,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import CustomUser
-from accounts.permissions import IsAdminOrManager, IsAdminOrReadOnly, IsStudent, LectureWritePermission, IsLectureSupervisor
+from accounts.permissions import (
+    IsAdminOrManager, IsAdminOrReadOnly, IsStudent, IsLectureSupervisor,
+    LectureWritePermission, LectureSubContentPermission,
+)
 from .models import (
     Level, Grade, Course, Unit, Lesson,
     Exercise, Question, Choice,
@@ -213,8 +216,15 @@ class LectureScopeMixin:
     محاضراتها"، والواجهة تخبره بذلك، لكن الحصر لم يكن مطبَّقاً: كان أي
     مشرف يقرأ ويعدّل محاضرات أي كورس في النظام.
 
+    كل view يعلن course_lookup: مسار العلاقة من موديله إلى الكورس. يشمل
+    الحصر التمارين والأسئلة والخيارات أيضاً، وإلا صار تعديل تمرين محاضرةٍ
+    التفافاً على حصر المحاضرة نفسها.
+
     بقية الأدوار (مدير / مانجر / أستاذ) غير محصورة هنا.
     """
+
+    #: مسار الفلترة من موديل الـ view إلى معرّف الكورس
+    course_lookup = "unit__course_id__in"
 
     @staticmethod
     def assigned_course_ids(user):
@@ -231,11 +241,25 @@ class LectureScopeMixin:
             return []
         return profile.get_assigned_course_ids()
 
-    def scope_lessons(self, qs):
+    def scope_to_assigned(self, qs):
         ids = self.assigned_course_ids(self.request.user)
         if ids is None:
             return qs
-        return qs.filter(unit__course_id__in=ids)
+        return qs.filter(**{self.course_lookup: ids})
+
+    def require_in_scope(self, model, course_lookup, message, **lookup):
+        """
+        يرفض الكتابة على كائن خارج نطاق المشرف.
+
+        course_lookup هو مسار العلاقة من `model` إلى الكورس — يختلف عن
+        course_lookup الخاص بالـ view لأن الكائن المفحوص هو الأب لا الابن.
+        لا أثر لهذه الدالة على الأدوار غير المحصورة.
+        """
+        ids = self.assigned_course_ids(self.request.user)
+        if ids is None:
+            return
+        if not model.objects.filter(**lookup, **{course_lookup: ids}).exists():
+            raise PermissionDenied(message)
 
 
 class LessonListCreateView(LectureScopeMixin, generics.ListCreateAPIView):
@@ -257,17 +281,15 @@ class LessonListCreateView(LectureScopeMixin, generics.ListCreateAPIView):
         if unit_id:
             qs = qs.filter(unit_id=unit_id)
 
-        return self.scope_lessons(qs).order_by("display_order")
+        return self.scope_to_assigned(qs).order_by("display_order")
 
     def create(self, request, *args, **kwargs):
         """يرفض إضافة محاضرة لكورس خارج نطاق المشرف."""
-        ids = self.assigned_course_ids(request.user)
-        if ids is not None:
-            unit_id = request.data.get("unit")
-            if not Unit.objects.filter(pk=unit_id, course_id__in=ids).exists():
-                raise PermissionDenied(
-                    _("لا تملك صلاحية إضافة محاضرات لهذا الكورس.")
-                )
+        self.require_in_scope(
+            Unit, "course_id__in",
+            _("لا تملك صلاحية إضافة محاضرات لهذا الكورس."),
+            pk=request.data.get("unit"),
+        )
         return super().create(request, *args, **kwargs)
 
     def get_serializer_class(self):
@@ -293,7 +315,7 @@ class LessonDetailView(LectureScopeMixin, generics.RetrieveUpdateDestroyAPIView)
         qs = Lesson.objects.select_related("unit__course").prefetch_related(
             "exercise__questions__choices"
         )
-        return self.scope_lessons(qs)
+        return self.scope_to_assigned(qs)
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
@@ -304,53 +326,130 @@ class LessonDetailView(LectureScopeMixin, generics.RetrieveUpdateDestroyAPIView)
 # 6. Exercise — التمارين
 # ─────────────────────────────────────────────────────────────────────────────
 
-class ExerciseCreateView(generics.CreateAPIView):
-    """POST /api/academic/exercises/ — إنشاء تمرين لمحاضرة"""
+class ExerciseCreateView(LectureScopeMixin, generics.CreateAPIView):
+    """
+    POST /api/academic/exercises/ — إنشاء تمرين لمحاضرة
+
+    التمرين جزء من المحاضرة، فيتبع صلاحياتها: الإدارة والأستاذ ومشرف
+    الكورسات ينشئون، والمشرف محصور في كورساته المخصصة.
+    """
 
     serializer_class   = ExerciseSerializer
-    permission_classes = [IsAdminOrManager]
+    permission_classes = [LectureWritePermission]
+
+    def create(self, request, *args, **kwargs):
+        self.require_in_scope(
+            Lesson, "unit__course_id__in",
+            _("لا تملك صلاحية إضافة تمارين لهذه المحاضرة."),
+            pk=request.data.get("lesson"),
+        )
+        return super().create(request, *args, **kwargs)
 
 
-class ExerciseDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """GET / PATCH / DELETE /api/academic/exercises/<id>/"""
+class ExerciseDetailView(LectureScopeMixin, generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET / PATCH / DELETE /api/academic/exercises/<id>/
 
-    queryset = Exercise.objects.prefetch_related("questions__choices")
+    الحذف للإدارة وحدها (LectureWritePermission.DELETE_ROLES).
+    """
+
     serializer_class   = ExerciseSerializer
-    permission_classes = [IsAdminOrManager]
+    permission_classes = [LectureWritePermission]
+    course_lookup      = "lesson__unit__course_id__in"
+
+    def get_queryset(self):
+        return self.scope_to_assigned(
+            Exercise.objects.prefetch_related("questions__choices")
+        )
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
         return self.update(request, *args, **kwargs)
 
 
-class QuestionListCreateView(generics.ListCreateAPIView):
+class QuestionListCreateView(LectureScopeMixin, generics.ListCreateAPIView):
     """GET /api/academic/exercises/<exercise_id>/questions/ | POST"""
 
     serializer_class   = QuestionSerializer
-    permission_classes = [IsAdminOrManager]
+    permission_classes = [LectureWritePermission]
+    course_lookup      = "exercise__lesson__unit__course_id__in"
 
     def get_queryset(self):
-        return Question.objects.filter(
+        qs = Question.objects.filter(
             exercise_id=self.kwargs["exercise_id"]
-        ).prefetch_related("choices").order_by("display_order")
+        ).prefetch_related("choices")
+        return self.scope_to_assigned(qs).order_by("display_order")
+
+    def create(self, request, *args, **kwargs):
+        self.require_in_scope(
+            Exercise, "lesson__unit__course_id__in",
+            _("لا تملك صلاحية إضافة أسئلة لهذا التمرين."),
+            pk=self.kwargs["exercise_id"],
+        )
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(exercise_id=self.kwargs["exercise_id"])
 
 
-class ChoiceListCreateView(generics.ListCreateAPIView):
+class ChoiceListCreateView(LectureScopeMixin, generics.ListCreateAPIView):
     """GET /api/academic/questions/<question_id>/choices/ | POST"""
 
     serializer_class   = ChoiceSerializer
-    permission_classes = [IsAdminOrManager]
+    permission_classes = [LectureWritePermission]
+    course_lookup      = "question__exercise__lesson__unit__course_id__in"
 
     def get_queryset(self):
-        return Choice.objects.filter(
-            question_id=self.kwargs["question_id"]
-        ).order_by("display_order")
+        qs = Choice.objects.filter(question_id=self.kwargs["question_id"])
+        return self.scope_to_assigned(qs).order_by("display_order")
+
+    def create(self, request, *args, **kwargs):
+        self.require_in_scope(
+            Question, "exercise__lesson__unit__course_id__in",
+            _("لا تملك صلاحية إضافة خيارات لهذا السؤال."),
+            pk=self.kwargs["question_id"],
+        )
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(question_id=self.kwargs["question_id"])
+
+
+class QuestionDetailView(LectureScopeMixin, generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET / PATCH / DELETE /api/academic/questions/<id>/
+
+    لم يكن هذا المسار موجوداً: كانت الأسئلة تُنشأ ولا تُعدَّل ولا تُحذف،
+    بينما لوحة التحكم تنادي DELETE عليه فتحصل على 404.
+    """
+
+    serializer_class   = QuestionSerializer
+    permission_classes = [LectureSubContentPermission]
+    course_lookup      = "exercise__lesson__unit__course_id__in"
+
+    def get_queryset(self):
+        return self.scope_to_assigned(
+            Question.objects.prefetch_related("choices")
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
+
+
+class ChoiceDetailView(LectureScopeMixin, generics.RetrieveUpdateDestroyAPIView):
+    """GET / PATCH / DELETE /api/academic/choices/<id>/"""
+
+    serializer_class   = ChoiceSerializer
+    permission_classes = [LectureSubContentPermission]
+    course_lookup      = "question__exercise__lesson__unit__course_id__in"
+
+    def get_queryset(self):
+        return self.scope_to_assigned(Choice.objects.all())
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

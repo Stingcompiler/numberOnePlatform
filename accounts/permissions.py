@@ -178,3 +178,16 @@ class LectureWritePermission(BasePermission):
             return request.user.role in self.DELETE_ROLES
         # POST / PUT / PATCH
         return request.user.role in self.WRITE_ROLES
+
+
+class LectureSubContentPermission(LectureWritePermission):
+    """
+    أسئلة التمارين وخياراتها.
+
+    حذف سؤال من تمرين هو تحرير للتمرين لا حذف لمحتوى منشور، فمن يملك
+    كتابة المحاضرات يملك حذفه — وإلا تعذّر على الأستاذ سحب سؤال أضافه
+    بالخطأ. حذف المحاضرة أو التمرين نفسه يبقى بيد الإدارة عبر
+    LectureWritePermission.
+    """
+
+    DELETE_ROLES = LectureWritePermission.WRITE_ROLES

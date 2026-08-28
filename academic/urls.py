@@ -13,6 +13,7 @@ from .views import (
     LessonListCreateView, LessonDetailView,
     ExerciseCreateView, ExerciseDetailView,
     QuestionListCreateView, ChoiceListCreateView,
+    QuestionDetailView, ChoiceDetailView,
     StudentCourseAccessListCreateView, StudentCourseAccessDetailView,
     MyCoursesView, MyCourseDetailView, MyLessonDetailView,
     MarkLessonCompleteView, SubmitExerciseView,
@@ -44,6 +45,8 @@ urlpatterns = [
     path("exercises/<int:pk>/",                 ExerciseDetailView.as_view(),       name="exercise-detail"),
     path("exercises/<int:exercise_id>/questions/", QuestionListCreateView.as_view(), name="question-list"),
     path("questions/<int:question_id>/choices/",   ChoiceListCreateView.as_view(),  name="choice-list"),
+    path("questions/<int:pk>/",                 QuestionDetailView.as_view(),       name="question-detail"),
+    path("choices/<int:pk>/",                   ChoiceDetailView.as_view(),         name="choice-detail"),
 
     # ── وصول الكورسات ─────────────────────────────────────────────────────────
     path("access/",                             StudentCourseAccessListCreateView.as_view(), name="access-list"),
