@@ -4,18 +4,23 @@ backups/serializers.py
 ================================================================================
 """
 
+import os
+
+from django.conf import settings
 from rest_framework import serializers
+
 from .models import BackupFile, BackupSettings, RestoreLog
 
 
 class BackupFileSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source="created_by.full_name", read_only=True, default="")
     size_display = serializers.SerializerMethodField()
+    file_exists  = serializers.SerializerMethodField()
 
     class Meta:
         model  = BackupFile
         fields = [
-            "id", "filename", "size_bytes", "size_display",
+            "id", "filename", "size_bytes", "size_display", "file_exists",
             "backup_type", "notes", "created_at", "created_by", "created_by_name",
         ]
         read_only_fields = ["id", "filename", "size_bytes", "created_at", "created_by"]
@@ -30,6 +35,18 @@ class BackupFileSerializer(serializers.ModelSerializer):
         elif size < 1024 ** 3:
             return f"{size / (1024 ** 2):.1f} MB"
         return f"{size / (1024 ** 3):.2f} GB"
+
+    def get_file_exists(self, obj):
+        """
+        هل الأرشيف موجود فعلاً على القرص؟
+
+        سجلٌّ بلا ملف كان يظهر في القائمة كنسخة سليمة ثم يفشل تنزيلها.
+        الحقل يفضح الحالة بدل أن تُكتشَف وقت الحاجة إلى الاستعادة.
+        """
+        backup_dir = getattr(settings, "BACKUP_STORAGE_DIR", None)
+        if not backup_dir:
+            return None
+        return os.path.exists(os.path.join(str(backup_dir), obj.filename))
 
 
 class CreateBackupSerializer(serializers.Serializer):

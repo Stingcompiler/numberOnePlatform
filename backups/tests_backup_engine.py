@@ -178,6 +178,100 @@ class BackupEngineTests(TestCase):
         self.assertIn(res.status_code, (401, 403))
 
 
+class ArchiveAndRecordConsistencyTests(TestCase):
+    """
+    السجل والملف يعيشان أو يموتان معاً.
+
+    كان السجل يُنشأ داخل نفس الـ try الذي يبني الأرشيف، فأي فشل بعده
+    يحذف الملف ويترك السجل: "فشل الإنشاء" ثم تظهر النسخة في القائمة ثم
+    يفشل تنزيلها — وهو ما وقع في الإنتاج بالضبط.
+    """
+
+    def setUp(self):
+        self.admin = CustomUser.objects.create_user(
+            username="cons_admin", password="pass12345",
+            full_name="مدير", role=CustomUser.Roles.ADMIN,
+        )
+        self.client_admin = APIClient()
+        self.client_admin.force_authenticate(user=self.admin)
+
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        patcher = mock.patch.object(backup_views, "BACKUP_DIR", self._tmp.name)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _create(self):
+        return self.client_admin.post("/api/backups/create/", {
+            "backup_type": "db_only",
+        })
+
+    def test_a_failure_after_the_archive_leaves_no_orphan_record(self):
+        """فشل التنظيف لا يجوز أن يُبطل نسخة صحيحة."""
+        with mock.patch.object(
+            backup_views.CreateBackupView, "_enforce_retention",
+            side_effect=OSError("فشل مفتعل في التنظيف"),
+        ):
+            res = self._create()
+
+        self.assertEqual(res.status_code, 201, res.data)
+
+        record = BackupFile.objects.get(pk=res.data["id"])
+        path = os.path.join(self._tmp.name, record.filename)
+        self.assertTrue(os.path.exists(path), "حُذف أرشيف صحيح بسبب فشل التنظيف")
+
+        dl = self.client_admin.get(f"/api/backups/{record.pk}/download/")
+        self.assertEqual(dl.status_code, 200)
+        # FileResponse يُبقي المقبض مفتوحاً، وويندوز يمنع حذف ملف مفتوح
+        # فيفشل تنظيف المجلد المؤقت. لا أثر لهذا على لينكس ولا على الإنتاج.
+        dl.close()
+
+    def test_a_failure_while_building_leaves_no_record(self):
+        with mock.patch.object(
+            backup_views.CreateBackupView, "_backup_database",
+            side_effect=RuntimeError("فشل مفتعل في التفريغ"),
+        ):
+            res = self._create()
+
+        self.assertEqual(res.status_code, 500)
+        self.assertEqual(BackupFile.objects.count(), 0)
+        self.assertEqual(
+            [f for f in os.listdir(self._tmp.name) if f.endswith(".zip")], [],
+        )
+
+    def test_error_message_names_the_exception(self):
+        """استثناء بلا نص كان يصل الواجهة رسالةً مبتورة بلا سبب."""
+        with mock.patch.object(
+            backup_views.CreateBackupView, "_backup_database",
+            side_effect=OSError(),
+        ):
+            res = self._create()
+
+        self.assertEqual(res.status_code, 500)
+        self.assertIn("OSError", res.data["detail"])
+
+    def test_listing_reveals_a_record_whose_file_is_gone(self):
+        res = self._create()
+        record = BackupFile.objects.get(pk=res.data["id"])
+        os.remove(os.path.join(self._tmp.name, record.filename))
+
+        with override_settings(BACKUP_STORAGE_DIR=self._tmp.name):
+            listing = self.client_admin.get("/api/backups/")
+
+        row = next(r for r in listing.data if r["id"] == str(record.pk))
+        self.assertFalse(row["file_exists"])
+
+    def test_a_record_without_its_file_can_still_be_deleted(self):
+        """التنظيف بعد العطل يجب ألا يحتاج وصولاً لقاعدة البيانات يدوياً."""
+        res = self._create()
+        record = BackupFile.objects.get(pk=res.data["id"])
+        os.remove(os.path.join(self._tmp.name, record.filename))
+
+        gone = self.client_admin.delete(f"/api/backups/{record.pk}/")
+        self.assertEqual(gone.status_code, 200)
+        self.assertFalse(BackupFile.objects.filter(pk=record.pk).exists())
+
+
 class MediaArchivingTests(TestCase):
     """
     الإعداد الفعلي في الإنتاج يضع BACKUP_STORAGE_DIR على MEDIA_ROOT نفسه،

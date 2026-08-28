@@ -92,13 +92,13 @@ class CreateBackupView(APIView):
         zip_name = f"backup_{backup_type}_{ts}_{uuid.uuid4().hex[:8]}.zip"
         zip_path = os.path.join(str(BACKUP_DIR), zip_name)
 
+        # ── بناء الأرشيف ─────────────────────────────────────────────
+        # كل ما قد يفشل محصور هنا. ما بعده يفترض أرشيفاً مكتملاً على القرص.
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                # ── نسخ قاعدة البيانات ────────────────────────────────────
                 if backup_type in ("full", "db_only"):
                     self._backup_database(tmp)
 
-                # ── إنشاء الأرشيف المضغوط ────────────────────────────────
                 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
                     for root, _dirs, files in os.walk(tmp):
                         for f in files:
@@ -114,31 +114,13 @@ class CreateBackupView(APIView):
                     if backup_type in ("full", "media_only"):
                         self._add_media(zf, zip_path)
 
-            # ── حفظ السجل ─────────────────────────────────────────────
             size = os.path.getsize(zip_path)
-            record = BackupFile.objects.create(
-                filename=zip_name,
-                size_bytes=size,
-                backup_type=backup_type,
-                notes=notes,
-                created_by=request.user,
-            )
-
-            # ── تنظيف النسخ القديمة ────────────────────────────────────
-            self._enforce_retention()
-
-            return Response(
-                BackupFileSerializer(record).data,
-                status=status.HTTP_201_CREATED,
-            )
 
         except Exception as exc:
-            # حذف الأرشيف المعطوب إن وُجد
+            # لا سجل بعد، فحذف الأرشيف الناقص لا يترك أثراً معلّقاً.
             if os.path.exists(zip_path):
                 os.remove(zip_path)
 
-            # التتبّع كاملاً في سجلات الخادم: رسالة الواجهة وحدها لا تكفي
-            # لتشخيص عطل يقع على قرص الإنتاج.
             logger.exception(
                 "فشل إنشاء نسخة احتياطية (type=%s, dir=%s)",
                 backup_type, BACKUP_DIR,
@@ -151,6 +133,29 @@ class CreateBackupView(APIView):
                 {"detail": f"فشل إنشاء النسخة الاحتياطية — {reason}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+        # ── الأرشيف مكتمل. ما يلي لا يجوز أن يتلفه ────────────────────
+        #
+        # كان السجل يُنشأ داخل الـ try، فأي فشل بعده يحذف الملف ويترك
+        # السجل قائماً: تظهر النسخة في القائمة ولا تُنزَّل أبداً.
+        record = BackupFile.objects.create(
+            filename=zip_name,
+            size_bytes=size,
+            backup_type=backup_type,
+            notes=notes,
+            created_by=request.user,
+        )
+
+        # التنظيف صيانة لا جزء من النسخة؛ فشله لا يُبطل أرشيفاً صحيحاً.
+        try:
+            self._enforce_retention()
+        except Exception:
+            logger.exception("فشل تنظيف النسخ القديمة بعد إنشاء %s", zip_name)
+
+        return Response(
+            BackupFileSerializer(record).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     # ── مساعدات ───────────────────────────────────────────────────────────
 
