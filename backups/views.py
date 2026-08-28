@@ -9,12 +9,13 @@ backups/views.py
 
 import os
 import shutil
-import subprocess
 import tempfile
 import zipfile
 from datetime import datetime
 
 from django.conf import settings
+from django.core.management import call_command
+from django.db import transaction
 from django.http import FileResponse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -44,12 +45,19 @@ def _ensure_backup_dir():
     os.makedirs(BACKUP_DIR, exist_ok=True)
 
 
-def _is_sqlite():
-    return "sqlite3" in DB_ENGINE
+# اسم ملف البيانات داخل الأرشيف. نسخ ما قبل التحوّل إلى dumpdata كانت
+# تحمل "db.sqlite3" أو "db_dump.sql" — تُرفَض صراحةً عند الاستعادة.
+DB_DUMP_NAME = "db_dump.json"
 
-
-def _is_postgres():
-    return "postgresql" in DB_ENGINE
+# جداول تُبنى من الهجرات أو تخصّ جلسات منتهية؛ نسخها يُفشل الاستعادة
+# بتضارب المفاتيح الأساسية.
+DUMP_EXCLUDES = [
+    "contenttypes",
+    "auth.permission",
+    "admin.logentry",
+    "sessions.session",
+    "token_blacklist",
+]
 
 
 def _timestamp():
@@ -128,33 +136,23 @@ class CreateBackupView(APIView):
 
     @staticmethod
     def _backup_database(dest_dir):
-        """نسخ قاعدة البيانات حسب المحرّك."""
-        if _is_sqlite():
-            db_path = DB_SETTINGS["NAME"]
-            shutil.copy2(db_path, os.path.join(dest_dir, "db.sqlite3"))
+        """
+        نسخ البيانات عبر dumpdata — بايثون خالص يعمل على SQLite و PostgreSQL
+        بلا أدوات خارجية.
 
-        elif _is_postgres():
-            dump_path = os.path.join(dest_dir, "db_dump.sql")
-            env = os.environ.copy()
-            if DB_SETTINGS.get("PASSWORD"):
-                env["PGPASSWORD"] = DB_SETTINGS["PASSWORD"]
-
-            cmd = [
-                "pg_dump",
-                "--clean", "--if-exists",
-                "--no-owner", "--no-acl",
-                "-h", DB_SETTINGS.get("HOST", "localhost"),
-                "-p", str(DB_SETTINGS.get("PORT", "5432")),
-                "-U", DB_SETTINGS.get("USER", "postgres"),
-                "-d", DB_SETTINGS["NAME"],
-                "-f", dump_path,
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, env=env)
-            if result.returncode != 0:
-                raise RuntimeError(f"pg_dump failed: {result.stderr}")
-
-        else:
-            raise RuntimeError(f"محرّك قاعدة البيانات غير مدعوم: {DB_ENGINE}")
+        الفرع السابق كان ينادي pg_dump، وهو غير مثبَّت في بيئة Render
+        (runtime: python بلا صلاحية apt)، فكان subprocess يرمي
+        FileNotFoundError قبل الوصول إلى فحص returncode أصلاً.
+        """
+        dump_path = os.path.join(dest_dir, DB_DUMP_NAME)
+        with open(dump_path, "w", encoding="utf-8") as fh:
+            call_command(
+                "dumpdata",
+                exclude=DUMP_EXCLUDES,
+                format="json",
+                indent=2,
+                stdout=fh,
+            )
 
     @staticmethod
     def _enforce_retention():
@@ -300,40 +298,35 @@ class RestoreBackupView(APIView):
 
     @staticmethod
     def _restore_database(extract_dir, log_lines):
-        """استعادة قاعدة البيانات حسب المحرّك."""
-        if _is_sqlite():
-            src = os.path.join(extract_dir, "db.sqlite3")
-            if os.path.exists(src):
-                dst = DB_SETTINGS["NAME"]
-                shutil.copy2(src, dst)
-                log_lines.append("تم استعادة قاعدة بيانات SQLite بنجاح.")
-            else:
-                log_lines.append("لم يتم العثور على ملف db.sqlite3 في الأرشيف.")
+        """
+        استعادة البيانات عبر loaddata داخل معاملة واحدة.
 
-        elif _is_postgres():
-            dump_path = os.path.join(extract_dir, "db_dump.sql")
-            if os.path.exists(dump_path):
-                env = os.environ.copy()
-                if DB_SETTINGS.get("PASSWORD"):
-                    env["PGPASSWORD"] = DB_SETTINGS["PASSWORD"]
+        حدّ معروف: هذه استعادة على مستوى البيانات لا على مستوى الملف.
+        loaddata يكتب فوق الصفوف المطابقة بالمفتاح الأساسي، لكنه لا يحذف
+        صفوفاً أُنشئت بعد أخذ النسخة. العودة إلى حالة النسخة بالضبط تتطلب
+        تفريغ القاعدة أولاً، وهو غير آمن من داخل طلب HTTP يستخدم نفس
+        القاعدة للمصادقة.
+        """
+        json_path = os.path.join(extract_dir, DB_DUMP_NAME)
+        if os.path.exists(json_path):
+            with transaction.atomic():
+                call_command("loaddata", json_path, verbosity=0)
+            log_lines.append("تمت استعادة بيانات قاعدة البيانات بنجاح.")
+            return
 
-                cmd = [
-                    "psql",
-                    "-h", DB_SETTINGS.get("HOST", "localhost"),
-                    "-p", str(DB_SETTINGS.get("PORT", "5432")),
-                    "-U", DB_SETTINGS.get("USER", "postgres"),
-                    "-d", DB_SETTINGS["NAME"],
-                    "-f", dump_path,
-                ]
-                result = subprocess.run(cmd, capture_output=True, text=True, env=env)
-                if result.returncode != 0:
-                    raise RuntimeError(f"psql restore failed: {result.stderr}")
-                log_lines.append("تم استعادة قاعدة بيانات PostgreSQL بنجاح.")
-            else:
-                log_lines.append("لم يتم العثور على ملف db_dump.sql في الأرشيف.")
+        # ── أرشيفات أُنشئت قبل التحوّل إلى dumpdata ────────────────────────
+        if os.path.exists(os.path.join(extract_dir, "db.sqlite3")):
+            raise RuntimeError(
+                "أرشيف قديم بصيغة ملف SQLite. استعِده يدوياً باستبدال ملف "
+                "قاعدة البيانات على الخادم."
+            )
+        if os.path.exists(os.path.join(extract_dir, "db_dump.sql")):
+            raise RuntimeError(
+                "أرشيف قديم بصيغة SQL ويتطلب psql غير المتوفر على الخادم. "
+                "استعِده من جهاز مثبَّت عليه أدوات PostgreSQL."
+            )
 
-        else:
-            raise RuntimeError(f"محرّك قاعدة البيانات غير مدعوم: {DB_ENGINE}")
+        log_lines.append("لم يُعثر على ملف بيانات داخل الأرشيف.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

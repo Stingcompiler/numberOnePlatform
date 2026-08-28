@@ -93,7 +93,12 @@ urlpatterns = [
     # ── خدمة ملفات الـ Media (الصور المرفوعة) ─────────────────────────────────
     # WhiteNoise تخدم /static/ فقط. ملفات /media/ يُخدِّمها Django مباشرةً
     # عبر django.views.static.serve في كلتا البيئتين (DEBUG=True / DEBUG=False).
-    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    # الاستثناء المهم: مجلد النسخ الاحتياطية قد يقع داخل MEDIA_ROOT على
+    # الأقراص الدائمة (Render). هذا المسار عام بلا مصادقة، فلولا الاستثناء
+    # لأمكن تنزيل نسخة قاعدة البيانات كاملةً من الإنترنت. التنزيل المشروع
+    # يمرّ عبر /api/backups/<id>/download/ المحمي بـ IsAdminOrManager.
+    re_path(r'^media/(?!\.backups/)(?P<path>.*)$', serve,
+            {'document_root': settings.MEDIA_ROOT}),
 
     # Catch-all للـ SPA — يُعيد index.html لكل مسار لا يبدأ بـ api أو admin أو static أو media
     re_path(r'^(?!api/|admin/|static/|media/).*$',

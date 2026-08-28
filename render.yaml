@@ -44,6 +44,12 @@ services:
       - key: MEDIA_ROOT
         value: "/var/data/media"
 
+      # النسخ الاحتياطية على نفس القرص الدائم، داخل مجلد مخفي.
+      # config/urls.py يستثني ".backups" من مسار /media/ العام حتى لا
+      # تُنزَّل نسخة قاعدة البيانات بلا مصادقة.
+      - key: BACKUP_STORAGE_DIR
+        value: "/var/data/media/.backups"
+
       # ALLOWED_HOSTS: يُضاف دومين Render تلقائياً + أي دومين مخصص
       # استبدل number-platform-api.onrender.com بالدومين الفعلي بعد النشر
       - key: ALLOWED_HOSTS
