@@ -11,7 +11,11 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'https://numberoneschools.com/api',
+  // مسار نسبي: الواجهة والـ API يخدمهما نفس الأصل في الإنتاج (Django يخدم
+  // الـ SPA)، فيصير النداء same-origin بلا حاجة CORS أصلاً. ومحلياً يمرّره
+  // proxy الموجود في vite.config.js إلى 127.0.0.1:8000 — وكان معطّلاً لأن
+  // العنوان المطلق يتجاوزه، فكان كل تطوير محلي يضرب قاعدة الإنتاج.
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   withCredentials: true,          // ضروري لإرسال HttpOnly Cookies
   headers: {
     'Content-Type': 'application/json',
