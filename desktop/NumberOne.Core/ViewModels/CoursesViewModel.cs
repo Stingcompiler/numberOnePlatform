@@ -45,7 +45,7 @@ public sealed partial class CoursesViewModel : ObservableObject
         // Both are needed before a single row can render honestly, so they are
         // fetched together rather than letting the table paint with every bar
         // at zero and then jump.
-        var coursesTask = _api.GetMyCoursesAsync(ct);
+        var coursesTask = _api.GetMyCoursesAsync(_auth.CurrentUser?.StudentProfile, ct);
         var progressTask = _api.GetMyProgressAsync(ct);
 
         await Task.WhenAll(coursesTask, progressTask).ConfigureAwait(true);

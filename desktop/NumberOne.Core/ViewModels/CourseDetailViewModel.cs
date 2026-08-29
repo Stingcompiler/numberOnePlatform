@@ -45,7 +45,7 @@ public sealed partial class CourseDetailViewModel : ObservableObject
 
     private async Task<CourseDetail> LoadDetailAsync(CancellationToken ct)
     {
-        var courseTask = _api.GetCourseAsync(_courseId, ct);
+        var courseTask = _api.GetCourseAsync(_courseId, _auth.CurrentUser?.StudentProfile, ct);
         var progressTask = _api.GetMyProgressAsync(ct);
 
         await Task.WhenAll(courseTask, progressTask).ConfigureAwait(true);

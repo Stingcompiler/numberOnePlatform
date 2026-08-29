@@ -32,6 +32,25 @@ public static class ApiEndpoints
 
     public static string MyCourse(int courseId)      => $"academic/my-courses/{courseId}/";
 
+    /// <summary>
+    /// The general course list, readable by any authenticated user. Used ONLY
+    /// as a fallback against a server that predates the shared access rule in
+    /// academic/access.py, where my-courses/ returns nothing for an online
+    /// student who has not paid. See StudentApi.GetMyCoursesAsync.
+    /// </summary>
+    public static string CoursesByGrade(int gradeId) =>
+        $"academic/courses/?grade={gradeId}&system_type=online";
+
+    /// <summary>
+    /// Course detail on the same fallback path.
+    ///
+    /// This view serialises with CourseSerializer, which carries the raw
+    /// youtube_url. That is why it is a fallback and not the default: against a
+    /// current server it is never called. The student DTOs do not model the
+    /// field, so this client cannot read it either way.
+    /// </summary>
+    public static string CourseDetail(int courseId) => $"academic/courses/{courseId}/";
+
     public static string MyLesson(int lessonId)      => $"academic/my-lessons/{lessonId}/";
     public static string CompleteLesson(int lessonId) => $"academic/my-lessons/{lessonId}/complete/";
 

@@ -23,25 +23,65 @@ public sealed class StudentApi
     // ── Courses and lessons ──────────────────────────────────────────────────
 
     /// <summary>
-    /// Courses the student may open, with units and lessons nested — the whole
-    /// tree in one call.
+    /// Courses the student may open, with units and lessons nested.
     ///
-    /// One endpoint for both enrollment types. It briefly took two: my-courses/
-    /// read StudentCourseAccess, which an online student only gets on their
-    /// first payment, so online students saw nothing while the mobile app --
-    /// which routes them to /academic/courses/?grade= -- showed content. That
-    /// was a backend inconsistency, and it is fixed at the source in
-    /// academic/access.py rather than worked around in each client.
+    /// Tries the student endpoint first and falls back only if it comes back
+    /// empty for an online student who has a grade.
     ///
-    /// Going through the student endpoint again matters for content protection
-    /// too: /academic/courses/&lt;id&gt; serialises with CourseSerializer, which
-    /// carries the raw youtube_url.
+    /// The fallback exists because this client is installed on student machines
+    /// and cannot assume which server version it is talking to. On a server with
+    /// academic/access.py, my-courses/ already returns the grade's courses and
+    /// the fallback never runs. On an older one it returns nothing for an online
+    /// student who has not paid, because that view reads StudentCourseAccess,
+    /// whose rows are created on first payment.
+    ///
+    /// Ordered this way on purpose: the fallback reads a view that serialises
+    /// the raw youtube_url, so it must be the exception, never the default.
     /// </summary>
-    public Task<List<Course>> GetMyCoursesAsync(CancellationToken ct = default)
-        => GetListTolerantAsync<Course>(ApiEndpoints.MyCourses, ct);
+    public async Task<List<Course>> GetMyCoursesAsync(
+        StudentProfile? profile, CancellationToken ct = default)
+    {
+        var courses = await GetListTolerantAsync<Course>(ApiEndpoints.MyCourses, ct)
+            .ConfigureAwait(false);
 
-    public Task<Course?> GetCourseAsync(int courseId, CancellationToken ct = default)
-        => GetAsync<Course>(ApiEndpoints.MyCourse(courseId), ct);
+        if (courses.Count > 0 || !IsOnlineWithGrade(profile, out var gradeId))
+            return courses;
+
+        return await GetListTolerantAsync<Course>(ApiEndpoints.CoursesByGrade(gradeId), ct)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Course detail, with the same fallback: a 403 from the student endpoint
+    /// on an older server means the access row is missing, not that the student
+    /// is barred from their own grade.
+    /// </summary>
+    public async Task<Course?> GetCourseAsync(
+        int courseId, StudentProfile? profile, CancellationToken ct = default)
+    {
+        try
+        {
+            return await GetAsync<Course>(ApiEndpoints.MyCourse(courseId), ct)
+                .ConfigureAwait(false);
+        }
+        catch (ApiRequestException ex) when (ex.IsForbidden && IsOnlineWithGrade(profile, out _))
+        {
+            return await GetAsync<Course>(ApiEndpoints.CourseDetail(courseId), ct)
+                .ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// True for an online student who has an enrolled_grade. Without the grade
+    /// there is nothing to filter by, so the fallback would return the whole
+    /// catalogue rather than their courses.
+    /// </summary>
+    private static bool IsOnlineWithGrade(StudentProfile? profile, out int gradeId)
+    {
+        gradeId = profile?.EnrolledGrade ?? 0;
+
+        return profile?.SystemType == SystemTypes.Online && gradeId > 0;
+    }
 
     /// <summary>
     /// A lesson with its exercise. Fetching it also records a view server-side
