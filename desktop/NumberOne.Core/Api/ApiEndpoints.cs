@@ -17,6 +17,13 @@ public static class ApiEndpoints
     // auth/change-password/ exists but students are refused there by policy
     // (IsStudentReadOnly). It is deliberately absent from this list.
 
+    /// <summary>
+    /// Landing-page data, AllowAny. The only endpoint the client calls without
+    /// a session — the blocked screens and the login error need the school's
+    /// phone number precisely when no session exists.
+    /// </summary>
+    public const string PublicSiteData = "public/site-data/";
+
     // ── Academic (mounted at /api/academic/) ─────────────────────────────────
     public const string MyCourses    = "academic/my-courses/";
     public const string MySubmissions = "academic/my-submissions/";

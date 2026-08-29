@@ -12,7 +12,7 @@ this repository. Windows first, macOS after. Arabic, RTL, students only.
 | `NumberOne.Core.Tests` | xUnit. Hermetic by default; the live-API tests skip unless pointed at a server. |
 
 ```bash
-dotnet build desktop/NumberOne.Desktop.sln
+dotnet build desktop/NumberOne.Desktop.slnx
 ```
 
 ## Testing
@@ -47,6 +47,13 @@ def mk(username, name):
 mk("fresh.student",   "طالب جديد").bind_device("hw-win-4f2a91c7d0e51b6a", "Windows")
 mk("bound.student",   "طالب مربوط").bind_device("hw-android-GALAXY-A54-TEST")
 mk("sibling.student", "طالب شقيق")   # left unbound on purpose
+```
+
+Then the content fixtures — a course, lessons, an exercise, an exam covering all
+four question types, live sessions and notifications:
+
+```bash
+python manage.py shell -c "exec(open('desktop/tools/seed_desktop_fixtures.py', encoding='utf-8').read())"
 ```
 
 ```bash
@@ -121,10 +128,37 @@ client bugs; they shape what the client can do.
 - **The disabled-device login state has no backend.** There is no
   `device_disabled` field anywhere in the models. The design's "هذا الجهاز معطّل"
   panel has nothing to drive it.
+- **The submit endpoint's field names do not match the read shape.**
+  `POST /academic/submit/` wants `exercise_id`, `answers[].question_id` and
+  `answers[].choice_id`, while the read serializers use `exercise`, `question`
+  and `selected_choice`. Mirroring the read names produces `هذا الحقل مطلوب.`
+  and a silently lost attempt.
+- **`Exam.passing_score` is an absolute mark, not a percentage** — the help text
+  says «من إجمالي درجات الاختبار» and the mobile app renders it as
+  `passing_score / total_marks`. Worth knowing because the model default is
+  `50.0`, so **any exam worth fewer than 50 marks that keeps the default can
+  never be passed**, however well the student does. Not a client concern, but a
+  trap when seeding or creating exams.
 - **Request bodies must carry a `Content-Length`.** Django's development server
   cannot parse a chunked request body — it reads the chunk-size line as a request
   line. `AuthenticatingHandler` buffers every body, and `RefreshEndpoint`
   serialises to a string rather than posting `JsonContent`.
+
+## A backend fault this work uncovered
+
+**Saving an `Exam` raises `AttributeError` and returns 500.**
+`notifications/signals.py` has a `post_save` receiver on `Exam` that reads
+`instance.is_published` — a field `Exam` does not have and never had. The only
+`is_published` in the codebase belongs to `store.App`. The receiver is
+registered in `NotificationsConfig.ready()`, so it fires on every save.
+
+Introduced in `b27a536` ("Implement Expo Push Notification system without
+Firebase"). Reproduced against unmodified code: creating an exam through the
+ORM crashes, which means `/api/exams/create/` and every exam edit do too.
+
+The fix is one word — `is_published` → `is_active` — but it is a production
+change and not this client's to make, so it is reported rather than applied.
+The seed script disconnects the receiver locally instead of patching it.
 
 ## Not done yet
 

@@ -3,6 +3,13 @@
     "Windows Machine": {
       "commandName": "Project",
       "nativeDebugging": false
+    },
+    "Windows Machine (local API)": {
+      "commandName": "Project",
+      "nativeDebugging": false,
+      "environmentVariables": {
+        "NUMBERONE_API": "http://127.0.0.1:8077/api/"
+      }
     }
   }
 }

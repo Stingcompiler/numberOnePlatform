@@ -2,7 +2,9 @@ using Microsoft.Extensions.Logging;
 using NumberOne.Core.Abstractions;
 using NumberOne.Core.Api;
 using NumberOne.Core.Services;
+using NumberOne.Core.ViewModels;
 using NumberOne.Desktop.Services;
+using NumberOne.Desktop.Views;
 
 namespace NumberOne.Desktop;
 
@@ -12,7 +14,22 @@ public static class MauiProgram
     /// Where the API lives. Point this at http://localhost:8000/api/ to work
     /// against a local runserver instead of production.
     /// </summary>
-    public static readonly Uri ApiBaseAddress = new(ApiEndpoints.DefaultBaseUrl);
+    public static readonly Uri ApiBaseAddress = ResolveBaseAddress();
+
+    /// <summary>
+    /// Production unless NUMBERONE_API says otherwise, so a developer can point
+    /// a build at a local runserver without editing code — and, more to the
+    /// point, so nobody ever ships a build that was edited to localhost and not
+    /// edited back.
+    /// </summary>
+    private static Uri ResolveBaseAddress()
+    {
+        var configured = Environment.GetEnvironmentVariable("NUMBERONE_API");
+
+        return new Uri(string.IsNullOrWhiteSpace(configured)
+            ? ApiEndpoints.DefaultBaseUrl
+            : configured);
+    }
 
     public static MauiApp CreateMauiApp()
     {
@@ -73,6 +90,22 @@ public static class MauiProgram
         });
 
         services.AddSingleton<AuthService>();
+        services.AddSingleton<StudentApi>();
+
+        // Anonymous, and on its own client: the blocked screens and the login
+        // error need the school's phone number when there is no session.
+        services.AddSingleton(_ => new SiteContactService(ApiBaseAddress));
+
+        // Singleton because App wires its Blocked event once at startup; a
+        // transient view model would leave that handler on a discarded instance.
+        services.AddSingleton<LoginViewModel>();
+        services.AddSingleton<LoginPage>();
+
+        // Transient: the dashboard is rebuilt per sign-in, so a second student
+        // on a shared machine never sees the first one's cached sections.
+        services.AddTransient<HomeViewModel>();
+        services.AddTransient<HomeView>();
+        services.AddTransient<ShellPage>();
     }
 }
 
