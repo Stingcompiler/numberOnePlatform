@@ -155,3 +155,85 @@ class RegistrationDocumentsTests(TestCase):
         super().tearDownClass()
         import shutil
         shutil.rmtree(_TEST_MEDIA, ignore_errors=True)
+
+
+@override_settings(MEDIA_ROOT=_TEST_MEDIA)
+class MissingDocumentReportingTests(TestCase):
+    """
+    الطلبات المقدَّمة قبل إضافة student_id_image لا تحتويه، وصفحة المراجعة كانت
+    تُخفي البطاقة الغائبة تماماً — فيرى المراجع ستّ بطاقات ولا شيء يدلّه على أن
+    سابعاً ناقص. الخادم صار يُبلّغ عن الناقص بدل أن يصمت عنه.
+    """
+
+    def setUp(self):
+        self.level = Level.objects.create(name="المرحلة الثانوية")
+        self.grade = Grade.objects.create(level=self.level, name="الصف الثالث")
+
+    def _registration(self, **files):
+        return NewStudentRegistration.objects.create(
+            student_full_name="طالب",
+            national_id="1234567890",
+            level=self.level,
+            grade=self.grade,
+            gender="male",
+            student_status="new_year",
+            residence="الخرطوم",
+            date_of_birth=datetime.date(2008, 1, 1),
+            guardian_name="ولي الأمر",
+            guardian_phone="0900000000",
+            guardian_residence="الخرطوم",
+            mother_full_name="اسم الأم",
+            **files,
+        )
+
+    def test_a_complete_request_reports_nothing_missing(self):
+        registration = self._registration(**{
+            f: _image(f"{f}.png") for f in DOCUMENT_FIELDS
+        })
+
+        self.assertEqual(registration.missing_documents(), [])
+
+    def test_a_legacy_request_reports_the_document_it_never_had(self):
+        """هذا هو الطلب الذي كان يُعرَض بستّ بطاقات فقط."""
+        registration = self._registration(**{
+            f: _image(f"{f}.png")
+            for f in DOCUMENT_FIELDS if f != "student_id_image"
+        })
+
+        missing = registration.missing_documents()
+
+        self.assertEqual([d["field"] for d in missing], ["student_id_image"])
+        self.assertTrue(missing[0]["label"])
+
+    def test_the_optional_receipt_is_never_reported_as_missing(self):
+        """إشعار السداد ‎blank=True‎ في الموديل، فغيابه ليس نقصاً."""
+        registration = self._registration(**{
+            f: _image(f"{f}.png")
+            for f in DOCUMENT_FIELDS if f != "payment_receipt_image"
+        })
+
+        self.assertEqual(registration.missing_documents(), [])
+
+    def test_the_serializer_exposes_the_missing_list_to_the_review_page(self):
+        registration = self._registration(**{
+            f: _image(f"{f}.png")
+            for f in DOCUMENT_FIELDS if f != "father_id_image"
+        })
+
+        data = NewStudentRegistrationSerializer(registration).data
+
+        self.assertIn("missing_documents", data)
+        self.assertEqual(
+            [d["field"] for d in data["missing_documents"]], ["father_id_image"],
+        )
+
+    def test_the_required_flags_are_read_from_the_model_not_a_second_list(self):
+        """
+        قائمة مكرّرة يدوياً هي بالضبط ما جعل student_id_image يسقط. الحقول
+        الإلزامية تُشتَقّ من ‎blank‎ في الموديل.
+        """
+        required = {name for name, _, is_required in
+                    NewStudentRegistration.document_fields() if is_required}
+
+        expected = {f for f in DOCUMENT_FIELDS if f != "payment_receipt_image"}
+        self.assertEqual(required, expected)

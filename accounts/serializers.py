@@ -460,6 +460,12 @@ class NewStudentRegistrationSerializer(serializers.ModelSerializer):
     student_status_display = serializers.CharField(source="get_student_status_display", read_only=True)
     supervisor_name        = serializers.CharField(source="supervisor.name", read_only=True, default=None)
 
+    #: المستندات الإلزامية الناقصة، لتعرضها صفحة المراجعة بدل إخفائها.
+    missing_documents      = serializers.SerializerMethodField(read_only=True)
+
+    def get_missing_documents(self, obj):
+        return obj.missing_documents()
+
     class Meta:
         model = NewStudentRegistration
         fields = [
@@ -488,11 +494,13 @@ class NewStudentRegistrationSerializer(serializers.ModelSerializer):
             "supervisor", "supervisor_name",
             # Status
             "status", "status_display", "admin_notes", "submitted_at",
+            "missing_documents",
         ]
         read_only_fields = [
             "id", "submitted_at", "status_display",
             "level_display", "grade_display", "gender_display",
             "student_status_display", "supervisor_name",
+            "missing_documents",
         ]
 
 
