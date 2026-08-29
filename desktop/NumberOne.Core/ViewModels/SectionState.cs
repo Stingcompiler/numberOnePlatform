@@ -74,17 +74,25 @@ public sealed partial class SectionState<T> : ObservableObject
             Value = value;
             Status = _isEmpty(value) ? SectionStatus.Empty : SectionStatus.Data;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            // The screen went away mid-flight. Leave the state alone.
+            // The screen genuinely went away mid-flight. Leave the state alone.
+            //
+            // The guard is load-bearing. HttpClient reports its own timeout as a
+            // TaskCanceledException, which derives from OperationCanceledException
+            // — so an unguarded catch here swallows every timeout as if the caller
+            // had cancelled, and the section spins on "جارٍ التحميل…" forever with
+            // no error and no retry. Only a cancellation the caller actually
+            // requested lands here; a timeout falls through to the handler below.
         }
         catch (Services.ApiRequestException ex)
         {
             ErrorMessage = ex.Message;
             Status = SectionStatus.Error;
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
         {
+            // Offline, or the request timed out waiting for a connection.
             ErrorMessage = Services.DesktopMessages.NoConnection;
             Status = SectionStatus.Error;
         }
