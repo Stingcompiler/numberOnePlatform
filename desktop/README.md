@@ -185,7 +185,65 @@ is gone, which also keeps the client off `/academic/courses/<id>/` — a view
 serialising with `CourseSerializer`, raw `youtube_url` included, behind
 `IsAuthenticated` only. **The mobile app still uses it, so that leak is live.**
 
-## Not done yet## Not done yet
+## Two production faults fixed along the way
+
+**Saving an `Exam` returned 500.** `notifications/signals.py` had a `post_save`
+receiver reading `instance.is_published` — a field `Exam` never had; the only
+one in the codebase belongs to `store.App`. Registered in
+`NotificationsConfig.ready()`, so it fired on every save: creating or editing any
+exam failed.
+
+Worse than it looked: the INSERT commits *before* the signal runs, so the exam
+was created and the API still answered 500. An admin retrying would have made
+duplicates. Worth checking production for repeated exam titles.
+
+Now `created and instance.is_active`, matching `notify_new_announcement` in the
+same file. `created` is deliberate: without it, the first edit of any pre-existing
+exam after this deploys would blast «امتحان جديد» to every student in the course
+about an exam from months ago.
+
+**`/academic/courses/<id>/` leaked raw YouTube URLs to students.** It serialises
+with `CourseSerializer`, which includes `youtube_url` on every lesson, behind
+`IsAuthenticated` only — so one request returned every video link in the course,
+which is exactly what the `my-courses` views exist to prevent. The mobile app
+calls it for online students, so the leak was live.
+
+Fixed by serializer, not by permission: a student gets `StudentCourseSerializer`,
+staff still get the raw URL because the editing screens need it. **Access is
+unchanged** — the mobile app keeps working, and it already reads
+`youtube_url || youtube_embed_url`, so it falls through to the embed URL with no
+client change.
+
+## Not done yet## Two production faults fixed along the way
+
+**Saving an `Exam` returned 500.** `notifications/signals.py` had a `post_save`
+receiver reading `instance.is_published` — a field `Exam` never had; the only
+one in the codebase belongs to `store.App`. Registered in
+`NotificationsConfig.ready()`, so it fired on every save: creating or editing any
+exam failed.
+
+Worse than it looked: the INSERT commits *before* the signal runs, so the exam
+was created and the API still answered 500. An admin retrying would have made
+duplicates. Worth checking production for repeated exam titles.
+
+Now `created and instance.is_active`, matching `notify_new_announcement` in the
+same file. `created` is deliberate: without it, the first edit of any pre-existing
+exam after this deploys would blast «امتحان جديد» to every student in the course
+about an exam from months ago.
+
+**`/academic/courses/<id>/` leaked raw YouTube URLs to students.** It serialises
+with `CourseSerializer`, which includes `youtube_url` on every lesson, behind
+`IsAuthenticated` only — so one request returned every video link in the course,
+which is exactly what the `my-courses` views exist to prevent. The mobile app
+calls it for online students, so the leak was live.
+
+Fixed by serializer, not by permission: a student gets `StudentCourseSerializer`,
+staff still get the raw URL because the editing screens need it. **Access is
+unchanged** — the mobile app keeps working, and it already reads
+`youtube_url || youtube_embed_url`, so it falls through to the embed URL with no
+client change.
+
+## Not done yet
 
 - Fonts. The design calls for Cairo and Tajawal at 400/500/700, bundled rather
   than fetched at runtime. `MauiProgram` still registers the template's OpenSans

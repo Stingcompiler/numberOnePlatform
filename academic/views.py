@@ -170,6 +170,27 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
             return [IsAuthenticated()]
         return [IsAdminOrReadOnly()]
 
+    def get_serializer_class(self):
+        """
+        الطالب يقرأ بنسخة الطالب: CourseSerializer يُضمّن youtube_url الخام في
+        كل محاضرة، وهذه الواجهة مفتوحة لكل مصادَق عليه — فكان طلب واحد يعيد
+        روابط كل محاضرات الكورس لأي طالب يصل إليها، وهو ما تمنعه واجهات
+        my-courses أصلاً.
+
+        الوصول لا يتغيّر: من كان يقرأ يبقى يقرأ. يسقط youtube_url وحده، وتطبيق
+        الموبايل يقرأ ‎youtube_url || youtube_embed_url‎ فيسقط تلقائياً على
+        embed_url دون تعديل.
+        """
+        user = getattr(self.request, "user", None)
+
+        if (
+            self.request.method in ("GET", "HEAD", "OPTIONS")
+            and getattr(user, "role", None) == CustomUser.Roles.STUDENT
+        ):
+            return StudentCourseSerializer
+
+        return CourseSerializer
+
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
         return self.update(request, *args, **kwargs)
