@@ -1,0 +1,133 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             x:Class="NumberOne.Desktop.Views.ProfileView"
+             x:DataType="vm:ProfileViewModel">
+
+    <!--
+        Two things are deliberately absent and must stay absent:
+
+        No password control. Students never change their own password; it is
+        issued and reset by the administration and the server refuses the request.
+
+        No unbind control. Clearing a device binding goes through the
+        administration; this screen explains that and shows the identifier.
+    -->
+    <ScrollView>
+        <Grid Padding="24" ColumnDefinitions="*,*" ColumnSpacing="24" RowDefinitions="Auto">
+
+            <!-- البيانات الشخصية -->
+            <VerticalStackLayout Grid.Column="0" Spacing="12">
+                <Label Text="البيانات الشخصية" Style="{StaticResource HeadingLabel}" />
+                <BoxView HeightRequest="1"
+                         Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto"
+                      ColumnSpacing="16" RowSpacing="12">
+
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="2">
+                        <Label Text="الاسم الكامل" Style="{StaticResource MutedLabel}" />
+                        <Label Text="{Binding FullName}" Style="{StaticResource BodyLabel}" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="2">
+                        <Label Text="اسم المستخدم" Style="{StaticResource MutedLabel}" />
+                        <Label Text="{Binding Username}" Style="{StaticResource MonoLtrLabel}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Grid.Row="1" Grid.Column="0" Spacing="2">
+                        <Label Text="الهاتف" Style="{StaticResource MutedLabel}" />
+                        <Label Text="{Binding Phone}" Style="{StaticResource MonoLtrLabel}" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="2">
+                        <Label Text="ولي الأمر" Style="{StaticResource MutedLabel}" />
+                        <Label Text="{Binding GuardianName}" Style="{StaticResource BodyLabel}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Grid.Row="2" Grid.Column="0" Spacing="2">
+                        <Label Text="الفصل" Style="{StaticResource MutedLabel}" />
+                        <Label Text="{Binding Grade}" Style="{StaticResource BodyLabel}" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Row="2" Grid.Column="1" Spacing="2">
+                        <Label Text="المرحلة" Style="{StaticResource MutedLabel}" />
+                        <Label Text="{Binding Level}" Style="{StaticResource BodyLabel}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Grid.Row="3" Grid.Column="0" Spacing="2">
+                        <Label Text="نوع النظام" Style="{StaticResource MutedLabel}" />
+                        <Label Text="{Binding SystemTypeDisplay}" Style="{StaticResource BodyLabel}" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Row="3" Grid.Column="1" Spacing="2">
+                        <Label Text="المشرفة" Style="{StaticResource MutedLabel}" />
+                        <!-- "توزيع إداري تلقائي" where unassigned, never a dash. -->
+                        <Label Text="{Binding SupervisorName}" Style="{StaticResource BodyLabel}" />
+                    </VerticalStackLayout>
+                </Grid>
+            </VerticalStackLayout>
+
+            <!-- الجهاز المرتبط + الملف المالي -->
+            <VerticalStackLayout Grid.Column="1" Spacing="16">
+
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="الجهاز المرتبط" Style="{StaticResource HeadingLabel}" />
+                    <BoxView HeightRequest="1"
+                             Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+
+                    <Border Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="النوع" Style="{StaticResource SecondaryLabel}" />
+                                <Label Grid.Column="1" Text="{Binding DeviceType}" Style="{StaticResource MonoLtrLabel}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="تاريخ الربط" Style="{StaticResource SecondaryLabel}" />
+                                <Label Grid.Column="1" Text="{Binding DeviceBoundAt}" Style="{StaticResource SecondaryLabel}" />
+                            </Grid>
+
+                            <!-- Copyable: a student phoning to be unbound has to
+                                 convey a string nobody can dictate accurately. -->
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
+                                <Label Grid.Row="0" Grid.Column="0" Text="معرّف الجهاز"
+                                       Style="{StaticResource SecondaryLabel}" />
+                                <Label Grid.Row="0" Grid.Column="1" Text="{Binding DeviceId}"
+                                       Style="{StaticResource MonoLtrLabel}" />
+                                <Button Grid.Row="1" Grid.ColumnSpan="2" Text="نسخ المعرّف"
+                                        Command="{Binding CopyDeviceIdCommand}"
+                                        Style="{StaticResource NeutralButtonSmall}"
+                                        HorizontalOptions="Start" />
+                            </Grid>
+
+                            <Label Text="{x:Static vm:ProfileViewModel.UnbindExplanation}"
+                                   Style="{StaticResource CopyLabel}" />
+
+                            <Label Text="{Binding ToastMessage}" IsVisible="{Binding HasToast}"
+                                   Style="{StaticResource MutedLabel}"
+                                   TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="الملف المالي" Style="{StaticResource HeadingLabel}" />
+                    <BoxView HeightRequest="1"
+                             Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+
+                    <Border Style="{StaticResource Panel}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="المتبقي"
+                                   Style="{StaticResource SecondaryLabel}" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding Balance}"
+                                   FontSize="{StaticResource FontHeading}" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- The payments table the design shows has no student
+                         endpoint: finance's StudentFinancialFileView is
+                         IsAdminOrManager. Only the balance is reachable. -->
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </Grid>
+    </ScrollView>
+</ContentView>

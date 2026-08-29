@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:models="clr-namespace:NumberOne.Core.Models;assembly=NumberOne.Core"
+             x:Class="NumberOne.Desktop.Views.LessonView"
+             x:DataType="vm:LessonViewModel">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Button x:Name="BackButton" Text="← رجوع"
+                    Style="{StaticResource GhostButton}"
+                    HorizontalOptions="Start" Clicked="OnBackClicked" />
+
+            <Label Text="جارٍ التحميل…" Style="{StaticResource MutedLabel}"
+                   IsVisible="{Binding Lesson.IsLoading}" />
+
+            <HorizontalStackLayout Spacing="8" IsVisible="{Binding Lesson.HasError}">
+                <Label Text="{Binding Lesson.ErrorMessage}" Style="{StaticResource SecondaryLabel}"
+                       VerticalOptions="Center" />
+                <Button Text="إعادة المحاولة" Command="{Binding LoadCommand}"
+                        Style="{StaticResource NeutralButtonSmall}" />
+            </HorizontalStackLayout>
+
+            <VerticalStackLayout IsVisible="{Binding Lesson.HasData}" Spacing="16">
+
+                <!--
+                    The video surface is fixed at 920 x 518 — an 11in 16:9
+                    diagonal at 96 DPI. It is a size AND a maximum: the picture
+                    never renders larger however wide the window.
+
+                    The surround is #0B0F16 in both themes; a letterbox is not
+                    theme-dependent.
+                -->
+                <Border WidthRequest="920" HeightRequest="518"
+                        HorizontalOptions="Center"
+                        Padding="0" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 8"
+                        BackgroundColor="{StaticResource VideoSurround}"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}">
+
+                    <Grid>
+                        <WebView x:Name="Player" Source="{Binding EmbedUrl}" />
+
+                        <!--
+                            The watermark is a SIBLING of the WebView, not
+                            injected into it: the YouTube iframe is cross-origin
+                            and cannot be reached. It is anchored inside this
+                            frame rather than the window, so it stays over the
+                            picture at any width, and it is non-interactive so it
+                            never swallows a click meant for the player.
+
+                            It does not prevent recording. It makes a leak
+                            traceable, which in a school is the stronger
+                            deterrent.
+                        -->
+                        <VerticalStackLayout x:Name="Watermark"
+                                             InputTransparent="True" CascadeInputTransparent="True"
+                                             Opacity="0.22" Margin="16"
+                                             HorizontalOptions="Start" VerticalOptions="Start">
+                            <Label Text="{Binding WatermarkName}"
+                                   FontSize="{StaticResource FontLabel}"
+                                   TextColor="#FFFFFF" />
+                            <Label Text="{Binding WatermarkPhone}"
+                                   FontSize="{StaticResource FontLabel}"
+                                   FlowDirection="LeftToRight"
+                                   TextColor="#FFFFFF" />
+                            <Label Text="{Binding WatermarkTimestamp}"
+                                   FontSize="{StaticResource FontLabel}"
+                                   FlowDirection="LeftToRight"
+                                   TextColor="#FFFFFF" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Security notice -->
+                <Label x:Name="SecurityNotice"
+                       Style="{StaticResource MutedLabel}"
+                       HorizontalOptions="Center" />
+
+                <!-- Title and actions -->
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <Label Grid.Column="0" Text="{Binding Lesson.Value.Title}"
+                           Style="{StaticResource HeadingLabel}" VerticalOptions="Center" />
+                    <Button Grid.Column="1" Text="الملف المرفق"
+                            IsVisible="{Binding Lesson.Value.HasAttachment}"
+                            Style="{StaticResource NeutralButtonSmall}" />
+                    <Button Grid.Column="2" Text="{Binding CompletionLabel}"
+                            Command="{Binding MarkCompleteCommand}"
+                            Style="{StaticResource NeutralButtonSmall}" />
+                </Grid>
+
+                <!-- Exercise -->
+                <VerticalStackLayout IsVisible="{Binding HasExercise}" Spacing="12">
+                    <Label Text="{Binding Exercise.Title}" Style="{StaticResource HeadingLabel}" />
+                    <BoxView HeightRequest="1"
+                             Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+
+                    <VerticalStackLayout x:Name="QuestionHost" Spacing="16" />
+
+                    <Button Text="{Binding SubmitLabel}"
+                            Command="{Binding SubmitExerciseCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            HorizontalOptions="Start" />
+
+                    <Label IsVisible="{Binding HasResult}"
+                           Style="{StaticResource BodyLabel}"
+                           Text="{Binding Result.Percentage, StringFormat='النتيجة: {0:0.#}٪'}" />
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentView>

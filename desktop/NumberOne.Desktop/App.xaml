@@ -16,6 +16,10 @@
             <local:PercentToFractionConverter x:Key="PercentToFraction" />
             <local:SystemTypeTintConverter x:Key="SystemTypeTint" />
             <local:SystemTypeInkConverter x:Key="SystemTypeInk" />
+            <local:VerdictWordConverter x:Key="VerdictWord" />
+            <local:VerdictInkConverter x:Key="VerdictInk" />
+            <local:VerdictTintConverter x:Key="VerdictTint" />
+            <local:NotificationTypeWordConverter x:Key="NotificationTypeWord" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

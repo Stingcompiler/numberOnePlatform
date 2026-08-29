@@ -50,6 +50,22 @@
                             Style="{StaticResource GhostButton}"
                             HeightRequest="36" HorizontalOptions="Fill"
                             Clicked="OnCoursesClicked" />
+                    <Button x:Name="NavLive" Text="البث المباشر"
+                            Style="{StaticResource GhostButton}"
+                            HeightRequest="36" HorizontalOptions="Fill"
+                            Clicked="OnLiveClicked" />
+                    <Button x:Name="NavExams" Text="الاختبارات"
+                            Style="{StaticResource GhostButton}"
+                            HeightRequest="36" HorizontalOptions="Fill"
+                            Clicked="OnExamsClicked" />
+                    <Button x:Name="NavResults" Text="النتائج"
+                            Style="{StaticResource GhostButton}"
+                            HeightRequest="36" HorizontalOptions="Fill"
+                            Clicked="OnResultsClicked" />
+                    <Button x:Name="NavNotifications" Text="الإشعارات"
+                            Style="{StaticResource GhostButton}"
+                            HeightRequest="36" HorizontalOptions="Fill"
+                            Clicked="OnNotificationsClicked" />
                 </VerticalStackLayout>
 
                 <!-- User block -->
@@ -58,6 +74,11 @@
                              Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
 
                     <Label x:Name="SidebarStudentName" Style="{StaticResource BodyLabel}" Margin="8,4,8,0" />
+
+                    <Button x:Name="NavProfile" Text="حسابي"
+                            Style="{StaticResource GhostButton}"
+                            HorizontalOptions="Fill"
+                            Clicked="OnProfileClicked" />
 
                     <Button x:Name="SignOutButton"
                             Text="تسجيل الخروج"
