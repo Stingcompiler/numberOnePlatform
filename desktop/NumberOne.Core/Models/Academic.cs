@@ -29,8 +29,25 @@ public sealed class Course
 
     [JsonPropertyName("units")] public List<Unit> Units { get; init; } = new();
 
+    /// <summary>
+    /// Present only on the LIST endpoint, which uses CourseListSerializer and
+    /// carries no nested units. Null on the student and detail endpoints, where
+    /// the count comes from <see cref="Units"/> instead.
+    /// </summary>
+    [JsonPropertyName("lesson_count")] public int? LessonCountFromServer { get; init; }
+
     [JsonIgnore]
     public IEnumerable<Lesson> AllLessons => Units.SelectMany(u => u.Lessons);
+
+    /// <summary>
+    /// How many lessons this course has, from whichever source the payload
+    /// actually carries. Counting AllLessons alone reads zero on the list
+    /// endpoint, because that serializer omits units entirely.
+    /// </summary>
+    [JsonIgnore]
+    public int LessonCount => Units.Count > 0
+        ? Units.Sum(u => u.Lessons.Count)
+        : LessonCountFromServer ?? 0;
 }
 
 public sealed class Unit

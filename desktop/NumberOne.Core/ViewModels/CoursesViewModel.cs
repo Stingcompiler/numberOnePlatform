@@ -16,10 +16,12 @@ namespace NumberOne.Core.ViewModels;
 public sealed partial class CoursesViewModel : ObservableObject
 {
     private readonly StudentApi _api;
+    private readonly AuthService _auth;
 
-    public CoursesViewModel(StudentApi api)
+    public CoursesViewModel(StudentApi api, AuthService auth)
     {
         _api = api;
+        _auth = auth;
 
         Courses = new SectionState<List<CourseRow>>(LoadRowsAsync, rows => rows.Count == 0);
     }
@@ -43,7 +45,7 @@ public sealed partial class CoursesViewModel : ObservableObject
         // Both are needed before a single row can render honestly, so they are
         // fetched together rather than letting the table paint with every bar
         // at zero and then jump.
-        var coursesTask = _api.GetMyCoursesAsync(ct);
+        var coursesTask = _api.GetMyCoursesAsync(_auth.CurrentUser?.StudentProfile, ct);
         var progressTask = _api.GetMyProgressAsync(ct);
 
         await Task.WhenAll(coursesTask, progressTask).ConfigureAwait(true);
@@ -106,7 +108,11 @@ public sealed record CourseRow
             SystemTypeDisplay = SystemTypes.Display(course.SystemType),
             IsOnline = course.SystemType == SystemTypes.Online,
             UnitCount = course.Units.Count,
-            LessonCount = lessons.Count,
+
+            // Course.LessonCount, not lessons.Count: the online list endpoint
+            // omits units entirely and carries only lesson_count, so counting
+            // the nested collection would render every row as zero.
+            LessonCount = course.LessonCount,
             CompletedCount = lessons.Count(l => completedLessonIds.Contains(l.Id)),
         };
     }

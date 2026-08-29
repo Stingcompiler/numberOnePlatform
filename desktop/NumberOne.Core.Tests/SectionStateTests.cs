@@ -43,7 +43,7 @@ public class SectionStateTests
 
         var api = new StudentApi(client);
         var section = new SectionState<List<Models.Course>>(
-            ct => api.GetMyCoursesAsync(ct),
+            ct => api.GetMyCoursesAsync(null, ct),
             list => list.Count == 0);
 
         await section.LoadAsync(CancellationToken.None);
@@ -85,7 +85,7 @@ public class SectionStateTests
 
         var api = new StudentApi(client);
         var section = new SectionState<List<Models.Course>>(
-            ct => api.GetMyCoursesAsync(ct),
+            ct => api.GetMyCoursesAsync(null, ct),
             list => list.Count == 0);
 
         await section.LoadAsync();

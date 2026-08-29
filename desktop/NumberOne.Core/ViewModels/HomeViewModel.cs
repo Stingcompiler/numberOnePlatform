@@ -21,7 +21,7 @@ public sealed partial class HomeViewModel : ObservableObject
         _auth = auth;
 
         Courses = new SectionState<List<Course>>(
-            ct => _api.GetMyCoursesAsync(ct),
+            ct => _api.GetMyCoursesAsync(_auth.CurrentUser?.StudentProfile, ct),
             list => list.Count == 0);
 
         Exams = new SectionState<List<ExamSummary>>(
@@ -73,7 +73,7 @@ public sealed partial class HomeViewModel : ObservableObject
 
     public int CourseCount => Courses.Value?.Count ?? 0;
 
-    public int LessonCount => Courses.Value?.Sum(c => c.AllLessons.Count()) ?? 0;
+    public int LessonCount => Courses.Value?.Sum(c => c.LessonCount) ?? 0;
 
     public int CompletedLessonCount => Progress.Value?.Count(p => p.IsCompleted) ?? 0;
 

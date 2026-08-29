@@ -93,6 +93,54 @@ public class CoursesViewModelTests
         Assert.Equal(1, opened);
     }
 
+    // ── Online students use a different endpoint ─────────────────────────────
+
+    [Fact]
+    public async Task An_online_student_reads_the_grade_filtered_endpoint_not_my_courses()
+    {
+        // The bug this guards: my-courses/ reads StudentCourseAccess, and an
+        // online student gets those rows only on their FIRST PAYMENT. Using it
+        // for everyone leaves the courses screen empty while the mobile app --
+        // which routes online students to /academic/courses/?grade= -- shows
+        // content for the same account on the same server.
+        var h = new Harness(online: true);
+        await h.Courses.LoadAsync();
+
+        Assert.True(h.Courses.Courses.HasData,
+            $"state was {h.Courses.Courses.Status}: {h.Courses.Courses.ErrorMessage}");
+
+        Assert.Contains(h.Server.Paths, p => p == "academic/courses/");
+        Assert.DoesNotContain(h.Server.Paths, p => p.Contains("my-courses"));
+    }
+
+    [Fact]
+    public async Task The_online_list_is_paginated_and_carries_lesson_count_not_units()
+    {
+        // CourseListSerializer omits units entirely, so counting nested lessons
+        // would render every row as zero; and the endpoint is a DRF ListAPIView,
+        // so the payload is an envelope rather than a bare array.
+        var h = new Harness(online: true);
+        await h.Courses.LoadAsync();
+
+        var row = Assert.Single(h.Courses.Courses.Value!);
+        Assert.Equal("الرياضيات", row.Name);
+        Assert.Equal(7, row.LessonCount);
+        Assert.Equal(0, row.UnitCount);
+    }
+
+    [Fact]
+    public async Task An_online_student_without_a_grade_falls_back_to_the_student_endpoint()
+    {
+        // Nothing to filter by, so the grade-filtered endpoint would return the
+        // whole catalogue. The student endpoint is empty instead, which is the
+        // truthful answer.
+        var h = new Harness(online: true, gradeId: null);
+        await h.Courses.LoadAsync();
+
+        Assert.Contains(h.Server.Paths, p => p.Contains("my-courses"));
+        Assert.DoesNotContain(h.Server.Paths, p => p == "academic/courses/");
+    }
+
     // ── Course detail ────────────────────────────────────────────────────────
 
     [Fact]
@@ -179,17 +227,30 @@ public class CoursesViewModelTests
         public CoursesViewModel Courses { get; }
 
         private readonly StudentApi _api;
+        private readonly AuthService _auth;
 
-        public Harness()
+        public Harness(bool online = false, int? gradeId = 1)
         {
             var handler = new AuthenticatingHandler(new Tokens(), new NoRefresh()) { InnerHandler = Server };
             var client = new HttpClient(handler) { BaseAddress = new Uri("https://numberoneschools.com/api/") };
 
             _api = new StudentApi(client);
-            Courses = new CoursesViewModel(_api);
+
+            // No signed-in user, so CurrentUser is null and the API falls back to
+            // the flash path (/academic/my-courses/) -- which is what this stub
+            // server serves.
+            _auth = new AuthService(client, new Tokens(), new StubDevice());
+
+            if (online)
+            {
+                Server.Respond(ApiEndpoints.Login, LoginAsOnline(gradeId));
+                _auth.SignInAsync("a.student", "pass1234").GetAwaiter().GetResult();
+            }
+
+            Courses = new CoursesViewModel(_api, _auth);
         }
 
-        public CourseDetailViewModel Detail(int courseId) => new(_api, courseId);
+        public CourseDetailViewModel Detail(int courseId) => new(_api, _auth, courseId);
     }
 
     private sealed class StubServer : HttpMessageHandler
@@ -204,6 +265,13 @@ public class CoursesViewModelTests
             _bodies[ApiEndpoints.MyProgress] = Progress;
         }
 
+        /// <summary>
+        /// Every path requested. A list rather than "the last one": the courses
+        /// and progress calls run concurrently, so whichever finishes last would
+        /// otherwise decide what the test sees.
+        /// </summary>
+        public List<string> Paths { get; } = new();
+
         public void Respond(string path, string body) => _bodies[path] = body;
 
         public void Fail(string path, HttpStatusCode status, string message)
@@ -212,6 +280,15 @@ public class CoursesViewModelTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             var path = request.RequestUri!.AbsolutePath.Replace("/api/", "");
+
+            if (!path.Contains("auth/"))
+            {
+                lock (Paths) Paths.Add(path);
+            }
+
+            // The grade-filtered list carries a query string; match on the path.
+            if (path == "academic/courses/")
+                return Task.FromResult(Ok(OnlineCoursesPage));
 
             if (_failures.TryGetValue(path, out var failure))
             {
@@ -251,9 +328,49 @@ public class CoursesViewModelTests
             {"id":1,"title":"الأولى","display_order":1,"duration_minutes":24}]}]}
         """;
 
+        /// <summary>
+        /// What /academic/courses/ actually returns: a pagination envelope whose
+        /// rows come from CourseListSerializer -- no units, but a lesson_count.
+        /// </summary>
+        private const string OnlineCoursesPage = """
+        {"count":1,"next":null,"previous":null,"results":[
+          {"id":1,"name":"الرياضيات","system_type":"online","teacher_name":"أ. محمد",
+           "grade":1,"grade_name":"الصف الثالث","is_active":true,"lesson_count":7}]}
+        """;
+
+        private static HttpResponseMessage Ok(string body) => new(HttpStatusCode.OK)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        };
+
         private const string Progress = """
         [{"id":1,"lesson":1,"is_completed":true},{"id":2,"lesson":2,"is_completed":false}]
         """;
+    }
+
+    private static string LoginAsOnline(int? gradeId)
+    {
+        var grade = gradeId is null ? "null" : gradeId.Value.ToString();
+
+        // Built by substitution rather than interpolation: the JSON ends in a
+        // run of closing braces, which an interpolated raw literal reads as
+        // holes no matter how many $ it carries.
+        const string template = """
+        {"access":"a","refresh":"r","user":{
+          "id":"209f3831-21b4-4784-a1b9-9660576ea410","username":"a.student",
+          "full_name":"طالب","role":"student","is_active":true,
+          "student_profile":{"id":1,"system_type":"online","enrolled_grade":GRADE,
+            "device_id":"hw-win-4f2a91c7d0e51b6a","device_type":"Windows"}}}
+        """;
+
+        return template.Replace("GRADE", gradeId?.ToString() ?? "null");
+    }
+
+    private sealed class StubDevice : IDeviceIdentityProvider
+    {
+        public string GetDeviceId() => "hw-win-4f2a91c7d0e51b6a";
+        public string GetDeviceType() => "Windows";
+        public string GetMachineName() => "DESKTOP-A2REKKA";
     }
 
     private sealed class NoRefresh : ITokenRefresher

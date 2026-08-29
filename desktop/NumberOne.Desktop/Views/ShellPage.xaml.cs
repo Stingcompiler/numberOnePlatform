@@ -90,7 +90,7 @@ public partial class ShellPage : ContentPage
     {
         // Rebuilt on each visit so the table reflects progress made since the
         // last time it was open, rather than a stale snapshot.
-        var courses = new CoursesView(new CoursesViewModel(_api));
+        var courses = new CoursesView(new CoursesViewModel(_api, _auth));
         courses.ViewModel.CourseOpened += (_, courseId) => ShowCourseDetail(courseId);
 
         Host(courses);
@@ -99,7 +99,7 @@ public partial class ShellPage : ContentPage
 
     private void ShowCourseDetail(int courseId)
     {
-        var detail = new CourseDetailView(new CourseDetailViewModel(_api, courseId));
+        var detail = new CourseDetailView(new CourseDetailViewModel(_api, _auth, courseId));
         detail.BackRequested += (_, _) => ShowCourses();
         detail.ViewModel.LessonOpened += (_, lessonId) => ShowLesson(lessonId, courseId);
 

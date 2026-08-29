@@ -17,11 +17,13 @@ namespace NumberOne.Core.ViewModels;
 public sealed partial class CourseDetailViewModel : ObservableObject
 {
     private readonly StudentApi _api;
+    private readonly AuthService _auth;
     private readonly int _courseId;
 
-    public CourseDetailViewModel(StudentApi api, int courseId)
+    public CourseDetailViewModel(StudentApi api, AuthService auth, int courseId)
     {
         _api = api;
+        _auth = auth;
         _courseId = courseId;
 
         Course = new SectionState<CourseDetail>(LoadDetailAsync, d => d.Units.Count == 0);
@@ -43,7 +45,7 @@ public sealed partial class CourseDetailViewModel : ObservableObject
 
     private async Task<CourseDetail> LoadDetailAsync(CancellationToken ct)
     {
-        var courseTask = _api.GetCourseAsync(_courseId, ct);
+        var courseTask = _api.GetCourseAsync(_courseId, _auth.CurrentUser?.StudentProfile, ct);
         var progressTask = _api.GetMyProgressAsync(ct);
 
         await Task.WhenAll(courseTask, progressTask).ConfigureAwait(true);

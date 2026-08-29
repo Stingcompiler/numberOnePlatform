@@ -47,10 +47,10 @@ public class LiveViewModelTests
     public async Task The_courses_table_projects_real_server_data_into_rows()
     {
         Skip.If(BaseAddress is null, SkipReason);
-        var (api, _, client) = await SignedInAsync();
+        var (api, auth, client) = await SignedInAsync();
         using var _c = client;
 
-        var vm = new CoursesViewModel(api);
+        var vm = new CoursesViewModel(api, auth);
         await vm.LoadAsync();
 
         // The distinction that matters: Data, not Empty. An empty table with a
@@ -102,13 +102,13 @@ public class LiveViewModelTests
     public async Task The_course_detail_projects_real_units_and_lessons()
     {
         Skip.If(BaseAddress is null, SkipReason);
-        var (api, _, client) = await SignedInAsync();
+        var (api, auth, client) = await SignedInAsync();
         using var _c = client;
 
-        var courses = new CoursesViewModel(api);
+        var courses = new CoursesViewModel(api, auth);
         await courses.LoadAsync();
 
-        var vm = new CourseDetailViewModel(api, courses.Courses.Value![0].Id);
+        var vm = new CourseDetailViewModel(api, auth, courses.Courses.Value![0].Id);
         await vm.LoadAsync();
 
         Assert.True(vm.Course.HasData, $"detail: {vm.Course.Status} {vm.Course.ErrorMessage}");
@@ -137,7 +137,7 @@ public class LiveViewModelTests
         var (api, auth, client) = await SignedInAsync();
         using var _c = client;
 
-        var courses = await api.GetMyCoursesAsync();
+        var courses = await api.GetMyCoursesAsync(null);
         var lessonId = courses[0].AllLessons.First().Id;
 
         var vm = new LessonViewModel(api, auth, lessonId);

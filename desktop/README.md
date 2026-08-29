@@ -160,6 +160,38 @@ The fix is one word — `is_published` → `is_active` — but it is a productio
 change and not this client's to make, so it is reported rather than applied.
 The seed script disconnects the receiver locally instead of patching it.
 
+## Online and flash students read courses from DIFFERENT endpoints
+
+This is the one thing most likely to be "fixed" back into a bug.
+
+`/academic/my-courses/` reads `StudentCourseAccess`, and an **online** student
+gets those rows only on their **first payment**. So for a paid-up online student
+on a working server, that endpoint returns `[]` and the courses screen is empty —
+while the mobile app shows content for the same account.
+
+Mobile handles it by routing online students elsewhere
+(`mobile/src/services/courseService.jsx`), and this client mirrors it:
+
+| enrollment | list | detail |
+|---|---|---|
+| `flash` | `/academic/my-courses/` | `/academic/my-courses/<id>/` |
+| `online` | `/academic/courses/?grade=…&system_type=online` | `/academic/courses/<id>/` |
+
+Two traps in the online path:
+
+- it is **paginated** (`{count, next, previous, results}`), unlike every student
+  endpoint, so list reads accept either shape;
+- its rows come from `CourseListSerializer`, which carries **no nested units** —
+  only a `lesson_count`. Counting `AllLessons` renders every row as zero, which
+  is why `Course.LessonCount` prefers whichever the payload actually has.
+
+**A server-side leak worth closing**: `/academic/courses/<id>/` serialises with
+`CourseSerializer`, which includes the raw `youtube_url` on every lesson, and it
+is only `IsAuthenticated` — so any student reaching it receives the unprotected
+video links. The student DTOs here deliberately do not model that field, so this
+client never reads it, but the value does cross the wire. The mobile app already
+uses this endpoint, so this is live today.
+
 ## Why a fresh student sees no courses
 
 Course access for an **online** student is granted only on their **first
