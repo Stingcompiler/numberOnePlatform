@@ -13,7 +13,28 @@
         the mobile app's six bottom tabs become this rail. Desktop is not a
         scaled-up phone: 36px nav rows, 13px labels, no bottom bar.
     -->
-    <Grid ColumnDefinitions="240,*">
+    <Grid>
+      <Grid RowDefinitions="Auto,*">
+
+        <!--
+            Offline bar. Persists across routes, which is why it lives here
+            rather than on a screen. Warning-tinted with a danger bottom rule:
+            the session is fine, the network is not.
+        -->
+        <Border Grid.Row="0" x:Name="OfflineBar" IsVisible="False"
+                HeightRequest="32" Padding="16,0" StrokeThickness="0"
+                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryTintLight}, Dark={StaticResource PrimaryTintDark}}">
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Grid.Column="0" x:Name="OfflineLabel"
+                       Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                <Button Grid.Column="1" Text="إعادة الاتصال"
+                        Style="{StaticResource GhostButton}"
+                        HeightRequest="24" VerticalOptions="Center"
+                        Clicked="OnReconnectClicked" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="240,*">
 
         <!-- ── Sidebar ─────────────────────────────────────────────────── -->
         <Grid Grid.Column="0"
@@ -62,10 +83,17 @@
                             Style="{StaticResource GhostButton}"
                             HeightRequest="36" HorizontalOptions="Fill"
                             Clicked="OnResultsClicked" />
-                    <Button x:Name="NavNotifications" Text="الإشعارات"
-                            Style="{StaticResource GhostButton}"
-                            HeightRequest="36" HorizontalOptions="Fill"
-                            Clicked="OnNotificationsClicked" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Button Grid.Column="0" x:Name="NavNotifications" Text="الإشعارات"
+                                Style="{StaticResource GhostButton}"
+                                HeightRequest="36" HorizontalOptions="Fill"
+                                Clicked="OnNotificationsClicked" />
+                        <!-- Zero hides it; over 99 renders "٩٩+". -->
+                        <Label Grid.Column="1" x:Name="NotificationBadge" IsVisible="False"
+                               VerticalOptions="Center" Margin="0,0,8,0"
+                               FontSize="{StaticResource FontLabel}"
+                               TextColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                    </Grid>
                 </VerticalStackLayout>
 
                 <!-- User block -->
@@ -91,5 +119,31 @@
 
         <!-- ── Content ─────────────────────────────────────────────────── -->
         <ContentView Grid.Column="1" x:Name="ContentHost" />
+        </Grid>
+      </Grid>
+
+      <!--
+          Session expired. A dropped connection is NOT this: the handler only
+          raises it when the refresh token was actually rejected, so an offline
+          student keeps their session and sees the bar instead.
+      -->
+      <Grid x:Name="SessionExpiredScrim" IsVisible="False"
+            BackgroundColor="{StaticResource Scrim}">
+          <Border Style="{StaticResource Dialog}" WidthRequest="480"
+                  HorizontalOptions="Center" VerticalOptions="Center">
+              <VerticalStackLayout Spacing="12">
+                  <Label Text="{x:Static vm:UiText.SessionExpiredTitle}" Style="{StaticResource HeadingLabel}" />
+                  <Label Text="{x:Static vm:UiText.SessionExpiredBody}" Style="{StaticResource CopyLabel}" />
+                  <HorizontalStackLayout Spacing="8" Margin="0,4,0,0">
+                      <Button Text="{x:Static vm:UiText.SessionExpiredContinue}"
+                              Style="{StaticResource PrimaryButton}"
+                              Clicked="OnSessionExpiredContinue" />
+                      <Button Text="{x:Static vm:UiText.SessionExpiredBackToLogin}"
+                              Style="{StaticResource NeutralButton}"
+                              Clicked="OnSessionExpiredContinue" />
+                  </HorizontalStackLayout>
+              </VerticalStackLayout>
+          </Border>
+      </Grid>
     </Grid>
 </ContentPage>

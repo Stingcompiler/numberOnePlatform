@@ -87,6 +87,13 @@
                     <DataTemplate x:DataType="vm:ResultRow">
                         <VerticalStackLayout>
                             <Grid ColumnDefinitions="2*,1.4*,1*,1*,1*" HeightRequest="40">
+                                <!-- The only row action: عرض التفاصيل. There is
+                                     deliberately no delete and no export. -->
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ResultsViewModel}}, Path=OpenAttemptCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
                                 <Label Grid.Column="0" Text="{Binding ExamTitle}"
                                        Style="{StaticResource BodyLabel}" VerticalOptions="Center" />
                                 <Label Grid.Column="1" Text="{Binding CourseName}"

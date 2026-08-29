@@ -20,6 +20,7 @@
             <local:VerdictInkConverter x:Key="VerdictInk" />
             <local:VerdictTintConverter x:Key="VerdictTint" />
             <local:NotificationTypeWordConverter x:Key="NotificationTypeWord" />
+            <local:CorrectWordConverter x:Key="CorrectWord" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

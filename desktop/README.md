@@ -160,6 +160,20 @@ The fix is one word — `is_published` → `is_active` — but it is a productio
 change and not this client's to make, so it is reported rather than applied.
 The seed script disconnects the receiver locally instead of patching it.
 
+## Why a fresh student sees no courses
+
+Course access for an **online** student is granted only on their **first
+payment** (`finance/models.py`, `_grant_all_level_courses`), and that helper
+returns early if `enrolled_grade` is unset. So a newly created student has zero
+`StudentCourseAccess` rows and `/academic/my-courses/` correctly returns `[]`.
+
+This is the access asymmetry above biting in practice: the same student **will**
+see exams, because `StudentExamListView` reads `enrolled_grade` rather than
+`StudentCourseAccess`. Exams for courses that cannot be opened looks like a
+broken client and is not one.
+
+`grant_all_access.py` at the repo root grants access manually.
+
 ## Not done yet
 
 - Fonts. The design calls for Cairo and Tajawal at 400/500/700, bundled rather
