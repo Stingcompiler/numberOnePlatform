@@ -25,6 +25,14 @@ public sealed partial class LessonViewModel : ObservableObject
 
     public SectionState<Lesson> Lesson { get; }
 
+    /// <summary>
+    /// Shown when the server refuses the lecture. Names the cause, because
+    /// "you are not authorised" on a course the app just listed reads as a
+    /// broken app rather than an unactivated subscription.
+    /// </summary>
+    public const string LessonLockedMessage =
+        "لم يُفعَّل اشتراكك في هذا الكورس بعد، لذلك لا يمكن فتح المحاضرة. يرجى التواصل مع إدارة المدرسة لتفعيل الاشتراك.";
+
     // ── Video ────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -193,10 +201,30 @@ public sealed partial class LessonViewModel : ObservableObject
 
     private async Task<Lesson> LoadLessonAsync(CancellationToken ct)
     {
-        // This GET is what creates the LessonProgress row, so it is also what
-        // makes MarkComplete possible. Not a free read.
-        var lesson = await _api.GetLessonAsync(_lessonId, ct).ConfigureAwait(true)
-                     ?? throw new InvalidOperationException($"Lesson {_lessonId} returned no body.");
+        Lesson? lesson;
+
+        try
+        {
+            // This GET is what creates the LessonProgress row, so it is also what
+            // makes MarkComplete possible. Not a free read.
+            lesson = await _api.GetLessonAsync(_lessonId, ct).ConfigureAwait(true);
+        }
+        catch (ApiRequestException ex) when (ex.IsForbidden)
+        {
+            // The student was shown this course, then refused the lecture inside
+            // it. That is not a client inconsistency to paper over: the courses
+            // list and the exams list are keyed on enrolled_grade, while
+            // MyLessonDetailView requires a StudentCourseAccess row that an
+            // online student only receives on their first payment.
+            //
+            // The server's wording is accurate but leaves the student with
+            // nothing to do, so it is restated with the reason and the remedy.
+            throw ApiRequestException.Restated(
+                System.Net.HttpStatusCode.Forbidden, LessonLockedMessage);
+        }
+
+        if (lesson is null)
+            throw new InvalidOperationException($"Lesson {_lessonId} returned no body.");
 
         var progress = await _api.GetMyProgressAsync(ct).ConfigureAwait(true);
         IsCompleted = progress.Any(p => p.Lesson == _lessonId && p.IsCompleted);

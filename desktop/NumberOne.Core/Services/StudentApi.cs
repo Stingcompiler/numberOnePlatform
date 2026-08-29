@@ -256,6 +256,14 @@ public sealed class ApiRequestException : Exception
     private ApiRequestException(HttpStatusCode status, string message) : base(message)
         => StatusCode = status;
 
+    /// <summary>
+    /// Restates a refusal in terms the student can act on, keeping the status so
+    /// callers can still branch on it. Used where the server's own wording is
+    /// accurate but leaves the student with nothing to do about it.
+    /// </summary>
+    public static ApiRequestException Restated(HttpStatusCode status, string message)
+        => new(status, message);
+
     internal static async Task<ApiRequestException> FromAsync(HttpResponseMessage response, CancellationToken ct)
     {
         string? body = null;

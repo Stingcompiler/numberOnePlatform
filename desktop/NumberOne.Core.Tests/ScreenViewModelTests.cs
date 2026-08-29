@@ -212,6 +212,26 @@ public class ScreenViewModelTests
         Assert.Equal("جلستان", vm.Rooms.Value![0].SessionCountLabel);
     }
 
+    // ── Lesson ───────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task A_refused_lecture_explains_why_rather_than_just_saying_no()
+    {
+        // The student was shown this course, then refused the lecture inside it:
+        // the courses and exams lists key on enrolled_grade, while
+        // MyLessonDetailView requires a StudentCourseAccess row an online
+        // student receives only on first payment. The server's wording is
+        // accurate but leaves them with nothing to do about it.
+        var api = ForbiddenApi("ليس لديك صلاحية الوصول لهذه المحاضرة.");
+        var vm = new LessonViewModel(api, SignedInAuth(), 1);
+
+        await vm.LoadAsync();
+
+        Assert.True(vm.Lesson.HasError);
+        Assert.Equal(LessonViewModel.LessonLockedMessage, vm.Lesson.ErrorMessage);
+        Assert.Contains("التواصل مع إدارة المدرسة", vm.Lesson.ErrorMessage);
+    }
+
     // ── Profile ──────────────────────────────────────────────────────────────
 
     [Fact]
@@ -253,6 +273,34 @@ public class ScreenViewModelTests
             BaseAddress = new Uri("https://numberoneschools.com/api/"),
         };
         return new StudentApi(client);
+    }
+
+    private static StudentApi ForbiddenApi(string message)
+    {
+        var client = new HttpClient(new StatusHandler(HttpStatusCode.Forbidden, message))
+        {
+            BaseAddress = new Uri("https://numberoneschools.com/api/"),
+        };
+        return new StudentApi(client);
+    }
+
+    private sealed class StatusHandler : HttpMessageHandler
+    {
+        private readonly HttpStatusCode _status;
+        private readonly string _message;
+
+        public StatusHandler(HttpStatusCode status, string message)
+        {
+            _status = status;
+            _message = message;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+            => Task.FromResult(new HttpResponseMessage(_status)
+            {
+                Content = new StringContent(
+                    "{\"detail\":\"" + _message + "\"}", Encoding.UTF8, "application/json"),
+            });
     }
 
     private static StudentApi FailingApi()

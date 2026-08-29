@@ -192,6 +192,36 @@ video links. The student DTOs here deliberately do not model that field, so this
 client never reads it, but the value does cross the wire. The mobile app already
 uses this endpoint, so this is live today.
 
+## The same student is listed courses, then refused the lectures in them
+
+Three endpoints answer "what can this student reach" with **two different
+rules**, and an online student without a payment falls in the gap:
+
+| endpoint | rule | online student, no payment |
+|---|---|---|
+| `/academic/courses/?grade=` | `enrolled_grade` | sees the courses |
+| `/exams/student/list/` | `enrolled_grade` | sees the exams |
+| `/academic/my-lessons/<id>/` | `StudentCourseAccess` | **403** |
+
+There is no student-reachable lesson endpoint without that access row —
+`/academic/lessons/<id>/` is `LectureWritePermission`, i.e. staff. So the client
+cannot resolve this; it can only explain it, which it does: the 403 is restated
+as «لم يُفعَّل اشتراكك في هذا الكورس بعد…» so the student is told the cause and
+the remedy rather than "not authorised" on a course the app just listed.
+
+The mobile app has the same gap — it lists courses by grade but opens lessons
+through `my-lessons/` — so this is not desktop-specific.
+
+Resolving it is a product decision, not a client one:
+
+- **Grant access.** The designed path: an online student's first payment fires
+  `_grant_all_level_courses`. Everything then agrees, including `my-courses/`.
+  No code change.
+- **Or widen the lesson endpoints** — `MyLessonDetailView`, `MarkLessonCompleteView`
+  and `SubmitExerciseView` — to accept online students by `enrolled_grade`, the
+  way `StudentExamListView` already does. That makes browsing without payment
+  deliberate rather than half-implemented.
+
 ## Why a fresh student sees no courses
 
 Course access for an **online** student is granted only on their **first
