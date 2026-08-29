@@ -52,7 +52,7 @@ public class LiveStudentApiTests
         var (api, client) = await SignedInAsync();
         using var _ = client;
 
-        var courses = await api.GetMyCoursesAsync(null);
+        var courses = await api.GetMyCoursesAsync();
 
         var course = Assert.Single(courses);
         Assert.Equal("الرياضيات", course.Name);
@@ -72,7 +72,7 @@ public class LiveStudentApiTests
         var (api, client) = await SignedInAsync();
         using var _ = client;
 
-        var courses = await api.GetMyCoursesAsync(null);
+        var courses = await api.GetMyCoursesAsync();
         var lessonId = courses[0].AllLessons.First().Id;
 
         var lesson = await api.GetLessonAsync(lessonId);
@@ -94,7 +94,7 @@ public class LiveStudentApiTests
         var (api, client) = await SignedInAsync();
         using var _ = client;
 
-        var courses = await api.GetMyCoursesAsync(null);
+        var courses = await api.GetMyCoursesAsync();
         var withExercise = courses[0].AllLessons.First();
 
         var lesson = await api.GetLessonAsync(withExercise.Id);
@@ -115,7 +115,7 @@ public class LiveStudentApiTests
         var (api, client) = await SignedInAsync();
         using var _ = client;
 
-        var courses = await api.GetMyCoursesAsync(null);
+        var courses = await api.GetMyCoursesAsync();
         var lessonId = courses[0].AllLessons.First().Id;
 
         // MarkLessonComplete requires a LessonProgress row, which only the GET
@@ -136,7 +136,7 @@ public class LiveStudentApiTests
         var (api, client) = await SignedInAsync();
         using var _ = client;
 
-        var courses = await api.GetMyCoursesAsync(null);
+        var courses = await api.GetMyCoursesAsync();
         var lesson = await api.GetLessonAsync(courses[0].AllLessons.First().Id);
         var exercise = lesson!.Exercise!;
         var question = exercise.Questions[0];
@@ -355,7 +355,7 @@ public class LiveStudentApiTests
 
         // The server answers 403 with its own message; screens show it verbatim.
         var error = await Assert.ThrowsAsync<ApiRequestException>(
-            () => api.GetCourseAsync(999_999, null));
+            () => api.GetCourseAsync(999_999));
 
         Assert.True(error.IsForbidden || error.IsNotFound);
         Assert.False(string.IsNullOrWhiteSpace(error.Message));

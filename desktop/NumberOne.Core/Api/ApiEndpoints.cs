@@ -32,24 +32,6 @@ public static class ApiEndpoints
 
     public static string MyCourse(int courseId)      => $"academic/my-courses/{courseId}/";
 
-    /// <summary>
-    /// The general course list, readable by any authenticated user. The mobile
-    /// app routes ONLINE students here rather than to my-courses/, because their
-    /// access is granted only on first payment and my-courses/ reads
-    /// StudentCourseAccess. Paginated, and its rows carry no nested units.
-    /// </summary>
-    public static string CoursesByGrade(int gradeId) =>
-        $"academic/courses/?grade={gradeId}&system_type=online";
-
-    /// <summary>
-    /// Course detail for an online student. Same reason as above.
-    ///
-    /// NOTE: this view serialises with CourseSerializer, which includes the raw
-    /// youtube_url on every lesson. The student DTOs deliberately do not model
-    /// that field, so this client never reads it — but the value does cross the
-    /// wire, and that is a server-side leak worth closing.
-    /// </summary>
-    public static string CourseDetail(int courseId) => $"academic/courses/{courseId}/";
     public static string MyLesson(int lessonId)      => $"academic/my-lessons/{lessonId}/";
     public static string CompleteLesson(int lessonId) => $"academic/my-lessons/{lessonId}/complete/";
 

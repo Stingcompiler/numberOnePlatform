@@ -21,7 +21,7 @@ public sealed partial class HomeViewModel : ObservableObject
         _auth = auth;
 
         Courses = new SectionState<List<Course>>(
-            ct => _api.GetMyCoursesAsync(_auth.CurrentUser?.StudentProfile, ct),
+            ct => _api.GetMyCoursesAsync(ct),
             list => list.Count == 0);
 
         Exams = new SectionState<List<ExamSummary>>(

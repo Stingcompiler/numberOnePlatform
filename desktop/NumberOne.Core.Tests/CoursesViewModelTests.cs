@@ -93,54 +93,6 @@ public class CoursesViewModelTests
         Assert.Equal(1, opened);
     }
 
-    // ── Online students use a different endpoint ─────────────────────────────
-
-    [Fact]
-    public async Task An_online_student_reads_the_grade_filtered_endpoint_not_my_courses()
-    {
-        // The bug this guards: my-courses/ reads StudentCourseAccess, and an
-        // online student gets those rows only on their FIRST PAYMENT. Using it
-        // for everyone leaves the courses screen empty while the mobile app --
-        // which routes online students to /academic/courses/?grade= -- shows
-        // content for the same account on the same server.
-        var h = new Harness(online: true);
-        await h.Courses.LoadAsync();
-
-        Assert.True(h.Courses.Courses.HasData,
-            $"state was {h.Courses.Courses.Status}: {h.Courses.Courses.ErrorMessage}");
-
-        Assert.Contains(h.Server.Paths, p => p == "academic/courses/");
-        Assert.DoesNotContain(h.Server.Paths, p => p.Contains("my-courses"));
-    }
-
-    [Fact]
-    public async Task The_online_list_is_paginated_and_carries_lesson_count_not_units()
-    {
-        // CourseListSerializer omits units entirely, so counting nested lessons
-        // would render every row as zero; and the endpoint is a DRF ListAPIView,
-        // so the payload is an envelope rather than a bare array.
-        var h = new Harness(online: true);
-        await h.Courses.LoadAsync();
-
-        var row = Assert.Single(h.Courses.Courses.Value!);
-        Assert.Equal("الرياضيات", row.Name);
-        Assert.Equal(7, row.LessonCount);
-        Assert.Equal(0, row.UnitCount);
-    }
-
-    [Fact]
-    public async Task An_online_student_without_a_grade_falls_back_to_the_student_endpoint()
-    {
-        // Nothing to filter by, so the grade-filtered endpoint would return the
-        // whole catalogue. The student endpoint is empty instead, which is the
-        // truthful answer.
-        var h = new Harness(online: true, gradeId: null);
-        await h.Courses.LoadAsync();
-
-        Assert.Contains(h.Server.Paths, p => p.Contains("my-courses"));
-        Assert.DoesNotContain(h.Server.Paths, p => p == "academic/courses/");
-    }
-
     // ── Course detail ────────────────────────────────────────────────────────
 
     [Fact]

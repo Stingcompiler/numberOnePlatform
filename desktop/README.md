@@ -160,83 +160,32 @@ The fix is one word — `is_published` → `is_active` — but it is a productio
 change and not this client's to make, so it is reported rather than applied.
 The seed script disconnects the receiver locally instead of patching it.
 
-## Online and flash students read courses from DIFFERENT endpoints
+## Course access: one rule, in academic/access.py
 
-This is the one thing most likely to be "fixed" back into a bug.
+An **online** enrolment covers the student's whole grade and needs no per-course
+activation. A **flash** enrolment is linked course by course.
 
-`/academic/my-courses/` reads `StudentCourseAccess`, and an **online** student
-gets those rows only on their **first payment**. So for a paid-up online student
-on a working server, that endpoint returns `[]` and the courses screen is empty —
-while the mobile app shows content for the same account.
+That rule used to exist in two conflicting forms — `StudentExamListView` keyed on
+`enrolled_grade`, while the course and lesson views read `StudentCourseAccess`,
+which an online student only receives on first payment. The visible result was a
+student who could see their exams and their course list but got 403 opening any
+lecture in it.
 
-Mobile handles it by routing online students elsewhere
-(`mobile/src/services/courseService.jsx`), and this client mirrors it:
+It now lives once, in `academic/access.py`, and every student view calls it. The
+online branch is a **union** with any granted rows, not a replacement: there are
+online students holding `StudentCourseAccess` with no `enrolled_grade`, and
+narrowing to the grade would have taken away access they already had.
 
-| enrollment | list | detail |
-|---|---|---|
-| `flash` | `/academic/my-courses/` | `/academic/my-courses/<id>/` |
-| `online` | `/academic/courses/?grade=…&system_type=online` | `/academic/courses/<id>/` |
+`academic/tests_student_access.py` guards it, including that a flash student
+gains nothing from their grade and that a revoked row is still refused.
 
-Two traps in the online path:
+Because of this, the client uses `/academic/my-courses/` for **every** student.
+It briefly branched to `/academic/courses/?grade=` to work around the gap; that
+is gone, which also keeps the client off `/academic/courses/<id>/` — a view
+serialising with `CourseSerializer`, raw `youtube_url` included, behind
+`IsAuthenticated` only. **The mobile app still uses it, so that leak is live.**
 
-- it is **paginated** (`{count, next, previous, results}`), unlike every student
-  endpoint, so list reads accept either shape;
-- its rows come from `CourseListSerializer`, which carries **no nested units** —
-  only a `lesson_count`. Counting `AllLessons` renders every row as zero, which
-  is why `Course.LessonCount` prefers whichever the payload actually has.
-
-**A server-side leak worth closing**: `/academic/courses/<id>/` serialises with
-`CourseSerializer`, which includes the raw `youtube_url` on every lesson, and it
-is only `IsAuthenticated` — so any student reaching it receives the unprotected
-video links. The student DTOs here deliberately do not model that field, so this
-client never reads it, but the value does cross the wire. The mobile app already
-uses this endpoint, so this is live today.
-
-## The same student is listed courses, then refused the lectures in them
-
-Three endpoints answer "what can this student reach" with **two different
-rules**, and an online student without a payment falls in the gap:
-
-| endpoint | rule | online student, no payment |
-|---|---|---|
-| `/academic/courses/?grade=` | `enrolled_grade` | sees the courses |
-| `/exams/student/list/` | `enrolled_grade` | sees the exams |
-| `/academic/my-lessons/<id>/` | `StudentCourseAccess` | **403** |
-
-There is no student-reachable lesson endpoint without that access row —
-`/academic/lessons/<id>/` is `LectureWritePermission`, i.e. staff. So the client
-cannot resolve this; it can only explain it, which it does: the 403 is restated
-as «لم يُفعَّل اشتراكك في هذا الكورس بعد…» so the student is told the cause and
-the remedy rather than "not authorised" on a course the app just listed.
-
-The mobile app has the same gap — it lists courses by grade but opens lessons
-through `my-lessons/` — so this is not desktop-specific.
-
-Resolving it is a product decision, not a client one:
-
-- **Grant access.** The designed path: an online student's first payment fires
-  `_grant_all_level_courses`. Everything then agrees, including `my-courses/`.
-  No code change.
-- **Or widen the lesson endpoints** — `MyLessonDetailView`, `MarkLessonCompleteView`
-  and `SubmitExerciseView` — to accept online students by `enrolled_grade`, the
-  way `StudentExamListView` already does. That makes browsing without payment
-  deliberate rather than half-implemented.
-
-## Why a fresh student sees no courses
-
-Course access for an **online** student is granted only on their **first
-payment** (`finance/models.py`, `_grant_all_level_courses`), and that helper
-returns early if `enrolled_grade` is unset. So a newly created student has zero
-`StudentCourseAccess` rows and `/academic/my-courses/` correctly returns `[]`.
-
-This is the access asymmetry above biting in practice: the same student **will**
-see exams, because `StudentExamListView` reads `enrolled_grade` rather than
-`StudentCourseAccess`. Exams for courses that cannot be opened looks like a
-broken client and is not one.
-
-`grant_all_access.py` at the repo root grants access manually.
-
-## Not done yet
+## Not done yet## Not done yet
 
 - Fonts. The design calls for Cairo and Tajawal at 400/500/700, bundled rather
   than fetched at runtime. `MauiProgram` still registers the template's OpenSans

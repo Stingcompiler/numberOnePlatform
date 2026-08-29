@@ -23,53 +23,25 @@ public sealed class StudentApi
     // ── Courses and lessons ──────────────────────────────────────────────────
 
     /// <summary>
-    /// The student's courses.
+    /// Courses the student may open, with units and lessons nested — the whole
+    /// tree in one call.
     ///
-    /// Which endpoint serves them depends on enrollment type, and getting this
-    /// wrong is why the courses screen came back empty while the mobile app
-    /// showed content for the same account:
+    /// One endpoint for both enrollment types. It briefly took two: my-courses/
+    /// read StudentCourseAccess, which an online student only gets on their
+    /// first payment, so online students saw nothing while the mobile app --
+    /// which routes them to /academic/courses/?grade= -- showed content. That
+    /// was a backend inconsistency, and it is fixed at the source in
+    /// academic/access.py rather than worked around in each client.
     ///
-    ///   flash  -> /academic/my-courses/, which reads StudentCourseAccess.
-    ///   online -> /academic/courses/?grade=..., because an online student's
-    ///             StudentCourseAccess rows are created only on their FIRST
-    ///             PAYMENT. Until then my-courses/ is legitimately empty even
-    ///             though the student can see the courses everywhere else.
-    ///
-    /// This mirrors mobile/src/services/courseService.jsx, which is the source
-    /// of truth for what a student can reach, and it matches the rule
-    /// StudentExamListView already uses for exams.
-    ///
-    /// The online list is paginated and its rows carry no nested units — only a
-    /// lesson_count — so callers must read Course.LessonCount rather than
-    /// counting AllLessons.
+    /// Going through the student endpoint again matters for content protection
+    /// too: /academic/courses/&lt;id&gt; serialises with CourseSerializer, which
+    /// carries the raw youtube_url.
     /// </summary>
-    public Task<List<Course>> GetMyCoursesAsync(StudentProfile? profile, CancellationToken ct = default)
-    {
-        if (IsOnlineWithGrade(profile, out var gradeId))
-            return GetListTolerantAsync<Course>(ApiEndpoints.CoursesByGrade(gradeId), ct);
+    public Task<List<Course>> GetMyCoursesAsync(CancellationToken ct = default)
+        => GetListTolerantAsync<Course>(ApiEndpoints.MyCourses, ct);
 
-        return GetListTolerantAsync<Course>(ApiEndpoints.MyCourses, ct);
-    }
-
-    public Task<Course?> GetCourseAsync(int courseId, StudentProfile? profile, CancellationToken ct = default)
-    {
-        if (IsOnlineWithGrade(profile, out _))
-            return GetAsync<Course>(ApiEndpoints.CourseDetail(courseId), ct);
-
-        return GetAsync<Course>(ApiEndpoints.MyCourse(courseId), ct);
-    }
-
-    /// <summary>
-    /// True for an online student who has an enrolled_grade. Without the grade
-    /// there is nothing to filter by, so the student endpoint is the only
-    /// option — and it will be empty, which is the truthful answer.
-    /// </summary>
-    private static bool IsOnlineWithGrade(StudentProfile? profile, out int gradeId)
-    {
-        gradeId = profile?.EnrolledGrade ?? 0;
-
-        return profile?.SystemType == SystemTypes.Online && gradeId > 0;
-    }
+    public Task<Course?> GetCourseAsync(int courseId, CancellationToken ct = default)
+        => GetAsync<Course>(ApiEndpoints.MyCourse(courseId), ct);
 
     /// <summary>
     /// A lesson with its exercise. Fetching it also records a view server-side

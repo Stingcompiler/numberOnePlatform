@@ -137,7 +137,7 @@ public class LiveViewModelTests
         var (api, auth, client) = await SignedInAsync();
         using var _c = client;
 
-        var courses = await api.GetMyCoursesAsync(null);
+        var courses = await api.GetMyCoursesAsync();
         var lessonId = courses[0].AllLessons.First().Id;
 
         var vm = new LessonViewModel(api, auth, lessonId);
