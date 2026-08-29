@@ -29,3 +29,43 @@ public sealed class PercentToFractionConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => value is double fraction ? (int)Math.Round(fraction * 100) : 0;
 }
+
+/// <summary>
+/// Fill for the النظام pill: blue for online, red for flash.
+///
+/// Red is both the brand colour and the danger colour, so this pill leans on a
+/// tint rather than a filled block - a solid red chip in a table row would read
+/// as an error.
+/// </summary>
+public sealed class SystemTypeTintConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var online = value is true;
+        var dark = Application.Current?.RequestedTheme == AppTheme.Dark;
+
+        return online
+            ? Color.FromArgb(dark ? "#244C8DFF" : "#141A56DB")
+            : Color.FromArgb(dark ? "#24E74C3C" : "#14C0392B");
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>Text colour for the النظام pill, matching its tint.</summary>
+public sealed class SystemTypeInkConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var online = value is true;
+        var dark = Application.Current?.RequestedTheme == AppTheme.Dark;
+
+        return online
+            ? Color.FromArgb(dark ? "#4C8DFF" : "#1A56DB")
+            : Color.FromArgb(dark ? "#E74C3C" : "#C0392B");
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}

@@ -42,7 +42,14 @@
                 <VerticalStackLayout Grid.Row="1" Spacing="2">
                     <Label Text="التعلّم" Style="{StaticResource MutedLabel}" Margin="8,0,8,6" />
 
-                    <ContentView x:Name="NavHost" />
+                    <Button x:Name="NavHome" Text="لوحة التحكم"
+                            Style="{StaticResource GhostButton}"
+                            HeightRequest="36" HorizontalOptions="Fill"
+                            Clicked="OnHomeClicked" />
+                    <Button x:Name="NavCourses" Text="الكورسات"
+                            Style="{StaticResource GhostButton}"
+                            HeightRequest="36" HorizontalOptions="Fill"
+                            Clicked="OnCoursesClicked" />
                 </VerticalStackLayout>
 
                 <!-- User block -->
