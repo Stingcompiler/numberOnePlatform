@@ -1,0 +1,200 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             x:Class="NumberOne.Desktop.Views.LoginPage"
+             x:DataType="vm:LoginViewModel"
+             FlowDirection="RightToLeft"
+             BackgroundColor="{AppThemeBinding Light={StaticResource BgLight}, Dark={StaticResource BgDark}}"
+             Shell.NavBarIsVisible="False">
+
+    <!--
+        No shell on this route. Split layout: the brand panel takes 42% on the
+        RIGHT - the leading edge in an RTL layout - and the form sits beside it.
+    -->
+    <Grid>
+        <Grid ColumnDefinitions="42*,58*">
+
+            <!-- ── Brand panel (leading / right) ───────────────────────── -->
+            <Grid Grid.Column="0"
+                  BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
+
+                <!-- 1px leading border, not a shadow: elevation comes from lines. -->
+                <BoxView HorizontalOptions="End" WidthRequest="1"
+                         Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+
+                <VerticalStackLayout VerticalOptions="Center" Padding="48" Spacing="16">
+
+                    <HorizontalStackLayout Spacing="12">
+                        <Border WidthRequest="40" HeightRequest="40" Padding="0"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 8"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
+                            <Label Text="١" TextColor="#FFFFFF"
+                                   FontSize="{StaticResource FontHeading}"
+                                   FontAttributes="Bold"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <Label Text="{x:Static vm:UiText.BrandShortName}"
+                               Style="{StaticResource TitleLabel}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Label Text="{x:Static vm:UiText.BrandName}"
+                           Style="{StaticResource HeadingLabel}" />
+
+                    <Label Text="{x:Static vm:UiText.BrandTagline}"
+                           Style="{StaticResource CopyLabel}"
+                           MaximumWidthRequest="360" />
+
+                    <VerticalStackLayout Spacing="10" Margin="0,12,0,0">
+                        <HorizontalStackLayout Spacing="8">
+                            <Label Text="✓" TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}"
+                                   FontSize="{StaticResource FontBody}" VerticalOptions="Center" />
+                            <Label Text="{x:Static vm:UiText.BrandBulletOne}" Style="{StaticResource SecondaryLabel}" />
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Spacing="8">
+                            <Label Text="✓" TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}"
+                                   FontSize="{StaticResource FontBody}" VerticalOptions="Center" />
+                            <Label Text="{x:Static vm:UiText.BrandBulletTwo}" Style="{StaticResource SecondaryLabel}" />
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Spacing="8">
+                            <Label Text="✓" TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}"
+                                   FontSize="{StaticResource FontBody}" VerticalOptions="Center" />
+                            <Label Text="{x:Static vm:UiText.BrandBulletThree}" Style="{StaticResource SecondaryLabel}" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </Grid>
+
+            <!-- ── Form ────────────────────────────────────────────────── -->
+            <ScrollView Grid.Column="1">
+                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center"
+                                     WidthRequest="420" Padding="24,48" Spacing="8">
+
+                    <Label Text="{x:Static vm:UiText.LoginTitle}" Style="{StaticResource TitleLabel}" />
+                    <Label Text="{x:Static vm:UiText.LoginSubtitle}" Style="{StaticResource MutedLabel}"
+                           FontSize="{StaticResource FontSecondary}" Margin="0,0,0,16" />
+
+                    <!-- Username -->
+                    <Label Text="{x:Static vm:UiText.UsernameLabel}" Style="{StaticResource FieldLabel}" />
+                    <Border Style="{StaticResource InputShell}">
+                        <Entry Text="{Binding Username}"
+                               Style="{StaticResource LoginEntry}"
+                               ReturnType="Next"
+                               VerticalOptions="Center" />
+                    </Border>
+
+                    <!-- Password, with the eye toggle -->
+                    <Label Text="{x:Static vm:UiText.PasswordLabel}" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
+                    <Border Style="{StaticResource InputShell}">
+                        <Grid ColumnDefinitions="*,24">
+                            <Entry Grid.Column="0"
+                                   Text="{Binding Password}"
+                                   IsPassword="{Binding PasswordVisible, Converter={StaticResource Invert}}"
+                                   Style="{StaticResource LoginEntry}"
+                                   ReturnType="Go"
+                                   ReturnCommand="{Binding SignInCommand}"
+                                   VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="👁"
+                                   FontSize="{StaticResource FontBody}"
+                                   VerticalOptions="Center" HorizontalOptions="Center"
+                                   ToolTipProperties.Text="{x:Static vm:UiText.ShowPassword}"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding TogglePasswordVisibilityCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+                    </Border>
+
+                    <!--
+                        Error panel: tint fill with a 1px danger border and the
+                        message inside. Never a filled red block.
+                    -->
+                    <Border Style="{StaticResource ErrorPanel}"
+                            IsVisible="{Binding HasError}"
+                            Margin="0,16,0,0">
+                        <Label Text="{Binding ErrorMessage}"
+                               Style="{StaticResource CopyLabel}"
+                               TextColor="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
+                    </Border>
+
+                    <Button Text="{Binding SubmitLabel}"
+                            Command="{Binding SignInCommand}"
+                            Style="{StaticResource PrimaryButtonLarge}"
+                            Margin="0,16,0,0" />
+
+                    <Label Text="{Binding DeviceFootnote}"
+                           Style="{StaticResource MutedLabel}"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0" />
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
+
+        <!-- ── Binding confirmation ────────────────────────────────────────
+             A 520px dialog over the dimmed login. Drawn as an overlay in this
+             page rather than a platform popup: the design specifies exactly
+             this, and it keeps the flow in one view model.
+        -->
+        <Grid IsVisible="{Binding IsBindConfirmationVisible}"
+              BackgroundColor="{StaticResource Scrim}">
+
+            <Border Style="{StaticResource Dialog}"
+                    WidthRequest="520"
+                    HorizontalOptions="Center" VerticalOptions="Center">
+                <VerticalStackLayout Spacing="12">
+
+                    <HorizontalStackLayout Spacing="12">
+                        <Border WidthRequest="40" HeightRequest="40" Padding="0"
+                                StrokeThickness="0" StrokeShape="RoundRectangle 20"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">
+                            <Label Text="!" FontAttributes="Bold"
+                                   FontSize="{StaticResource FontHeading}"
+                                   TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <Label Text="{x:Static vm:UiText.BindTitle}"
+                               Style="{StaticResource HeadingLabel}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Label Text="{x:Static vm:UiText.BindBody}" Style="{StaticResource CopyLabel}" />
+
+                    <!-- Device strip: what exactly is about to be bound. -->
+                    <Border Style="{StaticResource DeviceStrip}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0"
+                                   Text="{x:Static vm:UiText.BindCurrentDevice}"
+                                   Style="{StaticResource SecondaryLabel}"
+                                   VerticalOptions="Center" />
+                            <Label Grid.Column="1"
+                                   Text="{Binding DeviceDescription}"
+                                   Style="{StaticResource MonoLtrLabel}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Primary is visibly wider: confirming is the main action,
+                         and it is the irreversible one. -->
+                    <HorizontalStackLayout Spacing="8" Margin="0,4,0,0">
+                        <Button Text="{x:Static vm:UiText.BindConfirm}"
+                                Command="{Binding ConfirmBindCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                WidthRequest="200" />
+                        <Button Text="{x:Static vm:UiText.BindCancel}"
+                                Command="{Binding CancelBindCommand}"
+                                Style="{StaticResource NeutralButton}"
+                                WidthRequest="96" />
+                    </HorizontalStackLayout>
+
+                    <Label Text="{x:Static vm:UiText.BindFootnote}" Style="{StaticResource MutedLabel}" />
+
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

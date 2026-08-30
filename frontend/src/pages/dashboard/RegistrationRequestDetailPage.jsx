@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowRight, Loader2, User, Phone, MapPin, Calendar, Shield, Users,
-  FileText, Download, CheckCircle, XCircle, Clock, Eye, Save,
+  FileText, Download, CheckCircle, XCircle, Clock, Eye, Save, AlertTriangle,
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
 
@@ -21,6 +21,23 @@ function InfoItem({ label, value }) {
     <div className="p-3 rounded-xl bg-white/04">
       <p className="text-white/40 text-xs mb-0.5">{label}</p>
       <p className="text-white text-sm font-medium">{value || '—'}</p>
+    </div>
+  )
+}
+
+// المستند الإلزامي الناقص يُعرَض ولا يُخفى: المراجع كان يرى ست بطاقات ولا شيء
+// يدلّه على أن سابعاً غائب، وهو الفرق بين طلب مكتمل وطلب يجب تعليقه.
+function MissingDocument({ label }) {
+  return (
+    <div className="rounded-xl overflow-hidden border border-red-500/40 bg-red-500/5">
+      <div className="px-3 py-2 border-b border-red-500/30">
+        <p className="text-red-300/80 text-xs">{label}</p>
+      </div>
+      <div className="h-44 flex flex-col items-center justify-center gap-2 text-center px-3">
+        <AlertTriangle size={20} className="text-red-400" />
+        <p className="text-red-300 text-xs font-bold">مستند مفقود</p>
+        <p className="text-white/40 text-[11px] leading-relaxed">لم يُرفع هذا المستند مع الطلب</p>
+      </div>
     </div>
   )
 }
@@ -73,6 +90,10 @@ export default function RegistrationRequestDetailPage() {
 
   const st = STATUS_MAP[data.status] || STATUS_MAP.new
   const StIcon = st.icon
+
+  // يحسبها الخادم من حقول الموديل نفسها، فلا تنحرف القائمة هنا عند إضافة
+  // مستند جديد. الافتراضي [] ليبقى العرض سليماً مع استجابة أقدم.
+  const missing = data.missing_documents || []
 
   return (
     <div>
@@ -139,6 +160,20 @@ export default function RegistrationRequestDetailPage() {
           {/* Files */}
           <div className="glass-card p-5">
             <div className="flex items-center gap-2 text-brand-blue mb-4"><FileText size={16} /><span className="font-cairo font-bold text-white text-sm">المستندات المرفقة</span></div>
+            {/* الخادم يحسب الناقص من الموديل نفسه، فلا تُكرَّر القائمة هنا
+                ولا تنحرف عنه عند إضافة مستند جديد. */}
+            {missing.length > 0 && (
+              <div className="mb-4 rounded-xl px-4 py-3 border border-red-500/40 bg-red-500/10">
+                <div className="flex items-center gap-2 text-red-300 font-bold text-sm mb-1">
+                  <AlertTriangle size={15} />
+                  <span>ينقص هذا الطلب {missing.length} مستنداً إلزامياً</span>
+                </div>
+                <p className="text-white/50 text-xs leading-relaxed">
+                  الطلبات المقدَّمة قبل إضافة المستند لا تحتويه؛ يلزم طلبه من ولي الأمر قبل القبول.
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <ImagePreview label="النتيجة الدراسية" url={data.academic_result_image} />
               <ImagePreview label="شهادة الميلاد" url={data.birth_certificate_image} />
@@ -147,10 +182,11 @@ export default function RegistrationRequestDetailPage() {
               <ImagePreview label="بطاقة الأب" url={data.father_id_image} />
               <ImagePreview label="بطاقة الأم" url={data.mother_id_image} />
               <ImagePreview label="إيصال الدفع" url={data.payment_receipt_image} />
+              {missing.map(doc => <MissingDocument key={doc.field} label={doc.label} />)}
             </div>
             {!data.academic_result_image && !data.birth_certificate_image && !data.personal_photo &&
              !data.student_id_image && !data.father_id_image && !data.mother_id_image &&
-             !data.payment_receipt_image && (
+             !data.payment_receipt_image && missing.length === 0 && (
               <p className="text-white/30 text-sm text-center py-6">لا توجد مستندات مرفقة</p>
             )}
           </div>

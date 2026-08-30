@@ -513,6 +513,33 @@ class NewStudentRegistration(models.Model):
         _("  تحميل اشعار سداد الرسوم / اشعار بنكك "), upload_to=registration_upload_path, blank=True, null=True,
     )
 
+    @classmethod
+    def document_fields(cls):
+        """
+        حقول المستندات كما يعرّفها الموديل، مع كون كل منها إلزامياً أو لا.
+
+        تُشتَقّ من الموديل ولا تُكتَب يدوياً: قائمة مكرّرة في مكان آخر هي بالضبط
+        ما جعل student_id_image يصل من المتصفح ثم يُهمَل بصمت.
+        """
+        return [
+            (f.name, str(f.verbose_name).strip(), not f.blank)
+            for f in cls._meta.get_fields()
+            if isinstance(f, models.ImageField)
+        ]
+
+    def missing_documents(self):
+        """
+        المستندات الإلزامية غير المرفوعة في هذا الطلب.
+
+        صفحة المراجعة كانت تُخفي المستند الغائب تماماً، فيرى المراجع ستّ بطاقات
+        ولا شيء يدلّه على أن سابعاً ناقص — وهو الفرق بين طلب مكتمل وطلب معلّق.
+        """
+        return [
+            {"field": name, "label": label}
+            for name, label, required in self.document_fields()
+            if required and not getattr(self, name, None)
+        ]
+
     # ── بيانات ولي الأمر ──────────────────────────────────────────────────────
     guardian_name      = models.CharField(_("اسم ولي أمر الطالب"), max_length=200)
     guardian_phone     = models.CharField(_("رقم هاتف ولي الأمر"), max_length=20)

@@ -26,6 +26,7 @@ from .models import (
     Exercise, Question, Choice,
     Submission, StudentCourseAccess, LessonProgress,
 )
+from .access import accessible_course_ids, can_access_course
 from .serializers import (
     LevelSerializer,
     GradeSerializer, GradeListSerializer,
@@ -168,6 +169,27 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
             return [IsAuthenticated()]
         return [IsAdminOrReadOnly()]
+
+    def get_serializer_class(self):
+        """
+        الطالب يقرأ بنسخة الطالب: CourseSerializer يُضمّن youtube_url الخام في
+        كل محاضرة، وهذه الواجهة مفتوحة لكل مصادَق عليه — فكان طلب واحد يعيد
+        روابط كل محاضرات الكورس لأي طالب يصل إليها، وهو ما تمنعه واجهات
+        my-courses أصلاً.
+
+        الوصول لا يتغيّر: من كان يقرأ يبقى يقرأ. يسقط youtube_url وحده، وتطبيق
+        الموبايل يقرأ ‎youtube_url || youtube_embed_url‎ فيسقط تلقائياً على
+        embed_url دون تعديل.
+        """
+        user = getattr(self.request, "user", None)
+
+        if (
+            self.request.method in ("GET", "HEAD", "OPTIONS")
+            and getattr(user, "role", None) == CustomUser.Roles.STUDENT
+        ):
+            return StudentCourseSerializer
+
+        return CourseSerializer
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
@@ -507,12 +529,15 @@ class MyCoursesView(APIView):
 
     def get(self, request):
         student = request.user.student_profile
-        access_qs = StudentCourseAccess.objects.filter(
-            student=student, is_active=True
-        ).select_related("course__grade__level", "course__teacher").prefetch_related(
-            "course__units__lessons"
+
+        courses = (
+            Course.objects
+            .filter(id__in=accessible_course_ids(student))
+            .select_related("grade__level", "teacher")
+            .prefetch_related("units__lessons")
+            .order_by("grade__display_order", "display_order")
         )
-        courses = [acc.course for acc in access_qs]
+
         serializer = StudentCourseSerializer(courses, many=True)
         return Response(serializer.data)
 
@@ -527,11 +552,8 @@ class MyCourseDetailView(APIView):
 
     def get(self, request, course_id):
         student = request.user.student_profile
-        try:
-            StudentCourseAccess.objects.get(
-                student=student, course_id=course_id, is_active=True
-            )
-        except StudentCourseAccess.DoesNotExist:
+
+        if not can_access_course(student, course_id):
             return Response(
                 {"detail": _("ليس لديك صلاحية الوصول لهذا الكورس.")},
                 status=status.HTTP_403_FORBIDDEN,
@@ -566,13 +588,7 @@ class MyLessonDetailView(APIView):
             )
 
         # التحقق من وصول الطالب للكورس
-        try:
-            StudentCourseAccess.objects.get(
-                student=student,
-                course=lesson.unit.course,
-                is_active=True,
-            )
-        except StudentCourseAccess.DoesNotExist:
+        if not can_access_course(student, lesson.unit.course_id):
             return Response(
                 {"detail": _("ليس لديك صلاحية الوصول لهذه المحاضرة.")},
                 status=status.HTTP_403_FORBIDDEN,

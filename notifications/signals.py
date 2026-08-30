@@ -24,12 +24,19 @@ def notify_new_lesson(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Exam)
 def notify_new_exam(sender, instance, created, **kwargs):
-    if instance.is_published:
+    # كان الشرط ‎instance.is_published‎ وهو حقل لا وجود له في Exam إطلاقاً،
+    # فكان كل حفظ لاختبار يرفع AttributeError: إنشاء الاختبارات وتعديلها كانا
+    # معطّلين تماماً في الإنتاج.
+    #
+    # ‎created‎ مقصود: بدونه، أول تعديل على أي اختبار قديم بعد هذا الإصلاح كان
+    # سيرسل إشعار "امتحان جديد" لكل طلاب الكورس عن اختبار قديم. وهو نفس نمط
+    # ‎notify_new_announcement‎ أدناه.
+    if created and instance.is_active:
         exists = Notification.objects.filter(
             notification_type=Notification.NotificationType.EXAM,
             related_object_id=str(instance.id)
         ).exists()
-        
+
         if not exists:
             course = instance.course
             students = StudentProfile.objects.filter(course_accesses__course=course).distinct()
