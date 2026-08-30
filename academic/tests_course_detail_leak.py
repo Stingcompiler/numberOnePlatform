@@ -84,3 +84,25 @@ class CourseDetailLeakTests(TestCase):
         for lesson in self._lessons(res.data):
             self.assertIn("youtube_url", lesson)
             self.assertEqual(lesson["youtube_url"], YOUTUBE_URL)
+
+    def test_the_student_shape_differs_from_staff_by_exactly_the_leaked_fields(self):
+        """
+        الحارس الذي كان ناقصاً.
+
+        أول إصلاح للتسريب استبدل السيريالايزر بأخفّ منه، فسقطت مع youtube_url
+        حقول unit وdescription وexercise أيضاً — وتطبيق الموبايل يقرأ هذه
+        الواجهة لطالب الأونلاين. إغلاق تسريب حقل واحد يجب ألّا يغيّر شكل
+        الاستجابة فيما عداه.
+        """
+        student_lesson = self._lessons(
+            self.student.get(f"/api/academic/courses/{self.course.id}/").data
+        )[0]
+        staff_lesson = self._lessons(
+            self.admin.get(f"/api/academic/courses/{self.course.id}/").data
+        )[0]
+
+        dropped = set(staff_lesson.keys()) - set(student_lesson.keys())
+        added = set(student_lesson.keys()) - set(staff_lesson.keys())
+
+        self.assertEqual(dropped, {"youtube_url"})
+        self.assertEqual(added, set())
