@@ -509,10 +509,8 @@ class NewStudentRegistration(models.Model):
     mother_id_image          = models.ImageField(
         _("  تحميل الرقم الوطني للأم"), upload_to=registration_upload_path, blank=False, null=False,
     )
-    # إلزامي كبقية المستندات. كان ‎blank=True‎ وحده بين السبعة، فكان الطلب
-    # يُقبَل بلا إشعار سداد ولا شيء يُبلّغ المراجع بغيابه.
     payment_receipt_image    = models.ImageField(
-        _("  تحميل اشعار سداد الرسوم / اشعار بنكك "), upload_to=registration_upload_path, blank=False, null=False,
+        _("  تحميل اشعار سداد الرسوم / اشعار بنكك "), upload_to=registration_upload_path, blank=True, null=True,
     )
 
     @classmethod

@@ -205,19 +205,14 @@ class MissingDocumentReportingTests(TestCase):
         self.assertEqual([d["field"] for d in missing], ["student_id_image"])
         self.assertTrue(missing[0]["label"])
 
-    def test_a_missing_payment_receipt_is_reported_like_any_other_document(self):
-        """
-        كان إشعار السداد وحده اختيارياً بين السبعة، فيمرّ الطلب بدونه ولا يُبلَّغ
-        المراجع. صار إلزامياً كبقيتها.
-        """
+    def test_the_optional_receipt_is_never_reported_as_missing(self):
+        """إشعار السداد ‎blank=True‎ في الموديل، فغيابه ليس نقصاً."""
         registration = self._registration(**{
             f: _image(f"{f}.png")
             for f in DOCUMENT_FIELDS if f != "payment_receipt_image"
         })
 
-        missing = registration.missing_documents()
-
-        self.assertEqual([d["field"] for d in missing], ["payment_receipt_image"])
+        self.assertEqual(registration.missing_documents(), [])
 
     def test_the_serializer_exposes_the_missing_list_to_the_review_page(self):
         registration = self._registration(**{
@@ -240,30 +235,5 @@ class MissingDocumentReportingTests(TestCase):
         required = {name for name, _, is_required in
                     NewStudentRegistration.document_fields() if is_required}
 
-        self.assertEqual(required, set(DOCUMENT_FIELDS))
-
-    def test_a_submission_without_the_receipt_is_rejected(self):
-        """الشرط يسري على الإرسال أيضاً، لا على تقرير النقص وحده."""
-        payload = {
-            "student_full_name": "طالب",
-            "national_id": "1234567890",
-            "level": self.level.id,
-            "grade": self.grade.id,
-            "gender": "male",
-            "student_status": "new_year",
-            "residence": "الخرطوم",
-            "date_of_birth": datetime.date(2008, 1, 1),
-            "guardian_name": "ولي الأمر",
-            "guardian_phone": "0900000000",
-            "guardian_residence": "الخرطوم",
-            "mother_full_name": "اسم الأم",
-        }
-        payload.update({
-            f: _image(f"{f}.png")
-            for f in DOCUMENT_FIELDS if f != "payment_receipt_image"
-        })
-
-        serializer = NewStudentRegistrationSerializer(data=payload)
-
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("payment_receipt_image", serializer.errors)
+        expected = {f for f in DOCUMENT_FIELDS if f != "payment_receipt_image"}
+        self.assertEqual(required, expected)
