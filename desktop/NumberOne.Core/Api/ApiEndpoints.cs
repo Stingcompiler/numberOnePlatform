@@ -52,6 +52,21 @@ public static class ApiEndpoints
     public static string CourseDetail(int courseId) => $"academic/courses/{courseId}/";
 
     public static string MyLesson(int lessonId)      => $"academic/my-lessons/{lessonId}/";
+
+    /// <summary>
+    /// The player page, served from the school's own domain.
+    ///
+    /// The WebView must NOT navigate to a YouTube /embed/ URL directly: that URL
+    /// is meant to be loaded inside an iframe on a page, and a top-level
+    /// navigation to it makes YouTube answer "Error 153 - video player
+    /// configuration error". Reproduced in a plain browser with a known-good
+    /// public video, so it is not specific to WebView2 or to any one lesson.
+    ///
+    /// Serving the wrapper from the API host gives the iframe a real origin and
+    /// referer, which is what the web dashboard and the mobile app already do -
+    /// mobile passes baseUrl 'https://numberoneschools.com' for exactly this.
+    /// </summary>
+    public static string LessonPlayer(string videoId) => $"academic/player/?v={videoId}";
     public static string CompleteLesson(int lessonId) => $"academic/my-lessons/{lessonId}/complete/";
 
     // ── Exams (mounted at /api/exams/) ───────────────────────────────────────

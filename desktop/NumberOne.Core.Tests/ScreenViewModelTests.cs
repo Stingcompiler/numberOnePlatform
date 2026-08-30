@@ -223,13 +223,63 @@ public class ScreenViewModelTests
         // student receives only on first payment. The server's wording is
         // accurate but leaves them with nothing to do about it.
         var api = ForbiddenApi("ليس لديك صلاحية الوصول لهذه المحاضرة.");
-        var vm = new LessonViewModel(api, SignedInAuth(), 1);
+        var vm = new LessonViewModel(api, SignedInAuth(), new Uri("https://numberoneschools.com/api/"), 1);
 
         await vm.LoadAsync();
 
         Assert.True(vm.Lesson.HasError);
         Assert.Equal(LessonViewModel.LessonLockedMessage, vm.Lesson.ErrorMessage);
         Assert.Contains("التواصل مع إدارة المدرسة", vm.Lesson.ErrorMessage);
+    }
+
+    [Theory]
+    // The server only parses "youtu.be/" and "v=", and returns the raw URL when
+    // it cannot. A lesson saved with a /live/ or /shorts/ link therefore arrives
+    // as something that is not an embed URL, so the id is read out defensively.
+    [InlineData("https://www.youtube.com/embed/dQw4w9WgXcQ?modestbranding=1&rel=0", "dQw4w9WgXcQ")]
+    [InlineData("https://youtu.be/dQw4w9WgXcQ", "dQw4w9WgXcQ")]
+    [InlineData("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10", "dQw4w9WgXcQ")]
+    [InlineData("https://www.youtube.com/live/dQw4w9WgXcQ", "dQw4w9WgXcQ")]
+    [InlineData("https://www.youtube.com/shorts/dQw4w9WgXcQ", "dQw4w9WgXcQ")]
+    public async Task The_player_loads_the_wrapper_page_not_the_youtube_url(string embed, string id)
+    {
+        // Navigating a WebView straight at a /embed/ URL makes YouTube answer
+        // "Error 153 - video player configuration error": that URL belongs
+        // inside an iframe on a page. The wrapper is served from the API host so
+        // the iframe has a real origin, which is what web and mobile already do.
+        var vm = await LessonWithVideoAsync(embed);
+
+        Assert.True(vm.HasVideo);
+        Assert.Equal($"https://numberoneschools.com/api/academic/player/?v={id}", vm.PlayerUrl);
+        Assert.DoesNotContain("youtube.com/embed", vm.PlayerUrl);
+    }
+
+    [Fact]
+    public async Task A_lesson_with_an_unusable_video_url_reports_no_video()
+    {
+        // An empty frame beats a frame showing YouTube's error page.
+        var vm = await LessonWithVideoAsync("https://example.com/not-a-video");
+
+        Assert.False(vm.HasVideo);
+        Assert.Null(vm.PlayerUrl);
+    }
+
+    private static async Task<LessonViewModel> LessonWithVideoAsync(string embedUrl)
+    {
+        var body = $$"""
+        {"id":1,"title":"محاضرة","youtube_embed_url":"{{embedUrl}}","exercise":null}
+        """;
+        var client = new HttpClient(new LessonHandler(body))
+        {
+            BaseAddress = new Uri("https://numberoneschools.com/api/"),
+        };
+
+        var vm = new LessonViewModel(
+            new StudentApi(client), SignedInAuth(),
+            new Uri("https://numberoneschools.com/api/"), 1);
+
+        await vm.LoadAsync();
+        return vm;
     }
 
     // ── Profile ──────────────────────────────────────────────────────────────
@@ -323,6 +373,28 @@ public class ScreenViewModelTests
         var auth = new AuthService(client, tokens, new Device());
         auth.SignInAsync("fresh.student", "pass1234").GetAwaiter().GetResult();
         return auth;
+    }
+
+    /// <summary>
+    /// Serves the lesson body for the lesson endpoint and an empty list for
+    /// progress. One body for every path made the progress call fail to
+    /// deserialise, which masked what the test was actually checking.
+    /// </summary>
+    private sealed class LessonHandler : HttpMessageHandler
+    {
+        private readonly string _lesson;
+
+        public LessonHandler(string lesson) => _lesson = lesson;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var body = request.RequestUri!.AbsolutePath.Contains("my-progress") ? "[]" : _lesson;
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            });
+        }
     }
 
     private sealed class SingleBodyHandler : HttpMessageHandler

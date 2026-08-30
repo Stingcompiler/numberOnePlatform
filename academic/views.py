@@ -9,7 +9,11 @@ Views الكاملة للهيكل الأكاديمي
 ================================================================================
 """
 
+import re
+
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.utils.translation import gettext_lazy as _
+from django.views import View
 from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -704,6 +708,53 @@ class MyProgressView(APIView):
         student = request.user.student_profile
         progresses = LessonProgress.objects.filter(student=student).select_related("lesson")
         return Response(LessonProgressSerializer(progresses, many=True).data)
+
+
+class LessonPlayerView(View):
+    """
+    GET /api/academic/player/?v=<video_id>
+
+    صفحة صغيرة تحتوي iframe اليوتيوب، تُخدَّم من نطاق المدرسة.
+
+    عميل الديسكتوب كان يفتح رابط ‎/embed/‎ مباشرةً في الـ WebView، ويوتيوب يردّ
+    على ذلك بـ Error 153 — فالرابط مُعدّ ليُحمَّل داخل iframe في صفحة، لا أن
+    يُنتقَل إليه كمستند أعلى. التطبيقان الآخران يفعلان الصحيح أصلاً: الويب
+    يستخدم iframe داخل صفحة الموقع، والموبايل يمرّر HTML مع
+    ‎baseUrl: 'https://numberoneschools.com'‎.
+
+    تُخدَّم من الخادم لا من نص HTML محلي حتى يكون الأصل (origin) والمُحيل
+    (referer) نطاق المدرسة فعلاً على ويندوز وماك معاً، بدل about:blank.
+
+    عامة بلا مصادقة: لا تكشف شيئاً — معرّف الفيديو يصل العميل أصلاً، والصفحة
+    لا تقرأ قاعدة البيانات.
+    """
+
+    #: معرّفات يوتيوب: حروف وأرقام وشرطتان. أي شيء آخر يُرفَض بدل أن يُطبَع.
+    VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{6,20}$")
+
+    TEMPLATE = (
+        "<!doctype html><html><head><meta charset=\"utf-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        "<style>html,body{{margin:0;height:100%;background:#0B0F16;overflow:hidden}}"
+        "iframe{{border:0;width:100%;height:100%;display:block}}</style></head>"
+        "<body oncontextmenu=\"return false\">"
+        "<iframe src=\"https://www.youtube.com/embed/{video_id}?modestbranding=1&amp;rel=0\""
+        " allow=\"accelerometer; autoplay; encrypted-media; picture-in-picture\""
+        " referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen></iframe>"
+        "</body></html>"
+    )
+
+    def get(self, request):
+        video_id = request.GET.get("v", "")
+
+        if not self.VIDEO_ID.match(video_id):
+            return HttpResponseBadRequest("invalid video id")
+
+        response = HttpResponse(self.TEMPLATE.format(video_id=video_id))
+
+        # الصفحة تُضمّن iframe من يوتيوب فقط؛ لا تُضمَّن هي في أي مكان آخر.
+        response["X-Frame-Options"] = "SAMEORIGIN"
+        return response
 
 
 # ─────────────────────────────────────────────────────────────────────────────
