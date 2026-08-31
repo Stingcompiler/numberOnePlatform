@@ -55,12 +55,28 @@ public sealed partial class LessonViewModel : ObservableObject
         get
         {
             var videoId = VideoId;
+            if (videoId is null) return null;
 
-            return videoId is null
-                ? null
-                : new Uri(_apiBase, ApiEndpoints.LessonPlayer(videoId)).AbsoluteUri;
+            // Falls back to the embed URL against a server without the player
+            // route. That still shows YouTube's own error rather than playing,
+            // but it is honest about being a video problem instead of showing a
+            // 404 page that reads as a missing lesson.
+            return _playerPageAvailable
+                ? new Uri(_apiBase, ApiEndpoints.LessonPlayer(videoId)).AbsoluteUri
+                : Lesson.Value?.YoutubeEmbedUrl;
         }
     }
+
+    private bool _playerPageAvailable = true;
+
+    /// <summary>
+    /// Shown when the server predates the player page, so the student is told
+    /// the app is ahead of the server rather than left staring at an error.
+    /// </summary>
+    public bool IsServerOutdatedForPlayback => VideoId is not null && !_playerPageAvailable;
+
+    public const string ServerOutdatedMessage =
+        "تعذّر تشغيل الفيديو: نسخة الخادم أقدم من التطبيق. يرجى إبلاغ الإدارة.";
 
     /// <summary>
     /// The YouTube id, read out of the embed URL the server built.
@@ -248,6 +264,10 @@ public sealed partial class LessonViewModel : ObservableObject
     {
         await Lesson.LoadAsync(ct).ConfigureAwait(true);
 
+        if (VideoId is not null)
+            _playerPageAvailable = await _api.PlayerPageAvailableAsync(ct).ConfigureAwait(true);
+
+        OnPropertyChanged(nameof(IsServerOutdatedForPlayback));
         OnPropertyChanged(nameof(EmbedUrl));
         OnPropertyChanged(nameof(PlayerUrl));
         OnPropertyChanged(nameof(HasVideo));

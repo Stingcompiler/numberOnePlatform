@@ -83,6 +83,14 @@
                     </Grid>
                 </Border>
 
+                <!-- Server older than the app: say so rather than showing an error frame. -->
+                <Border Style="{StaticResource WarningPanel}"
+                        IsVisible="{Binding IsServerOutdatedForPlayback}">
+                    <Label Text="{x:Static vm:LessonViewModel.ServerOutdatedMessage}"
+                           Style="{StaticResource CopyLabel}"
+                           TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+                </Border>
+
                 <!-- Security notice -->
                 <Label x:Name="SecurityNotice"
                        Style="{StaticResource MutedLabel}"

@@ -167,6 +167,44 @@ public sealed class StudentApi
     public Task<bool> MarkAllNotificationsReadAsync(CancellationToken ct = default)
         => PostNoContentAsync(ApiEndpoints.NotificationsReadAll, ct);
 
+    /// <summary>
+    /// Whether this server serves the lesson player page.
+    ///
+    /// The desktop client is installed on student machines and can be newer
+    /// than the server it talks to. Without this check, a client built after
+    /// academic/player/ existed but pointed at a server without it renders
+    /// Django's 404 inside the video frame -- "the requested lesson was not
+    /// found on the server" -- which reads as a missing lesson rather than a
+    /// missing route.
+    ///
+    /// Asked once per session and cached: the answer cannot change while the
+    /// app is open.
+    /// </summary>
+    private bool? _playerPageAvailable;
+
+    public async Task<bool> PlayerPageAvailableAsync(CancellationToken ct = default)
+    {
+        if (_playerPageAvailable is { } known) return known;
+
+        try
+        {
+            // A syntactically valid id, so a server that has the route answers
+            // 200 rather than the 400 it gives for a malformed one.
+            using var response = await _http
+                .GetAsync(ApiEndpoints.LessonPlayer("dQw4w9WgXcQ"), ct)
+                .ConfigureAwait(false);
+
+            _playerPageAvailable = response.IsSuccessStatusCode;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
+        {
+            // Offline: assume it is there rather than permanently falling back.
+            return true;
+        }
+
+        return _playerPageAvailable.Value;
+    }
+
     // ── Plumbing ─────────────────────────────────────────────────────────────
 
     private async Task<T?> GetAsync<T>(string path, CancellationToken ct)

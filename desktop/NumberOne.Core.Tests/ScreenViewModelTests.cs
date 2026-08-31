@@ -264,12 +264,30 @@ public class ScreenViewModelTests
         Assert.Null(vm.PlayerUrl);
     }
 
+    [Fact]
+    public async Task A_server_without_the_player_route_falls_back_instead_of_showing_a_404()
+    {
+        // The client ships to student machines and can be newer than the server.
+        // Pointing the WebView at a route the server does not have rendered
+        // Django's 404 inside the video frame, which reads as a missing lesson.
+        var vm = await LessonWithVideoAsync(
+            "https://www.youtube.com/embed/dQw4w9WgXcQ", playerRouteExists: false);
+
+        Assert.True(vm.IsServerOutdatedForPlayback);
+        Assert.Equal("https://www.youtube.com/embed/dQw4w9WgXcQ", vm.PlayerUrl);
+        Assert.DoesNotContain("academic/player/", vm.PlayerUrl);
+    }
+
     private static async Task<LessonViewModel> LessonWithVideoAsync(string embedUrl)
+        => await LessonWithVideoAsync(embedUrl, playerRouteExists: true);
+
+    private static async Task<LessonViewModel> LessonWithVideoAsync(
+        string embedUrl, bool playerRouteExists)
     {
         var body = $$"""
         {"id":1,"title":"محاضرة","youtube_embed_url":"{{embedUrl}}","exercise":null}
         """;
-        var client = new HttpClient(new LessonHandler(body))
+        var client = new HttpClient(new LessonHandler(body, playerRouteExists))
         {
             BaseAddress = new Uri("https://numberoneschools.com/api/"),
         };
@@ -383,12 +401,25 @@ public class ScreenViewModelTests
     private sealed class LessonHandler : HttpMessageHandler
     {
         private readonly string _lesson;
+        private readonly bool _playerRoute;
 
-        public LessonHandler(string lesson) => _lesson = lesson;
+        public LessonHandler(string lesson, bool playerRoute = true)
+        {
+            _lesson = lesson;
+            _playerRoute = playerRoute;
+        }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
-            var body = request.RequestUri!.AbsolutePath.Contains("my-progress") ? "[]" : _lesson;
+            var path = request.RequestUri!.AbsolutePath;
+
+            if (path.Contains("academic/player/"))
+            {
+                return Task.FromResult(new HttpResponseMessage(
+                    _playerRoute ? HttpStatusCode.OK : HttpStatusCode.NotFound));
+            }
+
+            var body = path.Contains("my-progress") ? "[]" : _lesson;
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
