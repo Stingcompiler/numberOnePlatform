@@ -15,7 +15,7 @@ from .views import (
     QuestionListCreateView, ChoiceListCreateView,
     QuestionDetailView, ChoiceDetailView,
     StudentCourseAccessListCreateView, StudentCourseAccessDetailView,
-    MyCoursesView, MyCourseDetailView, MyLessonDetailView,
+    MyCoursesView, MyCourseDetailView, MyLessonDetailView, LessonPlayerView,
     MarkLessonCompleteView, SubmitExerciseView,
     MySubmissionsView, AllSubmissionsView, MyProgressView,
     PublicLevelListView, PublicGradeListView,
@@ -59,6 +59,9 @@ urlpatterns = [
     path("my-lessons/<int:lesson_id>/complete/",   MarkLessonCompleteView.as_view(), name="lesson-complete"),
     path("my-submissions/",                        MySubmissionsView.as_view(),      name="my-submissions"),
     path("my-progress/",                           MyProgressView.as_view(),         name="my-progress"),
+
+    # صفحة المشغّل — تُخدَّم من نطاق المدرسة ليصحّ الأصل والمُحيل عند يوتيوب.
+    path("player/",                                LessonPlayerView.as_view(),       name="lesson-player"),
 
     # ── التسليم والنتائج ──────────────────────────────────────────────────────
     path("submit/",                             SubmitExerciseView.as_view(),       name="exercise-submit"),

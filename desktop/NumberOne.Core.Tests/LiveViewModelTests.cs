@@ -140,11 +140,13 @@ public class LiveViewModelTests
         var courses = await api.GetMyCoursesAsync(null);
         var lessonId = courses[0].AllLessons.First().Id;
 
-        var vm = new LessonViewModel(api, auth, lessonId);
+        var vm = new LessonViewModel(api, auth, BaseAddress!, lessonId);
         await vm.LoadAsync();
 
         Assert.True(vm.Lesson.HasData, $"lesson: {vm.Lesson.Status} {vm.Lesson.ErrorMessage}");
         Assert.True(vm.HasVideo);
+        // The WebView loads the wrapper page, not the YouTube URL directly.
+        Assert.Contains("academic/player/?v=", vm.PlayerUrl);
         Assert.Contains("/embed/", vm.EmbedUrl);
 
         // The watermark needs both, and an empty one would leave a leak

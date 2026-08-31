@@ -41,7 +41,16 @@
                         Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}">
 
                     <Grid>
-                        <WebView x:Name="Player" Source="{Binding EmbedUrl}" />
+                        <!--
+                            LeftToRight, explicitly. The window is RTL and that
+                            cascades into the WebView, which mirrors everything
+                            the page draws - the video picture included. A flipped
+                            lecture is not a cosmetic problem: any text on the
+                            board reads backwards.
+                        -->
+                        <WebView x:Name="Player"
+                                 FlowDirection="LeftToRight"
+                                 Source="{Binding PlayerUrl}" />
 
                         <!--
                             The watermark is a SIBLING of the WebView, not
@@ -72,6 +81,14 @@
                                    TextColor="#FFFFFF" />
                         </VerticalStackLayout>
                     </Grid>
+                </Border>
+
+                <!-- Server older than the app: say so rather than showing an error frame. -->
+                <Border Style="{StaticResource WarningPanel}"
+                        IsVisible="{Binding IsServerOutdatedForPlayback}">
+                    <Label Text="{x:Static vm:LessonViewModel.ServerOutdatedMessage}"
+                           Style="{StaticResource CopyLabel}"
+                           TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
                 </Border>
 
                 <!-- Security notice -->

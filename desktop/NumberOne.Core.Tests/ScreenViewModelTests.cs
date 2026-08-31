@@ -223,13 +223,81 @@ public class ScreenViewModelTests
         // student receives only on first payment. The server's wording is
         // accurate but leaves them with nothing to do about it.
         var api = ForbiddenApi("ليس لديك صلاحية الوصول لهذه المحاضرة.");
-        var vm = new LessonViewModel(api, SignedInAuth(), 1);
+        var vm = new LessonViewModel(api, SignedInAuth(), new Uri("https://numberoneschools.com/api/"), 1);
 
         await vm.LoadAsync();
 
         Assert.True(vm.Lesson.HasError);
         Assert.Equal(LessonViewModel.LessonLockedMessage, vm.Lesson.ErrorMessage);
         Assert.Contains("التواصل مع إدارة المدرسة", vm.Lesson.ErrorMessage);
+    }
+
+    [Theory]
+    // The server only parses "youtu.be/" and "v=", and returns the raw URL when
+    // it cannot. A lesson saved with a /live/ or /shorts/ link therefore arrives
+    // as something that is not an embed URL, so the id is read out defensively.
+    [InlineData("https://www.youtube.com/embed/dQw4w9WgXcQ?modestbranding=1&rel=0", "dQw4w9WgXcQ")]
+    [InlineData("https://youtu.be/dQw4w9WgXcQ", "dQw4w9WgXcQ")]
+    [InlineData("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10", "dQw4w9WgXcQ")]
+    [InlineData("https://www.youtube.com/live/dQw4w9WgXcQ", "dQw4w9WgXcQ")]
+    [InlineData("https://www.youtube.com/shorts/dQw4w9WgXcQ", "dQw4w9WgXcQ")]
+    public async Task The_player_loads_the_wrapper_page_not_the_youtube_url(string embed, string id)
+    {
+        // Navigating a WebView straight at a /embed/ URL makes YouTube answer
+        // "Error 153 - video player configuration error": that URL belongs
+        // inside an iframe on a page. The wrapper is served from the API host so
+        // the iframe has a real origin, which is what web and mobile already do.
+        var vm = await LessonWithVideoAsync(embed);
+
+        Assert.True(vm.HasVideo);
+        Assert.Equal($"https://numberoneschools.com/api/academic/player/?v={id}", vm.PlayerUrl);
+        Assert.DoesNotContain("youtube.com/embed", vm.PlayerUrl);
+    }
+
+    [Fact]
+    public async Task A_lesson_with_an_unusable_video_url_reports_no_video()
+    {
+        // An empty frame beats a frame showing YouTube's error page.
+        var vm = await LessonWithVideoAsync("https://example.com/not-a-video");
+
+        Assert.False(vm.HasVideo);
+        Assert.Null(vm.PlayerUrl);
+    }
+
+    [Fact]
+    public async Task A_server_without_the_player_route_falls_back_instead_of_showing_a_404()
+    {
+        // The client ships to student machines and can be newer than the server.
+        // Pointing the WebView at a route the server does not have rendered
+        // Django's 404 inside the video frame, which reads as a missing lesson.
+        var vm = await LessonWithVideoAsync(
+            "https://www.youtube.com/embed/dQw4w9WgXcQ", playerRouteExists: false);
+
+        Assert.True(vm.IsServerOutdatedForPlayback);
+        Assert.Equal("https://www.youtube.com/embed/dQw4w9WgXcQ", vm.PlayerUrl);
+        Assert.DoesNotContain("academic/player/", vm.PlayerUrl);
+    }
+
+    private static async Task<LessonViewModel> LessonWithVideoAsync(string embedUrl)
+        => await LessonWithVideoAsync(embedUrl, playerRouteExists: true);
+
+    private static async Task<LessonViewModel> LessonWithVideoAsync(
+        string embedUrl, bool playerRouteExists)
+    {
+        var body = $$"""
+        {"id":1,"title":"محاضرة","youtube_embed_url":"{{embedUrl}}","exercise":null}
+        """;
+        var client = new HttpClient(new LessonHandler(body, playerRouteExists))
+        {
+            BaseAddress = new Uri("https://numberoneschools.com/api/"),
+        };
+
+        var vm = new LessonViewModel(
+            new StudentApi(client), SignedInAuth(),
+            new Uri("https://numberoneschools.com/api/"), 1);
+
+        await vm.LoadAsync();
+        return vm;
     }
 
     // ── Profile ──────────────────────────────────────────────────────────────
@@ -323,6 +391,41 @@ public class ScreenViewModelTests
         var auth = new AuthService(client, tokens, new Device());
         auth.SignInAsync("fresh.student", "pass1234").GetAwaiter().GetResult();
         return auth;
+    }
+
+    /// <summary>
+    /// Serves the lesson body for the lesson endpoint and an empty list for
+    /// progress. One body for every path made the progress call fail to
+    /// deserialise, which masked what the test was actually checking.
+    /// </summary>
+    private sealed class LessonHandler : HttpMessageHandler
+    {
+        private readonly string _lesson;
+        private readonly bool _playerRoute;
+
+        public LessonHandler(string lesson, bool playerRoute = true)
+        {
+            _lesson = lesson;
+            _playerRoute = playerRoute;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var path = request.RequestUri!.AbsolutePath;
+
+            if (path.Contains("academic/player/"))
+            {
+                return Task.FromResult(new HttpResponseMessage(
+                    _playerRoute ? HttpStatusCode.OK : HttpStatusCode.NotFound));
+            }
+
+            var body = path.Contains("my-progress") ? "[]" : _lesson;
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            });
+        }
     }
 
     private sealed class SingleBodyHandler : HttpMessageHandler

@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using NumberOne.Core.Api;
 using NumberOne.Core.Models;
 using NumberOne.Core.Services;
 
@@ -12,12 +13,14 @@ public sealed partial class LessonViewModel : ObservableObject
 {
     private readonly StudentApi _api;
     private readonly AuthService _auth;
+    private readonly Uri _apiBase;
     private readonly int _lessonId;
 
-    public LessonViewModel(StudentApi api, AuthService auth, int lessonId)
+    public LessonViewModel(StudentApi api, AuthService auth, Uri apiBase, int lessonId)
     {
         _api = api;
         _auth = auth;
+        _apiBase = apiBase;
         _lessonId = lessonId;
 
         Lesson = new SectionState<Lesson>(LoadLessonAsync, l => string.IsNullOrWhiteSpace(l.Title));
@@ -36,12 +39,83 @@ public sealed partial class LessonViewModel : ObservableObject
     // ── Video ────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// The /embed/ URL for the WebView. The raw watch URL is never sent to
-    /// students, so there is nothing else to fall back to.
+    /// What the WebView actually loads: the player page on the API host, which
+    /// wraps the YouTube embed in an iframe.
+    ///
+    /// Pointing the WebView straight at youtube.com/embed/... produces
+    /// "Error 153 - video player configuration error", because that URL is
+    /// meant to sit inside an iframe on a page rather than be navigated to.
+    /// The web dashboard and the mobile app both wrap it; this now does too.
+    ///
+    /// Null when the lesson has no video, or when no id can be read out of the
+    /// server's embed URL - better an empty frame than a page that errors.
     /// </summary>
+    public string? PlayerUrl
+    {
+        get
+        {
+            var videoId = VideoId;
+            if (videoId is null) return null;
+
+            // Falls back to the embed URL against a server without the player
+            // route. That still shows YouTube's own error rather than playing,
+            // but it is honest about being a video problem instead of showing a
+            // 404 page that reads as a missing lesson.
+            return _playerPageAvailable
+                ? new Uri(_apiBase, ApiEndpoints.LessonPlayer(videoId)).AbsoluteUri
+                : Lesson.Value?.YoutubeEmbedUrl;
+        }
+    }
+
+    private bool _playerPageAvailable = true;
+
+    /// <summary>
+    /// Shown when the server predates the player page, so the student is told
+    /// the app is ahead of the server rather than left staring at an error.
+    /// </summary>
+    public bool IsServerOutdatedForPlayback => VideoId is not null && !_playerPageAvailable;
+
+    public const string ServerOutdatedMessage =
+        "تعذّر تشغيل الفيديو: نسخة الخادم أقدم من التطبيق. يرجى إبلاغ الإدارة.";
+
+    /// <summary>
+    /// The YouTube id, read out of the embed URL the server built.
+    ///
+    /// The server falls back to returning the raw URL when it cannot parse one
+    /// (it only handles "youtu.be/" and "v="), so a lesson saved with a /live/
+    /// or /shorts/ link arrives here as something that is not an embed URL at
+    /// all. Those forms are handled here rather than assumed away.
+    /// </summary>
+    private string? VideoId
+    {
+        get
+        {
+            var url = Lesson.Value?.YoutubeEmbedUrl;
+            if (string.IsNullOrWhiteSpace(url)) return null;
+
+            foreach (var marker in new[] { "/embed/", "youtu.be/", "/live/", "/shorts/", "v=" })
+            {
+                var at = url.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+                if (at < 0) continue;
+
+                var id = url[(at + marker.Length)..];
+                id = id.Split('?', '&', '/')[0].Trim();
+
+                if (IsVideoId(id)) return id;
+            }
+
+            return null;
+        }
+    }
+
+    private static bool IsVideoId(string value) =>
+        value.Length is >= 6 and <= 20 &&
+        value.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '-');
+
+    /// <summary>The raw embed URL as the server sent it. Kept for diagnostics.</summary>
     public string? EmbedUrl => Lesson.Value?.YoutubeEmbedUrl;
 
-    public bool HasVideo => Lesson.Value?.HasVideo == true;
+    public bool HasVideo => PlayerUrl is not null;
 
     /// <summary>
     /// The video surface is fixed at 920 x 518 — an 11in 16:9 diagonal at 96 DPI.
@@ -190,7 +264,12 @@ public sealed partial class LessonViewModel : ObservableObject
     {
         await Lesson.LoadAsync(ct).ConfigureAwait(true);
 
+        if (VideoId is not null)
+            _playerPageAvailable = await _api.PlayerPageAvailableAsync(ct).ConfigureAwait(true);
+
+        OnPropertyChanged(nameof(IsServerOutdatedForPlayback));
         OnPropertyChanged(nameof(EmbedUrl));
+        OnPropertyChanged(nameof(PlayerUrl));
         OnPropertyChanged(nameof(HasVideo));
         OnPropertyChanged(nameof(Exercise));
         OnPropertyChanged(nameof(HasExercise));

@@ -110,7 +110,7 @@ public partial class ShellPage : ContentPage
     private void ShowLesson(int lessonId, int courseId)
     {
         var lesson = new LessonView(
-            new LessonViewModel(_api, _auth, lessonId), _protection);
+            new LessonViewModel(_api, _auth, MauiProgram.ApiBaseAddress, lessonId), _protection);
 
         lesson.BackRequested += (_, _) => ShowCourseDetail(courseId);
 
