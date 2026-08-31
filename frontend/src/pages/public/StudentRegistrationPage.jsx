@@ -184,6 +184,8 @@ export default function StudentRegistrationPage() {
       }
     }
 
+    // المستندات السبعة كلها إلزامية. كان إشعار السداد وحده خارج هذه القائمة
+    // وخارج شرط الموديل، فكان الطلب يُرسَل بستّة.
     const requiredFiles = [
       'academic_result_image',
       'birth_certificate_image',
@@ -191,6 +193,7 @@ export default function StudentRegistrationPage() {
       'student_id_image',
       'father_id_image',
       'mother_id_image',
+      'payment_receipt_image',
     ]
 
     for (const key of requiredFiles) {
