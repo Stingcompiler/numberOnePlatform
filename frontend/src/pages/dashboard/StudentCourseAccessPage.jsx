@@ -186,41 +186,67 @@ export default function StudentCourseAccessPage() {
   // فلاتر
   const [courses, setCourses]       = useState([])
   const [filterCourse, setFilterCourse] = useState('')
+  const [studentsList, setStudentsList] = useState([])
+  const [filterStudent, setFilterStudent] = useState('')
+  const [actionError, setActionError] = useState('')
 
   const load = useCallback(() => {
     setLoading(true)
     const params = {}
     if (filterCourse) params.course = filterCourse
-    api.get('/academic/access/', { params })
-      .then(({ data }) => setAccesses(data.results || data))
+    if (filterStudent) params.student = filterStudent
+    // fetchAll لا api.get: النقطة مُجزَّأة بعشرة سجلات، وقراءة data.results
+    // وحدها كانت تُخفي كل ما بعد العاشر — فلا يستطيع المدير تعطيله أو حذفه
+    // لأنه غير معروض أصلاً.
+    fetchAll('/academic/access/', params)
+      .then((data) => setAccesses(Array.isArray(data) ? data : (data?.results || [])))
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [filterCourse])
+  }, [filterCourse, filterStudent])
 
   useEffect(() => { load() }, [load])
 
-  // تحميل الكورسات للفلتر (فلاش فقط)
+  // تحميل الكورسات والطلاب للفلاتر (فلاش فقط)
   useEffect(() => {
     fetchAll('/academic/courses/', { system_type: 'flash' })
       .then(setCourses)
       .catch(() => {})
+    fetchAll('/students/', { system_type: 'flash' })
+      .then(setStudentsList)
+      .catch(() => {})
   }, [])
+
+  // رسالة الخادم بدل ابتلاع الخطأ في console: فشل صامت يبدو كزرّ لا يعمل.
+  const describeError = (e) => {
+    const d = e.response?.data
+    if (typeof d === 'string') return d
+    if (d && typeof d === 'object') return Object.values(d).flat().join(' ')
+    return 'تعذّر تنفيذ العملية. يرجى المحاولة مرة أخرى.'
+  }
 
   // تفعيل/تعطيل
   const toggleActive = async (item) => {
+    setActionError('')
     try {
       await api.patch(`/academic/access/${item.id}/`, { is_active: !item.is_active })
       load()
-    } catch (e) { console.error(e) }
+    } catch (e) {
+      console.error(e)
+      setActionError(describeError(e))
+    }
   }
 
-  // حذف
+  // حذف الكورس من سجل الطالب — يُزيل الوصول لا الكورس نفسه
   const handleDelete = async (id) => {
-    if (!confirm('هل تريد حذف هذا الوصول نهائياً؟')) return
+    if (!confirm('سيُحذف هذا الكورس من سجل الطالب نهائياً. هل تريد المتابعة؟')) return
+    setActionError('')
     try {
       await api.delete(`/academic/access/${id}/`)
       load()
-    } catch (e) { console.error(e) }
+    } catch (e) {
+      console.error(e)
+      setActionError(describeError(e))
+    }
   }
 
   // فلتر بحث محلي
@@ -300,8 +326,29 @@ export default function StudentCourseAccessPage() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+
+          {/* فلتر الطالب: المدير يدير سجل طالب بعينه، والفلترة بالكورس وحدها
+              كانت تتركه يبحث في القائمة كلها. */}
+          <select
+            value={filterStudent}
+            onChange={e => setFilterStudent(e.target.value)}
+            className="input-glass w-56 text-sm"
+          >
+            <option value="">كل الطلاب</option>
+            {studentsList.map(st => (
+              <option key={st.id} value={st.id}>
+                {st.user?.full_name || st.full_name || st.user?.username || st.id}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
+
+      {actionError && (
+        <div className="mb-4 rounded-xl px-4 py-3 border border-red-500/40 bg-red-500/10 text-red-300 text-sm">
+          {actionError}
+        </div>
+      )}
 
       {/* الجدول */}
       {loading ? (

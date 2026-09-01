@@ -506,9 +506,40 @@ class StudentCourseAccessListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(granted_by=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        """
+        منح الوصول يُعيد تفعيل صفٍّ معطّل بدل أن يفشل.
+
+        القيد ‎unique_together(student, course)‎ يعني أن تعطيل وصول ثم محاولة
+        منحه مجدداً كانت تُرفض بخطأ "موجود مسبقاً": فالمدير يعطّل الكورس، ثم
+        لا يستطيع إعادته، ولا يرى سبباً مفهوماً. الصفّ المعطّل يُعاد تفعيله
+        ويُسجَّل مانحه الجديد.
+        """
+        student_id = request.data.get("student")
+        course_id  = request.data.get("course")
+
+        existing = StudentCourseAccess.objects.filter(
+            student_id=student_id, course_id=course_id,
+        ).first() if student_id and course_id else None
+
+        if existing is None:
+            return super().create(request, *args, **kwargs)
+
+        existing.is_active  = True
+        existing.granted_by = request.user
+        existing.save(update_fields=["is_active", "granted_by"])
+
+        return Response(self.get_serializer(existing).data, status=status.HTTP_200_OK)
+
 
 class StudentCourseAccessDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """PATCH /api/academic/access/<id>/ — تفعيل/تعطيل الوصول"""
+    """
+    GET / PATCH / DELETE /api/academic/access/<id>/
+
+    PATCH يعطّل الوصول ويُبقي السجل، وDELETE يمحوه من سجل الطالب نهائياً.
+    الاثنان متاحان للإدارة عمداً: التعطيل يُوقف الوصول مع بقاء الأثر، والحذف
+    لمن سُجّل خطأً أصلاً.
+    """
 
     queryset           = StudentCourseAccess.objects.all()
     serializer_class   = StudentCourseAccessSerializer
