@@ -74,6 +74,39 @@ internal static class SecurePlayerWebViewSetup
         }
     }
 
+    /// <summary>
+    /// Shuts the browser down before the lecture leaves the visual tree.
+    ///
+    /// A WebView2 does not draw into its parent — it owns a composition surface
+    /// the WinUI compositor renders directly. Dropping the control out of the
+    /// tree while that surface is live leaves the compositor holding a visual
+    /// nobody owns any more, which it reports as "Element not found" followed
+    /// by a run of DCOMPOSITION_ERROR_SURFACE_BEING_RENDERED as it tries to
+    /// finish the frame it had already started.
+    ///
+    /// Leaving a lecture did exactly that: the host swapped its content and the
+    /// player went with it, mid-frame, still playing. Closing here ends the
+    /// browser first, so by the time the element is removed there is no surface
+    /// left to lose.
+    /// </summary>
+    public static void Detach(Microsoft.UI.Xaml.FrameworkElement platformView)
+    {
+        if (platformView is not Microsoft.UI.Xaml.Controls.WebView2 native) return;
+
+        try
+        {
+            // Ends the browser process backing this view. The control is being
+            // discarded with the lecture, so it is never reused afterwards.
+            native.Close();
+        }
+        catch (Exception ex)
+        {
+            // Already gone, or torn down by the handler first. The point was to
+            // leave nothing rendering, and either way nothing is.
+            App.RecordUnhandled("PlayerDetach", ex);
+        }
+    }
+
     private static void Configure(SecurePlayerWebView control, CoreWebView2 core)
     {
         // Once per core. Subscribing twice meant two cancels per navigation and

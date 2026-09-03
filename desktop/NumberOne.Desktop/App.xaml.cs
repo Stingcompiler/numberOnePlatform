@@ -78,6 +78,7 @@ public partial class App : Application
     public static void ShowFault(Exception? ex)
     {
         if (ex is null) return;
+        if (IsRenderThreadFault(ex)) return;
 
         var page = Current?.Windows.FirstOrDefault()?.Page;
         if (page is null) return;
@@ -100,6 +101,38 @@ public partial class App : Application
                 // No page, or a dialog already up. The log still has it.
             }
         });
+    }
+
+    /// <summary>
+    /// True for a compositor failure the app has already survived.
+    ///
+    /// WinUI renders through DirectComposition on its own thread, and when a
+    /// frame is disturbed mid-render it raises COMException through the app's
+    /// UnhandledException: DCOMPOSITION_ERROR_SURFACE_BEING_RENDERED, or
+    /// 0x80070490 for a visual the compositor can no longer find. The next
+    /// frame draws correctly and nothing is lost — these arrived while every
+    /// screen behind the dialog was rendered and usable.
+    ///
+    /// They are still recorded. What stops is the dialog: it was put there to
+    /// find an unidentified crash, and it did, but a modal over a student's
+    /// results page for a fault that has already resolved is now itself the
+    /// interruption. A COMException raised from our own code carries a managed
+    /// stack and does not match, so it still surfaces.
+    /// </summary>
+    private static bool IsRenderThreadFault(Exception ex)
+    {
+        if (ex is not System.Runtime.InteropServices.COMException com) return false;
+
+        const int Fail = unchecked((int)0x80004005);
+        const int ElementNotFound = unchecked((int)0x80070490);
+
+        if (com.HResult == ElementNotFound) return true;
+        if (com.HResult != Fail) return false;
+
+        // E_FAIL is generic, so it only counts as the compositor's when it
+        // names DCOMPOSITION or arrives with no managed frames beneath it.
+        return (com.Message?.Contains("DCOMPOSITION", StringComparison.Ordinal) ?? false)
+            || string.IsNullOrWhiteSpace(com.StackTrace);
     }
 
     private static void Record(string source, Exception? ex)

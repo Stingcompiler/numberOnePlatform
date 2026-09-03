@@ -145,10 +145,18 @@ public partial class LessonView : ContentView
         StartWatermark();
     }
 
-    /// <summary>Stops the timer. The host calls this when the view goes away.</summary>
+    /// <summary>
+    /// Stops everything this view owns. The host calls it before swapping the
+    /// content, which is the only moment the player can still be closed while
+    /// it is in the tree.
+    /// </summary>
     public void Teardown()
     {
         _vm.Lesson.PropertyChanged -= OnLessonChanged;
+
+        // First: it is the one part of this view that keeps rendering after the
+        // view is dropped.
+        Player.Shutdown();
 
         if (_watermarkTimer is not null)
         {

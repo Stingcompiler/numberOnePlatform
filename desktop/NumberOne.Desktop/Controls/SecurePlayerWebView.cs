@@ -53,6 +53,25 @@ public sealed class SecurePlayerWebView : WebView
     }
 
     /// <summary>
+    /// Stops the player for good, before the view is discarded.
+    ///
+    /// Must run while the control is still in the visual tree. On Windows the
+    /// browser owns a composition surface of its own, and letting it be removed
+    /// while it is still rendering is what produced the compositor faults the
+    /// student saw on leaving a lecture.
+    ///
+    /// Nothing to do on Mac Catalyst: WKWebView draws through the same layer
+    /// tree as everything else and is torn down with it.
+    /// </summary>
+    public void Shutdown()
+    {
+#if WINDOWS
+        if (Handler?.PlatformView is Microsoft.UI.Xaml.FrameworkElement native)
+            Platforms.Windows.SecurePlayerWebViewSetup.Detach(native);
+#endif
+    }
+
+    /// <summary>
     /// The page allowed in the main frame. Set before the source, because the
     /// policy needs it the moment the first navigation starts.
     /// </summary>
