@@ -26,12 +26,23 @@ public partial class App : MauiWinUIApplication
 		// attached, the window simply closes. On a school machine that leaves
 		// nothing behind but "it broke".
 		//
-		// The exception is written to the crash log and NOT marked handled:
-		// continuing after an unknown fault would leave the app in a state
-		// nobody has reasoned about. This makes the failure legible, it does
-		// not pretend to survive it.
+		// The exception is written to the crash log AND shown on screen, and
+		// the fault is marked handled.
+		//
+		// Marking it handled is a deliberate reversal. The app was already
+		// dying at this point, so "do not continue in a state nobody has
+		// reasoned about" was choosing between a window that vanishes with no
+		// message and one that stays with a message naming the fault. The
+		// second is better for a student — they can read it back, and close the
+		// app themselves — and it is the only version that ever produced a
+		// usable report.
 		this.UnhandledException += (_, e) =>
+		{
 			NumberOne.Desktop.App.RecordUnhandled("WinUI", e.Exception);
+			NumberOne.Desktop.App.ShowFault(e.Exception);
+
+			e.Handled = true;
+		};
 	}
 
 	protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();

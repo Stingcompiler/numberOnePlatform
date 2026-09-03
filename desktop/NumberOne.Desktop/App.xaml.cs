@@ -67,6 +67,41 @@ public partial class App : Application
     /// </summary>
     public static void RecordUnhandled(string source, Exception? ex) => Record(source, ex);
 
+    /// <summary>
+    /// Puts the fault in front of the student, wherever it happened.
+    ///
+    /// Shows the exception type, its message and the first line of the stack —
+    /// which names the method — rather than a polite apology. Nobody has
+    /// diagnosed this yet, and a person who can read those three things back is
+    /// the shortest path to a fix. Everything else is in the crash log.
+    /// </summary>
+    public static void ShowFault(Exception? ex)
+    {
+        if (ex is null) return;
+
+        var page = Current?.Windows.FirstOrDefault()?.Page;
+        if (page is null) return;
+
+        var where = ex.StackTrace?
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault()?.Trim() ?? "";
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            try
+            {
+                await page.DisplayAlertAsync(
+                    "حدث خطأ",
+                    $"{ex.GetType().Name}: {ex.Message}\n\n{where}\n\n{CrashLogPath}",
+                    "حسناً");
+            }
+            catch (Exception)
+            {
+                // No page, or a dialog already up. The log still has it.
+            }
+        });
+    }
+
     private static void Record(string source, Exception? ex)
     {
         if (ex is null) return;

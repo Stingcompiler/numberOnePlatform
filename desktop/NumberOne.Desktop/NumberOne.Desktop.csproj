@@ -2,6 +2,22 @@
 
 	<PropertyGroup>
 		<!--
+			Stops the XAML-generated handler intercepting every unhandled exception
+			with Debugger.Break().
+
+			That break fires BEFORE our own UnhandledException handler, so under a
+			debugger the app halts on a generated line with no message and the crash
+			log is never written — and with no debugger attached it does nothing at
+			all and the window simply closes. Either way the fault is invisible,
+			which is how the same crash was reported three times with nothing
+			attached to it.
+
+			With this defined, Platforms/Windows/App.xaml.cs handles it: the
+			exception is written to crash.log and shown on screen.
+		-->
+		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION</DefineConstants>
+
+		<!--
 			Desktop only. No Linux target exists for MAUI.
 
 			The Windows TFM is listed FIRST on Windows deliberately: Visual Studio
