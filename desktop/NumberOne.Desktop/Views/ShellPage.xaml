@@ -1,124 +1,430 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
              x:Class="NumberOne.Desktop.Views.ShellPage"
              FlowDirection="RightToLeft"
              BackgroundColor="{AppThemeBinding Light={StaticResource BgLight}, Dark={StaticResource BgDark}}">
 
     <!--
-        The app chrome: a 240px sidebar and the content area beside it.
+        The app chrome: a 240px sidebar and, beside it, a 48px top bar over the
+        content area.
 
         The sidebar is column 0, which in this RTL layout puts it on the RIGHT —
         the mobile app's six bottom tabs become this rail. Desktop is not a
         scaled-up phone: 36px nav rows, 13px labels, no bottom bar.
+
+        The rail collapses to 56px, at which point every label hides and only
+        the icons remain; the toggle lives in the top bar, as the design has it.
     -->
     <Grid>
-      <Grid RowDefinitions="Auto,*">
+      <Grid ColumnDefinitions="Auto,*">
 
-        <!--
-            Offline bar. Persists across routes, which is why it lives here
-            rather than on a screen. Warning-tinted with a danger bottom rule:
-            the session is fine, the network is not.
-        -->
-        <Border Grid.Row="0" x:Name="OfflineBar" IsVisible="False"
-                HeightRequest="32" Padding="16,0" StrokeThickness="0"
-                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryTintLight}, Dark={StaticResource PrimaryTintDark}}">
-            <Grid ColumnDefinitions="*,Auto">
-                <Label Grid.Column="0" x:Name="OfflineLabel"
-                       Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                <Button Grid.Column="1" Text="إعادة الاتصال"
-                        Style="{StaticResource GhostButton}"
-                        HeightRequest="24" VerticalOptions="Center"
-                        Clicked="OnReconnectClicked" />
-            </Grid>
-        </Border>
-
-        <Grid Grid.Row="1" ColumnDefinitions="240,*">
-
-        <!-- ── Sidebar ─────────────────────────────────────────────────── -->
-        <Grid Grid.Column="0"
+        <!-- ══ Sidebar ═══════════════════════════════════════════════════ -->
+        <Grid Grid.Column="0" x:Name="Sidebar" WidthRequest="240"
               BackgroundColor="{AppThemeBinding Light={StaticResource SidebarLight}, Dark={StaticResource SidebarDark}}">
 
             <!-- Trailing 1px rule. Elevation is a line, never a shadow. -->
             <BoxView HorizontalOptions="Start" WidthRequest="1"
                      Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
 
-            <Grid RowDefinitions="Auto,*,Auto" Padding="12,16">
+            <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="8,12">
 
-                <!-- Brand block -->
-                <HorizontalStackLayout Grid.Row="0" Spacing="10" Margin="4,0,4,20">
-                    <Border WidthRequest="28" HeightRequest="28" Padding="0"
+                <!-- ── Brand ─────────────────────────────────────────────── -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="10" Padding="10,4">
+                    <Border Grid.Column="0" WidthRequest="28" HeightRequest="28" Padding="0"
                             StrokeThickness="0" StrokeShape="RoundRectangle 6"
                             BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
                         <Label Text="١" TextColor="#FFFFFF" FontAttributes="Bold"
-                               FontSize="{StaticResource FontBody}"
+                               FontSize="{StaticResource FontHeading}"
                                HorizontalOptions="Center" VerticalOptions="Center" />
                     </Border>
-                    <Label Text="{x:Static vm:UiText.BrandShortName}"
-                           Style="{StaticResource HeadingLabel}" VerticalOptions="Center" />
-                </HorizontalStackLayout>
+                    <VerticalStackLayout Grid.Column="1" x:Name="BrandText"
+                                         Spacing="1" VerticalOptions="Center">
+                        <Label Text="{x:Static vm:UiText.BrandShortName}"
+                               FontSize="{StaticResource FontBody}" FontAttributes="Bold"
+                               FontFamily="{StaticResource FontUiBold}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                        <Label Text="منصة الطالب" Style="{StaticResource MutedLabel}" />
+                    </VerticalStackLayout>
+                </Grid>
 
-                <!-- Primary nav -->
-                <VerticalStackLayout Grid.Row="1" Spacing="2">
-                    <Label Text="التعلّم" Style="{StaticResource MutedLabel}" Margin="8,0,8,6" />
+                <!-- ── Group label ───────────────────────────────────────── -->
+                <Label Grid.Row="1" x:Name="NavGroupLabel" Text="التعلّم"
+                       Style="{StaticResource MutedLabel}" CharacterSpacing="60"
+                       Margin="10,14,10,6" />
 
-                    <Button x:Name="NavHome" Text="لوحة التحكم"
-                            Style="{StaticResource GhostButton}"
-                            HeightRequest="36" HorizontalOptions="Fill"
-                            Clicked="OnHomeClicked" />
-                    <Button x:Name="NavCourses" Text="الكورسات"
-                            Style="{StaticResource GhostButton}"
-                            HeightRequest="36" HorizontalOptions="Fill"
-                            Clicked="OnCoursesClicked" />
-                    <Button x:Name="NavLive" Text="البث المباشر"
-                            Style="{StaticResource GhostButton}"
-                            HeightRequest="36" HorizontalOptions="Fill"
-                            Clicked="OnLiveClicked" />
-                    <Button x:Name="NavExams" Text="الاختبارات"
-                            Style="{StaticResource GhostButton}"
-                            HeightRequest="36" HorizontalOptions="Fill"
-                            Clicked="OnExamsClicked" />
-                    <Button x:Name="NavResults" Text="النتائج"
-                            Style="{StaticResource GhostButton}"
-                            HeightRequest="36" HorizontalOptions="Fill"
-                            Clicked="OnResultsClicked" />
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Button Grid.Column="0" x:Name="NavNotifications" Text="الإشعارات"
-                                Style="{StaticResource GhostButton}"
-                                HeightRequest="36" HorizontalOptions="Fill"
-                                Clicked="OnNotificationsClicked" />
-                        <!-- Zero hides it; over 99 renders "٩٩+". -->
-                        <Label Grid.Column="1" x:Name="NotificationBadge" IsVisible="False"
-                               VerticalOptions="Center" Margin="0,0,8,0"
+                <!-- ── Primary nav ───────────────────────────────────────── -->
+                <!--
+                    Each row is built the same way: a 2px active bar pinned to
+                    the leading edge, an icon, a label, and for notifications a
+                    count. The bar and the row background are the only markers
+                    of the current route; there is no other selected state.
+                -->
+                <VerticalStackLayout Grid.Row="2" Spacing="2">
+
+                    <Grid x:Name="NavHome" Style="{StaticResource NavRow}"
+                          ColumnDefinitions="Auto,*">
+                        <Border x:Name="NavHomeBg" Grid.ColumnSpan="2" Margin="-10,0"
+                                Padding="0" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" />
+                        <BoxView x:Name="NavHomeBar" Grid.ColumnSpan="2"
+                                 WidthRequest="2" Margin="-10,8" IsVisible="False"
+                                 HorizontalOptions="Start"
+                                 Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <shapes:Path Grid.Column="0" x:Name="NavHomeIcon"
+                                     Style="{StaticResource IconPath}"
+                                     Data="{StaticResource IconHome}" />
+                        <Label Grid.Column="1" x:Name="NavHomeLabel" Text="الرئيسية"
+                               Style="{StaticResource NavLabel}" />
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnHomeClicked" />
+                        </Grid.GestureRecognizers>
+                    </Grid>
+
+                    <Grid x:Name="NavCourses" Style="{StaticResource NavRow}"
+                          ColumnDefinitions="Auto,*">
+                        <Border x:Name="NavCoursesBg" Grid.ColumnSpan="2" Margin="-10,0"
+                                Padding="0" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" />
+                        <BoxView x:Name="NavCoursesBar" Grid.ColumnSpan="2"
+                                 WidthRequest="2" Margin="-10,8" IsVisible="False"
+                                 HorizontalOptions="Start"
+                                 Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <shapes:Path Grid.Column="0" x:Name="NavCoursesIcon"
+                                     Style="{StaticResource IconPath}"
+                                     Data="{StaticResource IconCourses}" />
+                        <Label Grid.Column="1" x:Name="NavCoursesLabel" Text="الكورسات"
+                               Style="{StaticResource NavLabel}" />
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnCoursesClicked" />
+                        </Grid.GestureRecognizers>
+                    </Grid>
+
+                    <Grid x:Name="NavLive" Style="{StaticResource NavRow}"
+                          ColumnDefinitions="Auto,*">
+                        <Border x:Name="NavLiveBg" Grid.ColumnSpan="2" Margin="-10,0"
+                                Padding="0" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" />
+                        <BoxView x:Name="NavLiveBar" Grid.ColumnSpan="2"
+                                 WidthRequest="2" Margin="-10,8" IsVisible="False"
+                                 HorizontalOptions="Start"
+                                 Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <shapes:Path Grid.Column="0" x:Name="NavLiveIcon"
+                                     Style="{StaticResource IconPath}"
+                                     Data="{StaticResource IconLive}" />
+                        <Label Grid.Column="1" x:Name="NavLiveLabel" Text="البث المباشر"
+                               Style="{StaticResource NavLabel}" />
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLiveClicked" />
+                        </Grid.GestureRecognizers>
+                    </Grid>
+
+                    <Grid x:Name="NavExams" Style="{StaticResource NavRow}"
+                          ColumnDefinitions="Auto,*">
+                        <Border x:Name="NavExamsBg" Grid.ColumnSpan="2" Margin="-10,0"
+                                Padding="0" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" />
+                        <BoxView x:Name="NavExamsBar" Grid.ColumnSpan="2"
+                                 WidthRequest="2" Margin="-10,8" IsVisible="False"
+                                 HorizontalOptions="Start"
+                                 Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <shapes:Path Grid.Column="0" x:Name="NavExamsIcon"
+                                     Style="{StaticResource IconPath}"
+                                     Data="{StaticResource IconExams}" />
+                        <Label Grid.Column="1" x:Name="NavExamsLabel"
+                               Text="الإختبارات والإمتحانات"
+                               Style="{StaticResource NavLabel}" LineBreakMode="TailTruncation" />
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnExamsClicked" />
+                        </Grid.GestureRecognizers>
+                    </Grid>
+
+                    <Grid x:Name="NavResults" Style="{StaticResource NavRow}"
+                          ColumnDefinitions="Auto,*">
+                        <Border x:Name="NavResultsBg" Grid.ColumnSpan="2" Margin="-10,0"
+                                Padding="0" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" />
+                        <BoxView x:Name="NavResultsBar" Grid.ColumnSpan="2"
+                                 WidthRequest="2" Margin="-10,8" IsVisible="False"
+                                 HorizontalOptions="Start"
+                                 Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <shapes:Path Grid.Column="0" x:Name="NavResultsIcon"
+                                     Style="{StaticResource IconPath}"
+                                     Data="{StaticResource IconResults}" />
+                        <Label Grid.Column="1" x:Name="NavResultsLabel" Text="النتائج"
+                               Style="{StaticResource NavLabel}" />
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnResultsClicked" />
+                        </Grid.GestureRecognizers>
+                    </Grid>
+
+                    <Grid x:Name="NavNotifications" Style="{StaticResource NavRow}"
+                          ColumnDefinitions="Auto,*,Auto">
+                        <Border x:Name="NavNotificationsBg" Grid.ColumnSpan="3" Margin="-10,0"
+                                Padding="0" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" />
+                        <BoxView x:Name="NavNotificationsBar" Grid.ColumnSpan="3"
+                                 WidthRequest="2" Margin="-10,8" IsVisible="False"
+                                 HorizontalOptions="Start"
+                                 Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <shapes:Path Grid.Column="0" x:Name="NavNotificationsIcon"
+                                     Style="{StaticResource IconPath}"
+                                     Data="{StaticResource IconBell}" />
+                        <Label Grid.Column="1" x:Name="NavNotificationsLabel" Text="الإشعارات"
+                               Style="{StaticResource NavLabel}" />
+                        <!--
+                            Expanded, the count sits inline at the trailing end.
+                            Collapsed, it becomes the 5px dot below, because a
+                            number has nowhere to go in a 56px rail.
+                        -->
+                        <Label Grid.Column="2" x:Name="NotificationBadge" IsVisible="False"
+                               VerticalOptions="Center"
                                FontSize="{StaticResource FontLabel}"
+                               FlowDirection="LeftToRight"
                                TextColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <Ellipse Grid.Column="0" x:Name="NotificationDot" IsVisible="False"
+                                 WidthRequest="5" HeightRequest="5"
+                                 HorizontalOptions="End" VerticalOptions="Start" Margin="0,5,0,0"
+                                 Fill="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnNotificationsClicked" />
+                        </Grid.GestureRecognizers>
                     </Grid>
                 </VerticalStackLayout>
 
-                <!-- User block -->
-                <VerticalStackLayout Grid.Row="2" Spacing="8">
-                    <BoxView HeightRequest="1"
-                             Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+                <!-- ── Account block, pinned to the bottom ───────────────── -->
+                <VerticalStackLayout Grid.Row="4" Spacing="0">
 
-                    <Label x:Name="SidebarStudentName" Style="{StaticResource BodyLabel}" Margin="8,4,8,0" />
+                    <BoxView Style="{StaticResource SectionRule}" Margin="0,12,0,8" />
 
-                    <Button x:Name="NavProfile" Text="حسابي"
-                            Style="{StaticResource GhostButton}"
-                            HorizontalOptions="Fill"
-                            Clicked="OnProfileClicked" />
+                    <Grid x:Name="NavProfile" Style="{StaticResource NavRow}"
+                          ColumnDefinitions="Auto,*">
+                        <Border x:Name="NavProfileBg" Grid.ColumnSpan="2" Margin="-10,0"
+                                Padding="0" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" />
+                        <BoxView x:Name="NavProfileBar" Grid.ColumnSpan="2"
+                                 WidthRequest="2" Margin="-10,8" IsVisible="False"
+                                 HorizontalOptions="Start"
+                                 Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <shapes:Path Grid.Column="0" x:Name="NavProfileIcon"
+                                     Style="{StaticResource IconPath}"
+                                     Data="{StaticResource IconUser}" />
+                        <Label Grid.Column="1" x:Name="NavProfileLabel" Text="حسابي"
+                               Style="{StaticResource NavLabel}" />
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnProfileClicked" />
+                        </Grid.GestureRecognizers>
+                    </Grid>
 
-                    <Button x:Name="SignOutButton"
-                            Text="تسجيل الخروج"
-                            Style="{StaticResource GhostButton}"
-                            HorizontalOptions="Fill"
-                            Clicked="OnSignOutClicked" />
+                    <Grid x:Name="NavSignOut" Style="{StaticResource NavRow}"
+                          ColumnDefinitions="Auto,*">
+                        <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
+                                     Data="{StaticResource IconSignOut}" />
+                        <Label Grid.Column="1" x:Name="NavSignOutLabel" Text="تسجيل الخروج"
+                               Style="{StaticResource NavLabel}" />
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnSignOutClicked" />
+                        </Grid.GestureRecognizers>
+                    </Grid>
+
+                    <!-- Student identity and the theme toggle. -->
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8"
+                          Padding="10,8,10,0" Margin="0,8,0,0">
+                        <BoxView Grid.ColumnSpan="3" Style="{StaticResource SectionRule}"
+                                 VerticalOptions="Start" Margin="0,-8,0,0" />
+
+                        <Border Grid.Column="0" WidthRequest="26" HeightRequest="26" Padding="0"
+                                StrokeThickness="0" StrokeShape="RoundRectangle 13"
+                                VerticalOptions="Center"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryTintLight}, Dark={StaticResource SecondaryTintDark}}">
+                            <Label x:Name="SidebarInitial" FontAttributes="Bold"
+                                   FontSize="{StaticResource FontLabel}"
+                                   HorizontalOptions="Center" VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+                        </Border>
+
+                        <VerticalStackLayout Grid.Column="1" x:Name="SidebarIdentity"
+                                             VerticalOptions="Center">
+                            <Label x:Name="SidebarStudentName"
+                                   FontSize="{StaticResource FontSecondary}"
+                                   FontFamily="{StaticResource FontUi}"
+                                   LineBreakMode="TailTruncation"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                            <Label x:Name="SidebarStudentGrade" Style="{StaticResource MutedLabel}"
+                                   LineBreakMode="TailTruncation" />
+                        </VerticalStackLayout>
+
+                        <!--
+                            Light/dark, two 24x22 cells in a bordered shell. The
+                            student's choice is remembered; the app does not
+                            follow the OS after they have chosen once.
+                        -->
+                        <Border Grid.Column="2" x:Name="ThemeToggle" Padding="2"
+                                StrokeThickness="1" StrokeShape="RoundRectangle 6"
+                                VerticalOptions="Center" BackgroundColor="Transparent"
+                                Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}">
+                            <HorizontalStackLayout Spacing="2">
+                                <Border x:Name="ThemeLightCell" WidthRequest="24" HeightRequest="22"
+                                        Padding="0" StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 4" BackgroundColor="Transparent">
+                                    <shapes:Path x:Name="ThemeLightIcon"
+                                                 Style="{StaticResource IconPathSmall}"
+                                                 StrokeThickness="1.75"
+                                                 Data="{StaticResource IconSun}" />
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnLightThemeClicked" />
+                                    </Border.GestureRecognizers>
+                                </Border>
+                                <Border x:Name="ThemeDarkCell" WidthRequest="24" HeightRequest="22"
+                                        Padding="0" StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 4" BackgroundColor="Transparent">
+                                    <shapes:Path x:Name="ThemeDarkIcon"
+                                                 Style="{StaticResource IconPathSmall}"
+                                                 StrokeThickness="1.75"
+                                                 Data="{StaticResource IconMoon}" />
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnDarkThemeClicked" />
+                                    </Border.GestureRecognizers>
+                                </Border>
+                            </HorizontalStackLayout>
+                        </Border>
+                    </Grid>
                 </VerticalStackLayout>
             </Grid>
         </Grid>
 
-        <!-- ── Content ─────────────────────────────────────────────────── -->
-        <ContentView Grid.Column="1" x:Name="ContentHost" />
+        <!-- ══ Top bar and content ═══════════════════════════════════════ -->
+        <Grid Grid.Column="1" RowDefinitions="48,Auto,*">
+
+            <!-- ── Top bar ───────────────────────────────────────────────── -->
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto"
+                  ColumnSpacing="16" Padding="24,0"
+                  BackgroundColor="{AppThemeBinding Light={StaticResource BgLight}, Dark={StaticResource BgDark}}">
+
+                <BoxView Grid.ColumnSpan="6" Style="{StaticResource SectionRule}"
+                         VerticalOptions="End" />
+
+                <!-- Back. Shown only where there is somewhere to go back to,
+                     which is the detail screens, not the six root routes. -->
+                <Border Grid.Column="0" x:Name="BackButton" IsVisible="False"
+                        Style="{StaticResource IconButton}">
+                    <shapes:Path Style="{StaticResource IconPathSmall}"
+                                 StrokeThickness="2"
+                                 Data="{StaticResource IconChevronRight}" />
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackClicked" />
+                    </Border.GestureRecognizers>
+                </Border>
+
+                <Border Grid.Column="1" x:Name="RailToggle" Style="{StaticResource IconButtonBare}">
+                    <shapes:Path Style="{StaticResource IconPathMuted}"
+                                 WidthRequest="15" HeightRequest="15"
+                                 Data="{StaticResource IconMenu}" />
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnRailToggleClicked" />
+                    </Border.GestureRecognizers>
+                </Border>
+
+                <Label Grid.Column="2" x:Name="PageTitle" Style="{StaticResource TitleLabel}"
+                       VerticalOptions="Center" />
+
+                <!-- Row count beside the title, e.g. "٦ كورسات". -->
+                <Label Grid.Column="3" x:Name="PageCount" Style="{StaticResource CellLabelSecondary}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+
+                <HorizontalStackLayout Grid.Column="5" Spacing="8" VerticalOptions="Center">
+
+                    <!-- Search filters the current screen's rows. Hidden on the
+                         screens that have no list to filter. -->
+                    <Border x:Name="SearchField" Style="{StaticResource TopBarField}"
+                            WidthRequest="220">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
+                                         WidthRequest="14" HeightRequest="14"
+                                         Data="{StaticResource IconSearch}" />
+                            <Entry Grid.Column="1" x:Name="SearchEntry"
+                                   Style="{StaticResource TopBarEntry}"
+                                   TextChanged="OnSearchChanged" />
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="TopBarBell" Style="{StaticResource IconButtonBare32}">
+                        <Grid>
+                            <shapes:Path Style="{StaticResource IconPath}"
+                                         Data="{StaticResource IconBell}" />
+                            <!-- The count badge overlaps the bell's leading
+                                 corner, ringed in the page background so it
+                                 reads as sitting above the icon. -->
+                            <Border x:Name="TopBarBellBadge" IsVisible="False"
+                                    HeightRequest="16" MinimumWidthRequest="16"
+                                    Padding="4,0" StrokeThickness="2"
+                                    StrokeShape="RoundRectangle 8"
+                                    HorizontalOptions="End" VerticalOptions="Start"
+                                    Margin="0,1,1,0"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                                    Stroke="{AppThemeBinding Light={StaticResource BgLight}, Dark={StaticResource BgDark}}">
+                                <Label x:Name="TopBarBellCount" TextColor="#FFFFFF"
+                                       FontSize="{StaticResource FontLabel}"
+                                       FlowDirection="LeftToRight"
+                                       HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                        </Grid>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnNotificationsClicked" />
+                        </Border.GestureRecognizers>
+                    </Border>
+
+                    <!-- Which machine this is. The student needs it verbatim
+                         when they call the school about a device lock. -->
+                    <Border Style="{StaticResource TopBarField}">
+                        <HorizontalStackLayout Spacing="6">
+                            <shapes:Path Style="{StaticResource IconPathMuted}"
+                                         WidthRequest="14" HeightRequest="14"
+                                         Data="{StaticResource IconMonitor}" />
+                            <Label x:Name="DeviceTypeLabel"
+                                   Style="{StaticResource CellLabelSecondary}"
+                                   FlowDirection="LeftToRight" />
+                        </HorizontalStackLayout>
+                    </Border>
+                </HorizontalStackLayout>
+            </Grid>
+
+            <!--
+                Offline bar, under the top bar and above the content. It sits
+                here rather than on a screen because it must persist across
+                routes. Warning-tinted with a danger rule: the session is fine,
+                the network is not.
+            -->
+            <Grid Grid.Row="1" x:Name="OfflineBar" IsVisible="False"
+                  HeightRequest="32" Padding="24,0"
+                  ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8"
+                  BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryTintLight}, Dark={StaticResource PrimaryTintDark}}">
+                <BoxView Grid.ColumnSpan="3" HeightRequest="1" VerticalOptions="End"
+                         Color="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
+                <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
+                             WidthRequest="14" HeightRequest="14"
+                             Data="{StaticResource IconWifiOff}"
+                             Stroke="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
+                <Label Grid.Column="1" x:Name="OfflineLabel" VerticalOptions="Center"
+                       FontSize="{StaticResource FontSecondary}"
+                       FontFamily="{StaticResource FontUi}"
+                       TextColor="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
+                <Border Grid.Column="2" HeightRequest="22" Padding="8,0"
+                        StrokeThickness="1" StrokeShape="RoundRectangle 4"
+                        VerticalOptions="Center" BackgroundColor="Transparent"
+                        Stroke="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}">
+                    <Label Text="إعادة الاتصال" FontSize="{StaticResource FontLabel}"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnReconnectClicked" />
+                    </Border.GestureRecognizers>
+                </Border>
+            </Grid>
+
+            <ContentView Grid.Row="2" x:Name="ContentHost" />
         </Grid>
       </Grid>
 
@@ -129,12 +435,16 @@
       -->
       <Grid x:Name="SessionExpiredScrim" IsVisible="False"
             BackgroundColor="{StaticResource Scrim}">
-          <Border Style="{StaticResource Dialog}" WidthRequest="480"
+          <Border Style="{StaticResource Dialog}" WidthRequest="480" Padding="0"
                   HorizontalOptions="Center" VerticalOptions="Center">
-              <VerticalStackLayout Spacing="12">
-                  <Label Text="{x:Static vm:UiText.SessionExpiredTitle}" Style="{StaticResource HeadingLabel}" />
-                  <Label Text="{x:Static vm:UiText.SessionExpiredBody}" Style="{StaticResource CopyLabel}" />
-                  <HorizontalStackLayout Spacing="8" Margin="0,4,0,0">
+              <VerticalStackLayout>
+                  <VerticalStackLayout Padding="16" Spacing="8">
+                      <Label Text="{x:Static vm:UiText.SessionExpiredTitle}" Style="{StaticResource HeadingLabel}" />
+                      <Label Text="{x:Static vm:UiText.SessionExpiredBody}" Style="{StaticResource CopyLabel}"
+                             FontSize="{StaticResource FontBody}" />
+                  </VerticalStackLayout>
+                  <BoxView Style="{StaticResource SectionRule}" />
+                  <HorizontalStackLayout Spacing="8" Padding="16,12">
                       <Button Text="{x:Static vm:UiText.SessionExpiredContinue}"
                               Style="{StaticResource PrimaryButton}"
                               Clicked="OnSessionExpiredContinue" />
@@ -145,5 +455,26 @@
               </VerticalStackLayout>
           </Border>
       </Grid>
+
+      <!--
+          Toast. Bottom-leading, floating, and the one place a shadow is
+          allowed. Used for the outcomes that have no screen of their own:
+          a copied device id, a session link opening in the browser.
+      -->
+      <Border x:Name="Toast" IsVisible="False"
+              HorizontalOptions="Start" VerticalOptions="End" Margin="20"
+              Padding="14,8" StrokeThickness="1" StrokeShape="RoundRectangle 6"
+              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceElevatedLight}, Dark={StaticResource SurfaceElevatedDark}}"
+              Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}">
+          <Border.Shadow>
+              <Shadow Brush="#000000" Offset="0,4" Radius="12" Opacity="0.12" />
+          </Border.Shadow>
+          <HorizontalStackLayout Spacing="8">
+              <Ellipse x:Name="ToastDot" WidthRequest="6" HeightRequest="6"
+                       VerticalOptions="Center" />
+              <Label x:Name="ToastLabel" Style="{StaticResource CellLabelSecondary}"
+                     TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+          </HorizontalStackLayout>
+      </Border>
     </Grid>
 </ContentPage>

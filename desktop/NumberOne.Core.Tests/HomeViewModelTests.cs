@@ -128,7 +128,13 @@ public class HomeViewModelTests
         await h.Vm.LoadAsync();
 
         Assert.Equal(1, h.Vm.PendingExamCount);
-        Assert.DoesNotContain(h.Vm.Exams.Value!, e => e.HasBeenAttempted);
+        Assert.DoesNotContain(h.Vm.UpcomingExams, e => e.HasBeenAttempted);
+
+        // The SECTION still holds every exam, and must: the average-score card
+        // is computed from the attempts that ride along on the same payload,
+        // and filtering them out of the section would cost a second fetch of
+        // the identical list to get them back.
+        Assert.Contains(h.Vm.Exams.Value!, e => e.HasBeenAttempted);
     }
 
     [Fact]

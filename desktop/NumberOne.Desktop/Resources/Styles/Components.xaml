@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!--
+        The pieces the v2 design is built out of: tables, pills, stat cards,
+        nav rows, the top bar, progress bars and the loading/empty/error
+        furniture.
+
+        Kept apart from Theme.xaml, which holds the primitives (text ramp,
+        panels, buttons). These compose those primitives into the specific
+        objects the design draws, so a screen reads as a layout rather than as
+        a wall of setters.
+    -->
+
+    <!-- ── Icons ────────────────────────────────────────────────────────── -->
+
+    <!--
+        The geometries in Icons.xaml are drawn on the design's 24x24 viewBox.
+        Aspect="Uniform" is what makes a 24-unit path render inside a 16x16
+        slot, exactly as viewBox does in a browser; without it the geometry
+        keeps its own coordinates and the slot clips it.
+    -->
+    <Style x:Key="IconPath" TargetType="Path">
+        <Setter Property="Aspect" Value="Uniform" />
+        <Setter Property="WidthRequest" Value="16" />
+        <Setter Property="HeightRequest" Value="16" />
+        <Setter Property="StrokeThickness" Value="1.75" />
+        <Setter Property="StrokeLineCap" Value="Round" />
+        <Setter Property="StrokeLineJoin" Value="Round" />
+        <Setter Property="Fill" Value="Transparent" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+        <Setter Property="HorizontalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="IconPathSmall" TargetType="Path" BasedOn="{StaticResource IconPath}">
+        <Setter Property="WidthRequest" Value="13" />
+        <Setter Property="HeightRequest" Value="13" />
+    </Style>
+
+    <Style x:Key="IconPathLarge" TargetType="Path" BasedOn="{StaticResource IconPath}">
+        <Setter Property="WidthRequest" Value="30" />
+        <Setter Property="HeightRequest" Value="30" />
+        <Setter Property="StrokeThickness" Value="1.6" />
+    </Style>
+
+    <Style x:Key="IconPathMuted" TargetType="Path" BasedOn="{StaticResource IconPath}">
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+    </Style>
+
+    <!-- ── Section headers ──────────────────────────────────────────────── -->
+
+    <!--
+        The design never underlines a heading with a full rule. The rule begins
+        where the title ends and runs to the trailing edge, with any action
+        after it: Label + BoxView + optional link.
+    -->
+    <Style x:Key="SectionRule" TargetType="BoxView">
+        <Setter Property="HeightRequest" Value="1" />
+        <Setter Property="VerticalOptions" Value="Center" />
+        <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+    </Style>
+
+    <!-- A link inside a section header. Secondary, never underlined. -->
+    <Style x:Key="LinkLabel" TargetType="Label">
+        <Setter Property="FontSize" Value="{StaticResource FontSecondary}" />
+        <Setter Property="FontFamily" Value="{StaticResource FontUi}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <!-- ── Tables ───────────────────────────────────────────────────────── -->
+
+    <!--
+        Rows carry their own bottom rule, so the card is padding-free and clips
+        them at the corner radius.
+    -->
+    <Style x:Key="TableCard" TargetType="Border" BasedOn="{StaticResource Panel}">
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style x:Key="TableHeaderRow" TargetType="Grid">
+        <Setter Property="HeightRequest" Value="36" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="ColumnSpacing" Value="16" />
+    </Style>
+
+    <Style x:Key="TableHeaderLabel" TargetType="Label">
+        <Setter Property="FontSize" Value="{StaticResource FontLabel}" />
+        <Setter Property="FontFamily" Value="{StaticResource FontUi}" />
+        <Setter Property="CharacterSpacing" Value="40" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <!--
+        Hover is a real affordance on desktop: a row that navigates must show
+        one, or the student cannot tell what is clickable.
+    -->
+    <Style x:Key="TableRow" TargetType="Grid">
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="ColumnSpacing" Value="16" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource HoverLight}, Dark={StaticResource HoverDark}}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <Style x:Key="RowRule" TargetType="BoxView" BasedOn="{StaticResource SectionRule}">
+        <Setter Property="VerticalOptions" Value="End" />
+    </Style>
+
+    <Style x:Key="CellLabel" TargetType="Label">
+        <Setter Property="FontSize" Value="{StaticResource FontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource FontUi}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+        <Setter Property="LineBreakMode" Value="TailTruncation" />
+    </Style>
+
+    <Style x:Key="CellLabelSecondary" TargetType="Label" BasedOn="{StaticResource CellLabel}">
+        <Setter Property="FontSize" Value="{StaticResource FontSecondary}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+    </Style>
+
+    <!--
+        Numbers sit in an LTR island. Arabic-Indic digits still order LTR, and
+        a score of "46 / 50" reads back as "50 / 46" without this.
+    -->
+    <Style x:Key="CellLabelNumeric" TargetType="Label" BasedOn="{StaticResource CellLabelSecondary}">
+        <Setter Property="FlowDirection" Value="LeftToRight" />
+        <Setter Property="HorizontalTextAlignment" Value="Start" />
+    </Style>
+
+    <!-- ── Pills and chips ──────────────────────────────────────────────── -->
+
+    <!-- 22px, fully rounded, tinted: the system type, and the session status. -->
+    <Style x:Key="Pill" TargetType="Border">
+        <Setter Property="HeightRequest" Value="22" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 11" />
+        <Setter Property="HorizontalOptions" Value="Start" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="PillLabel" TargetType="Label">
+        <Setter Property="FontSize" Value="{StaticResource FontLabel}" />
+        <Setter Property="FontFamily" Value="{StaticResource FontUi}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <!-- An outlined chip, not a pill: the PDF and exercise markers on a row. -->
+    <Style x:Key="Chip" TargetType="Border">
+        <Setter Property="Padding" Value="6,1" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 4" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="ChipLabel" TargetType="Label" BasedOn="{StaticResource PillLabel}">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+    </Style>
+
+    <!-- ── Stat cards ───────────────────────────────────────────────────── -->
+
+    <Style x:Key="StatLabel" TargetType="Label" BasedOn="{StaticResource TableHeaderLabel}">
+        <Setter Property="VerticalOptions" Value="Start" />
+    </Style>
+
+    <Style x:Key="StatValue" TargetType="Label" BasedOn="{StaticResource TitleLabel}">
+        <Setter Property="FlowDirection" Value="LeftToRight" />
+        <Setter Property="HorizontalTextAlignment" Value="Start" />
+    </Style>
+
+    <Style x:Key="StatCaption" TargetType="Label" BasedOn="{StaticResource MutedLabel}">
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+    </Style>
+
+    <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
+
+    <!--
+        A nav row is a Grid, not a Button: it carries an icon, a label, an
+        optional badge and the 2px active bar on the leading edge, and a Button
+        holds only text.
+    -->
+    <Style x:Key="NavRow" TargetType="Grid">
+        <Setter Property="HeightRequest" Value="36" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="ColumnSpacing" Value="10" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+    </Style>
+
+    <Style x:Key="NavLabel" TargetType="Label">
+        <Setter Property="FontSize" Value="{StaticResource FontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource FontUi}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+    </Style>
+
+    <!-- ── Top bar ──────────────────────────────────────────────────────── -->
+
+    <!-- 28px square, bordered: back, and the rail toggle. -->
+    <Style x:Key="IconButton" TargetType="Border">
+        <Setter Property="WidthRequest" Value="28" />
+        <Setter Property="HeightRequest" Value="28" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="IconButtonBare" TargetType="Border" BasedOn="{StaticResource IconButton}">
+        <Setter Property="Stroke" Value="Transparent" />
+        <Setter Property="StrokeThickness" Value="0" />
+    </Style>
+
+    <Style x:Key="IconButtonBare32" TargetType="Border" BasedOn="{StaticResource IconButtonBare}">
+        <Setter Property="WidthRequest" Value="32" />
+        <Setter Property="HeightRequest" Value="32" />
+    </Style>
+
+    <!-- Search, and the device chip: 32px, bordered, laid out inside. -->
+    <Style x:Key="TopBarField" TargetType="Border">
+        <Setter Property="HeightRequest" Value="32" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="TopBarEntry" TargetType="Entry">
+        <Setter Property="FontSize" Value="{StaticResource FontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource FontUi}" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+        <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <!-- ── Progress ─────────────────────────────────────────────────────── -->
+
+    <!--
+        4px, radius 2, track in the hover colour. MAUI's ProgressBar has no
+        corner radius and no track colour, so the design's bar is two Borders
+        in a Grid, the fill sized by a width binding.
+    -->
+    <Style x:Key="ProgressTrack" TargetType="Border">
+        <Setter Property="HeightRequest" Value="4" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 2" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource HoverLight}, Dark={StaticResource HoverDark}}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="ProgressFill" TargetType="Border">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 2" />
+        <Setter Property="HorizontalOptions" Value="Start" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+    </Style>
+
+    <!-- ── Loading, empty and error ─────────────────────────────────────── -->
+
+    <!--
+        A table states its own emptiness inside the card, centred with 48px of
+        air and the recovery action beneath it.
+    -->
+    <Style x:Key="StatePanel" TargetType="VerticalStackLayout">
+        <Setter Property="Padding" Value="16,48" />
+        <Setter Property="Spacing" Value="12" />
+        <Setter Property="HorizontalOptions" Value="Center" />
+    </Style>
+
+    <!--
+        A skeleton line. Never a spinner inside a table: the shape of what is
+        coming tells the student more than the fact that something is.
+    -->
+    <Style x:Key="SkeletonLine" TargetType="Border">
+        <Setter Property="HeightRequest" Value="8" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 4" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SkeletonLight}, Dark={StaticResource SkeletonDark}}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <!-- ── Buttons the design uses that Theme.xaml does not carry ───────── -->
+
+    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SecondaryHoverLight}, Dark={StaticResource SecondaryHoverDark}}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <Style x:Key="PrimaryButtonSmall" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="HeightRequest" Value="{StaticResource ControlHeightSmall}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSecondary}" />
+        <Setter Property="Padding" Value="12,0" />
+    </Style>
+
+    <!-- The filter and tab chip: 28px, bordered, filled when selected. -->
+    <Style x:Key="TabButton" TargetType="Button">
+        <Setter Property="HeightRequest" Value="{StaticResource ControlHeightSmall}" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="FontSize" Value="{StaticResource FontSecondary}" />
+        <Setter Property="FontFamily" Value="{StaticResource FontUi}" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource HoverLight}, Dark={StaticResource HoverDark}}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

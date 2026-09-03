@@ -140,10 +140,15 @@ public class LiveViewModelTests
         var courses = await api.GetMyCoursesAsync(null);
         var lessonId = courses[0].AllLessons.First().Id;
 
-        var vm = new LessonViewModel(api, auth, BaseAddress!, lessonId);
+        var vm = new LessonViewModel(api, auth, BaseAddress!, lessonId, courses[0].Id);
         await vm.LoadAsync();
 
         Assert.True(vm.Lesson.HasData, $"lesson: {vm.Lesson.Status} {vm.Lesson.ErrorMessage}");
+
+        // The unit rail is built from the course tree, not from the lesson
+        // payload — my-lessons/{id}/ knows nothing of the lecture's neighbours.
+        Assert.True(vm.Playlist.HasData, $"playlist: {vm.Playlist.Status} {vm.Playlist.ErrorMessage}");
+        Assert.Contains(vm.Playlist.Value!.Lessons, l => l.IsCurrent);
         Assert.True(vm.HasVideo);
         // The WebView loads the wrapper page, not the YouTube URL directly.
         Assert.Contains("academic/player/?v=", vm.PlayerUrl);

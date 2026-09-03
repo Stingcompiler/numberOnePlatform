@@ -27,6 +27,15 @@ public sealed partial class NotificationsViewModel : ObservableObject
 
     public SectionState<List<Notification>> Notifications { get; }
 
+    /// <summary>The label the top bar prints beside the title.</summary>
+    public event EventHandler<string>? CountChanged;
+
+    /// <summary>
+    /// Raised after a read or a mark-all. The chrome owns the badge and has no
+    /// other way to know the count just changed under it.
+    /// </summary>
+    public event EventHandler? ReadStateChanged;
+
     /// <summary>Drives the sidebar and top-bar badges.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BadgeLabel), nameof(HasUnread))]
@@ -78,13 +87,16 @@ public sealed partial class NotificationsViewModel : ObservableObject
         // Refetch rather than mutating in place: Notification is an immutable
         // DTO, and the badge has to come from the server anyway.
         await LoadAsync(ct).ConfigureAwait(true);
+        ReadStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]
     private async Task MarkAllReadAsync(CancellationToken ct = default)
     {
-        if (await _api.MarkAllNotificationsReadAsync(ct).ConfigureAwait(true))
-            await LoadAsync(ct).ConfigureAwait(true);
+        if (!await _api.MarkAllNotificationsReadAsync(ct).ConfigureAwait(true)) return;
+
+        await LoadAsync(ct).ConfigureAwait(true);
+        ReadStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]
@@ -92,6 +104,9 @@ public sealed partial class NotificationsViewModel : ObservableObject
     {
         await Notifications.LoadAsync(ct).ConfigureAwait(true);
         OnPropertyChanged(nameof(Groups));
+
+        CountChanged?.Invoke(
+            this, UiText.Count(Notifications.Value?.Count ?? 0, "إشعار", "إشعاران", "إشعارات", "واحد"));
 
         await RefreshBadgeAsync(ct).ConfigureAwait(true);
     }

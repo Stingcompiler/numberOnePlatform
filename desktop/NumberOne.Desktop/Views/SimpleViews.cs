@@ -56,13 +56,18 @@ public partial class NotificationsView : ContentView
 
 public partial class ProfileView : ContentView
 {
+    private readonly ProfileViewModel _vm;
+
     public ProfileView(ProfileViewModel vm)
     {
         InitializeComponent();
+        _vm = vm;
         BindingContext = vm;
 
         vm.ClipboardWriter = text => Clipboard.Default.SetTextAsync(text);
     }
+
+    public ProfileViewModel ViewModel => _vm;
 }
 
 public partial class LiveView : ContentView

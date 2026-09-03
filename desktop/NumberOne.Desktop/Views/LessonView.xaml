@@ -1,132 +1,266 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
-             xmlns:models="clr-namespace:NumberOne.Core.Models;assembly=NumberOne.Core"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
              x:Class="NumberOne.Desktop.Views.LessonView"
+             x:Name="Root"
              x:DataType="vm:LessonViewModel">
 
+    <!--
+        The lecture: the player on the leading side, the unit's other lectures
+        in a 200px rail beside it.
+
+        Back lives in the top bar, not here.
+    -->
+
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="16">
+        <Grid Padding="16" ColumnDefinitions="*,200" ColumnSpacing="12"
+              RowDefinitions="Auto">
 
-            <Button x:Name="BackButton" Text="← رجوع"
-                    Style="{StaticResource GhostButton}"
-                    HorizontalOptions="Start" Clicked="OnBackClicked" />
+            <!-- ══ Player and lesson ═════════════════════════════════════ -->
+            <VerticalStackLayout Grid.Column="0" Spacing="16" VerticalOptions="Start">
 
-            <Label Text="جارٍ التحميل…" Style="{StaticResource MutedLabel}"
-                   IsVisible="{Binding Lesson.IsLoading}" />
-
-            <HorizontalStackLayout Spacing="8" IsVisible="{Binding Lesson.HasError}">
-                <Label Text="{Binding Lesson.ErrorMessage}" Style="{StaticResource SecondaryLabel}"
-                       VerticalOptions="Center" />
-                <Button Text="إعادة المحاولة" Command="{Binding LoadCommand}"
-                        Style="{StaticResource NeutralButtonSmall}" />
-            </HorizontalStackLayout>
-
-            <VerticalStackLayout IsVisible="{Binding Lesson.HasData}" Spacing="16">
+                <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                     IsVisible="{Binding Lesson.IsLoading}">
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="420" />
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="360" />
+                </VerticalStackLayout>
 
                 <!--
-                    The video surface is fixed at 920 x 518 — an 11in 16:9
-                    diagonal at 96 DPI. It is a size AND a maximum: the picture
-                    never renders larger however wide the window.
-
-                    The surround is #0B0F16 in both themes; a letterbox is not
-                    theme-dependent.
+                    A refused lecture is not a broken app. The message names the
+                    cause and the remedy rather than repeating the server's bare
+                    "not authorised", which reads as a fault in the client on a
+                    course the app has just listed.
                 -->
-                <Border WidthRequest="920" HeightRequest="518"
-                        HorizontalOptions="Center"
-                        Padding="0" StrokeThickness="1"
-                        StrokeShape="RoundRectangle 8"
-                        BackgroundColor="{StaticResource VideoSurround}"
-                        Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}">
-
-                    <Grid>
-                        <!--
-                            LeftToRight, explicitly. The window is RTL and that
-                            cascades into the WebView, which mirrors everything
-                            the page draws - the video picture included. A flipped
-                            lecture is not a cosmetic problem: any text on the
-                            board reads backwards.
-                        -->
-                        <WebView x:Name="Player"
-                                 FlowDirection="LeftToRight"
-                                 Source="{Binding PlayerUrl}" />
-
-                        <!--
-                            The watermark is a SIBLING of the WebView, not
-                            injected into it: the YouTube iframe is cross-origin
-                            and cannot be reached. It is anchored inside this
-                            frame rather than the window, so it stays over the
-                            picture at any width, and it is non-interactive so it
-                            never swallows a click meant for the player.
-
-                            It does not prevent recording. It makes a leak
-                            traceable, which in a school is the stronger
-                            deterrent.
-                        -->
-                        <VerticalStackLayout x:Name="Watermark"
-                                             InputTransparent="True" CascadeInputTransparent="True"
-                                             Opacity="0.22" Margin="16"
-                                             HorizontalOptions="Start" VerticalOptions="Start">
-                            <Label Text="{Binding WatermarkName}"
-                                   FontSize="{StaticResource FontLabel}"
-                                   TextColor="#FFFFFF" />
-                            <Label Text="{Binding WatermarkPhone}"
-                                   FontSize="{StaticResource FontLabel}"
-                                   FlowDirection="LeftToRight"
-                                   TextColor="#FFFFFF" />
-                            <Label Text="{Binding WatermarkTimestamp}"
-                                   FontSize="{StaticResource FontLabel}"
-                                   FlowDirection="LeftToRight"
-                                   TextColor="#FFFFFF" />
-                        </VerticalStackLayout>
+                <Border Style="{StaticResource WarningPanel}" IsVisible="{Binding Lesson.HasError}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
+                                     Data="{StaticResource IconAlertCircle}"
+                                     Stroke="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+                        <Label Grid.Column="1" Text="{Binding Lesson.ErrorMessage}"
+                               Style="{StaticResource CopyLabel}" VerticalOptions="Center" />
+                        <Button Grid.Column="2" Text="إعادة المحاولة"
+                                Style="{StaticResource NeutralButtonSmall}"
+                                Command="{Binding LoadCommand}" />
                     </Grid>
                 </Border>
 
-                <!-- Server older than the app: say so rather than showing an error frame. -->
-                <Border Style="{StaticResource WarningPanel}"
-                        IsVisible="{Binding IsServerOutdatedForPlayback}">
-                    <Label Text="{x:Static vm:LessonViewModel.ServerOutdatedMessage}"
-                           Style="{StaticResource CopyLabel}"
-                           TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
-                </Border>
+                <VerticalStackLayout IsVisible="{Binding Lesson.HasData}" Spacing="16">
 
-                <!-- Security notice -->
-                <Label x:Name="SecurityNotice"
-                       Style="{StaticResource MutedLabel}"
-                       HorizontalOptions="Center" />
+                    <!--
+                        The video surface is fixed at 920 x 518 — an 11in 16:9
+                        diagonal at 96 DPI. It is a size AND a maximum: the
+                        picture never renders larger however wide the window.
 
-                <!-- Title and actions -->
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <Label Grid.Column="0" Text="{Binding Lesson.Value.Title}"
-                           Style="{StaticResource HeadingLabel}" VerticalOptions="Center" />
-                    <Button Grid.Column="1" Text="الملف المرفق"
-                            IsVisible="{Binding Lesson.Value.HasAttachment}"
-                            Style="{StaticResource NeutralButtonSmall}" />
-                    <Button Grid.Column="2" Text="{Binding CompletionLabel}"
-                            Command="{Binding MarkCompleteCommand}"
-                            Style="{StaticResource NeutralButtonSmall}" />
-                </Grid>
+                        The surround is #0B0F16 in both themes; a letterbox is
+                        not theme-dependent.
+                    -->
+                    <Border WidthRequest="920" HeightRequest="518"
+                            HorizontalOptions="Center"
+                            Padding="0" StrokeThickness="1"
+                            StrokeShape="RoundRectangle 8"
+                            BackgroundColor="{StaticResource VideoSurround}"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}">
 
-                <!-- Exercise -->
-                <VerticalStackLayout IsVisible="{Binding HasExercise}" Spacing="12">
-                    <Label Text="{Binding Exercise.Title}" Style="{StaticResource HeadingLabel}" />
-                    <BoxView HeightRequest="1"
-                             Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+                        <Grid>
+                            <!--
+                                LeftToRight, explicitly. The window is RTL and
+                                that cascades into the WebView, which mirrors
+                                everything the page draws — the video picture
+                                included. A flipped lecture is not a cosmetic
+                                problem: any text on the board reads backwards.
+                            -->
+                            <WebView x:Name="Player"
+                                     FlowDirection="LeftToRight"
+                                     Source="{Binding PlayerUrl}" />
 
-                    <VerticalStackLayout x:Name="QuestionHost" Spacing="16" />
+                            <!--
+                                The watermark is a SIBLING of the WebView, not
+                                injected into it: the YouTube iframe is
+                                cross-origin and cannot be reached. It is
+                                anchored inside this frame rather than the
+                                window, so it stays over the picture at any
+                                width, and it is non-interactive so it never
+                                swallows a click meant for the player.
 
-                    <Button Text="{Binding SubmitLabel}"
-                            Command="{Binding SubmitExerciseCommand}"
-                            Style="{StaticResource PrimaryButton}"
-                            HorizontalOptions="Start" />
+                                It does not prevent recording. It makes a leak
+                                traceable, which in a school is the stronger
+                                deterrent.
+                            -->
+                            <VerticalStackLayout x:Name="Watermark"
+                                                 InputTransparent="True" CascadeInputTransparent="True"
+                                                 Opacity="0.22" Margin="16"
+                                                 HorizontalOptions="Start" VerticalOptions="Start">
+                                <Label Text="{Binding WatermarkName}"
+                                       FontSize="{StaticResource FontLabel}"
+                                       TextColor="#FFFFFF" />
+                                <Label Text="{Binding WatermarkPhone}"
+                                       FontSize="{StaticResource FontLabel}"
+                                       FlowDirection="LeftToRight"
+                                       TextColor="#FFFFFF" />
+                                <Label Text="{Binding WatermarkTimestamp}"
+                                       FontSize="{StaticResource FontLabel}"
+                                       FlowDirection="LeftToRight"
+                                       TextColor="#FFFFFF" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
 
-                    <Label IsVisible="{Binding HasResult}"
-                           Style="{StaticResource BodyLabel}"
-                           Text="{Binding Result.Percentage, StringFormat='النتيجة: {0:0.#}٪'}" />
+                    <!-- Server older than the app: say so rather than showing
+                         an error frame the student cannot act on. -->
+                    <Border Style="{StaticResource WarningPanel}"
+                            IsVisible="{Binding IsServerOutdatedForPlayback}">
+                        <Label Text="{x:Static vm:LessonViewModel.ServerOutdatedMessage}"
+                               Style="{StaticResource CopyLabel}"
+                               TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+                    </Border>
+
+                    <!-- The protection notice, with the frame size beside it so
+                         the fixed surface reads as deliberate, not as a bug. -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
+                                     WidthRequest="13" HeightRequest="13"
+                                     Data="{StaticResource IconShield}" />
+                        <Label Grid.Column="1" x:Name="SecurityNotice"
+                               Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                    </Grid>
+
+                    <!-- ── Title and actions ─────────────────────────────── -->
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding Lesson.Value.Title}"
+                                   Style="{StaticResource HeadingLabel}" />
+                            <Label Text="{Binding LessonMeta}"
+                                   Style="{StaticResource CellLabelSecondary}" />
+                        </VerticalStackLayout>
+
+                        <Button Grid.Column="1" Text="الملف المرفق"
+                                IsVisible="{Binding Lesson.Value.HasAttachment}"
+                                Command="{Binding OpenAttachmentCommand}"
+                                Style="{StaticResource NeutralButtonSmall}"
+                                HeightRequest="32" />
+
+                        <Button Grid.Column="2" Text="{Binding CompletionLabel}"
+                                Command="{Binding MarkCompleteCommand}"
+                                Style="{StaticResource NeutralButtonSmall}"
+                                HeightRequest="32" />
+                    </Grid>
+
+                    <!-- ── تمرين المحاضرة ────────────────────────────────── -->
+                    <VerticalStackLayout IsVisible="{Binding HasExercise}" Spacing="12">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                            <Label Grid.Column="0" Text="تمرين المحاضرة"
+                                   Style="{StaticResource HeadingLabel}" />
+                            <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                            <Label Grid.Column="2" Text="{Binding ExerciseCountLabel}"
+                                   Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                        </Grid>
+
+                        <Border Style="{StaticResource Panel}">
+                            <VerticalStackLayout Spacing="12">
+                                <VerticalStackLayout x:Name="QuestionHost" Spacing="16" />
+
+                                <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="12">
+                                    <Button Grid.Column="0" Text="{Binding SubmitLabel}"
+                                            Command="{Binding SubmitExerciseCommand}"
+                                            Style="{StaticResource PrimaryButton}"
+                                            HorizontalOptions="Start" />
+
+                                    <Label Grid.Column="1" IsVisible="{Binding HasResult}"
+                                           Style="{StaticResource CellLabelSecondary}"
+                                           VerticalOptions="Center"
+                                           Text="{Binding Result.Percentage, StringFormat='النتيجة: {0:0.#}٪'}" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
-
             </VerticalStackLayout>
-        </VerticalStackLayout>
+
+            <!-- ══ محتويات الوحدة ════════════════════════════════════════ -->
+            <!--
+                The rail exists so a student can move down a unit without going
+                back to the course. It is built from the course tree, because
+                my-lessons/{id}/ returns the lecture alone and knows nothing of
+                its neighbours.
+            -->
+            <Border Grid.Column="1" Style="{StaticResource TableCard}"
+                    VerticalOptions="Start"
+                    IsVisible="{Binding Playlist.HasData}">
+                <VerticalStackLayout>
+
+                    <Grid HeightRequest="36" Padding="12,0" ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="محتويات الوحدة"
+                               Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="1" Text="{Binding Playlist.Value.DoneLabel}"
+                               Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                        <BoxView Grid.ColumnSpan="2" Style="{StaticResource RowRule}" Margin="-12,0" />
+                    </Grid>
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Playlist.Value.Lessons}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PlaylistRow">
+                                <Grid Style="{StaticResource TableRow}"
+                                      ColumnDefinitions="14,*,Auto" ColumnSpacing="10"
+                                      Padding="12,8" MinimumHeightRequest="40"
+                                      BackgroundColor="{Binding IsCurrent, Converter={StaticResource SelectedTabTint}}">
+
+                                    <!-- The lecture being watched carries the
+                                         2px bar on the leading edge. -->
+                                    <BoxView Grid.ColumnSpan="3" WidthRequest="2" Margin="-12,0"
+                                             HorizontalOptions="Start"
+                                             IsVisible="{Binding IsCurrent}"
+                                             Color="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+
+                                    <Label Grid.Column="0" Text="{Binding IndexLabel}"
+                                           Style="{StaticResource CellLabelNumeric}"
+                                           FontSize="{StaticResource FontSecondary}" />
+
+                                    <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                                        <Label Text="{Binding Title}"
+                                               Style="{StaticResource CellLabelSecondary}"
+                                               TextColor="{Binding IsCompleted, Converter={StaticResource CompletedInk}}" />
+                                        <Label Text="{Binding DurationLabel}"
+                                               Style="{StaticResource MutedLabel}"
+                                               FlowDirection="LeftToRight" />
+                                    </VerticalStackLayout>
+
+                                    <shapes:Path Grid.Column="2" Style="{StaticResource IconPathSmall}"
+                                                 WidthRequest="13" HeightRequest="13"
+                                                 StrokeThickness="2"
+                                                 IsVisible="{Binding IsCompleted}"
+                                                 Data="{StaticResource IconCheck}"
+                                                 Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
+
+                                    <BoxView Grid.ColumnSpan="3" Style="{StaticResource RowRule}" Margin="-12,0" />
+
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={x:Reference Root}, Path=BindingContext.OpenLessonCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Padding="12" Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="تقدّمك في الوحدة"
+                                   Style="{StaticResource MutedLabel}" />
+                            <Label Grid.Column="1" Text="{Binding Playlist.Value.PercentLabel}"
+                                   Style="{StaticResource CellLabelNumeric}"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                        </Grid>
+                        <Border Style="{StaticResource ProgressTrack}">
+                            <ProgressBar HeightRequest="4" BackgroundColor="Transparent"
+                                         Progress="{Binding Playlist.Value.Fraction}"
+                                         ProgressColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+                        </Border>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
     </ScrollView>
 </ContentView>

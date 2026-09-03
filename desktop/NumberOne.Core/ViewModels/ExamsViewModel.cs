@@ -8,7 +8,7 @@ namespace NumberOne.Core.ViewModels;
 /// <summary>
 /// The exams screen: المتاحة / المكتملة tabs, plus the in-progress banner.
 /// </summary>
-public sealed partial class ExamsViewModel : ObservableObject
+public sealed partial class ExamsViewModel : ObservableObject, ISearchable
 {
     private readonly StudentApi _api;
 
@@ -23,21 +23,54 @@ public sealed partial class ExamsViewModel : ObservableObject
     /// <summary>Raised by "ابدأ" / "متابعة".</summary>
     public event EventHandler<int>? ExamStarted;
 
+    /// <summary>The label the top bar prints beside the title.</summary>
+    public event EventHandler<string>? CountChanged;
+
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Available), nameof(Completed), nameof(ShowingAvailable))]
+    [NotifyPropertyChangedFor(
+        nameof(Available), nameof(Completed), nameof(ShowingAvailable),
+        nameof(ShowingCompleted), nameof(IsFilteredEmpty))]
     private ExamTab _tab = ExamTab.Available;
 
     public bool ShowingAvailable => Tab == ExamTab.Available;
+    public bool ShowingCompleted => Tab == ExamTab.Completed;
+
+    // ── Search ───────────────────────────────────────────────────────────────
+
+    public string SearchPlaceholder => "ابحث في الاختبارات";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Available), nameof(Completed), nameof(IsFilteredEmpty))]
+    private string _query = "";
+
+    public void ApplySearch(string query) => Query = query;
+
+    private IEnumerable<ExamSummary> Matching(IEnumerable<ExamSummary> exams)
+    {
+        if (string.IsNullOrWhiteSpace(Query)) return exams;
+
+        var needle = Query.Trim();
+        return exams.Where(e =>
+            e.Title.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+            e.CourseName.Contains(needle, StringComparison.OrdinalIgnoreCase));
+    }
 
     /// <summary>
     /// Never attempted. There is no server-side attempt limit, so "available"
     /// means "not yet tried" rather than "may still be tried".
     /// </summary>
     public IReadOnlyList<ExamSummary> Available =>
-        Exams.Value?.Where(e => !e.HasBeenAttempted).ToList() ?? new List<ExamSummary>();
+        Matching(Exams.Value?.Where(e => !e.HasBeenAttempted) ?? Enumerable.Empty<ExamSummary>()).ToList();
 
     public IReadOnlyList<ExamSummary> Completed =>
-        Exams.Value?.Where(e => e.HasBeenAttempted).ToList() ?? new List<ExamSummary>();
+        Matching(Exams.Value?.Where(e => e.HasBeenAttempted) ?? Enumerable.Empty<ExamSummary>()).ToList();
+
+    /// <summary>Rows exist on this tab, but the search hid them all.</summary>
+    public bool IsFilteredEmpty =>
+        Exams.HasData && (ShowingAvailable ? Available.Count : Completed.Count) == 0;
+
+    [RelayCommand]
+    private void ClearSearch() => Query = "";
 
     [RelayCommand]
     private void ShowAvailable() => Tab = ExamTab.Available;
@@ -58,6 +91,10 @@ public sealed partial class ExamsViewModel : ObservableObject
 
         OnPropertyChanged(nameof(Available));
         OnPropertyChanged(nameof(Completed));
+        OnPropertyChanged(nameof(IsFilteredEmpty));
+
+        CountChanged?.Invoke(
+            this, UiText.Count(Exams.Value?.Count ?? 0, "اختبار", "اختباران", "اختبارات", "واحد"));
     }
 }
 

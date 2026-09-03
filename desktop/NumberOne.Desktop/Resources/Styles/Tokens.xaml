@@ -84,6 +84,11 @@
     <Color x:Key="DisabledTextLight">#94A3B8</Color>
     <Color x:Key="DisabledTextDark">#7E8DA8</Color>
 
+    <!-- Skeleton fill. Its own token rather than a reuse of Hover: a skeleton
+         must read as absent content, and Hover reads as an interaction. -->
+    <Color x:Key="SkeletonLight">#EEF2F8</Color>
+    <Color x:Key="SkeletonDark">#1A2235</Color>
+
     <!-- Scrim behind dialogs, and the video letterbox surround. The surround is
          the same value in both themes - a letterbox is not theme-dependent. -->
     <Color x:Key="Scrim">#730F172A</Color>

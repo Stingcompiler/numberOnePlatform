@@ -84,6 +84,29 @@ public static class UiText
         return ToArabicIndicDigits(western);
     }
 
+    /// <summary>
+    /// Counts a noun the way Arabic actually counts.
+    ///
+    /// Arabic has four number forms where English has two, and the design's own
+    /// copy uses them: "لا توجد جلسات" for none, "جلسة واحدة" for one,
+    /// "جلستان" for two, the plural for three to ten, and then back to the
+    /// singular for eleven and above — "١٢ جلسة", not "١٢ جلسات". Rendering
+    /// "١ كورسات" is the kind of mistake that makes an app read as translated
+    /// rather than written.
+    ///
+    /// <paramref name="oneWord"/> carries the gender, which the noun's own
+    /// forms cannot: جلسة takes واحدة, كورس takes واحد.
+    /// </summary>
+    public static string Count(
+        int n, string singular, string dual, string plural, string oneWord = "واحدة") => n switch
+    {
+        <= 0 => $"لا توجد {plural}",
+        1 => $"{singular} {oneWord}",
+        2 => dual,
+        <= 10 => $"{ToArabicIndicDigits(n.ToString())} {plural}",
+        _ => $"{ToArabicIndicDigits(n.ToString())} {singular}",
+    };
+
     public static string ToArabicIndicDigits(string value)
     {
         Span<char> buffer = stackalloc char[value.Length];

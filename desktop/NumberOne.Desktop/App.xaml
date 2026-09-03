@@ -10,6 +10,8 @@
                 <ResourceDictionary Source="Resources/Styles/Tokens.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Theme.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Icons.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Components.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <local:InvertedBoolConverter x:Key="Invert" />
@@ -21,6 +23,24 @@
             <local:VerdictTintConverter x:Key="VerdictTint" />
             <local:NotificationTypeWordConverter x:Key="NotificationTypeWord" />
             <local:CorrectWordConverter x:Key="CorrectWord" />
+            <local:GainInkConverter x:Key="GainInk" />
+            <local:LiveDotConverter x:Key="LiveDot" />
+            <local:LiveInkConverter x:Key="LiveInk" />
+            <local:UnreadWeightConverter x:Key="UnreadWeight" />
+            <local:LiveStatusTintConverter x:Key="LiveStatusTint" />
+            <local:LiveStatusInkConverter x:Key="LiveStatusInk" />
+            <local:JoinableInkConverter x:Key="JoinableInk" />
+            <local:JoinableBorderConverter x:Key="JoinableBorder" />
+            <local:ProviderIconConverter x:Key="ProviderIcon" />
+            <local:SelectedTabTintConverter x:Key="SelectedTabTint" />
+            <local:SelectedTabInkConverter x:Key="SelectedTabInk" />
+            <local:SelectedTabBorderConverter x:Key="SelectedTabBorder" />
+            <local:CompletedInkConverter x:Key="CompletedInk" />
+            <local:IconKeyConverter x:Key="IconKey" />
+            <local:EnabledOpacityConverter x:Key="EnabledOpacity" />
+            <local:ZeroToTrueConverter x:Key="ZeroToTrue" />
+            <local:ExpandChevronConverter x:Key="ExpandChevron" />
+            <local:FractionToWidthConverter x:Key="FractionToWidth" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,120 +1,201 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
              x:Class="NumberOne.Desktop.Views.CourseDetailView"
+             x:Name="Root"
              x:DataType="vm:CourseDetailViewModel">
+
+    <!--
+        The course: a header carrying the description and three figures, then
+        the units accordion.
+
+        Back lives in the top bar, not here — one back control per window, in
+        the same place on every screen.
+    -->
 
     <ScrollView>
         <VerticalStackLayout Padding="24" Spacing="24">
 
-            <Button x:Name="BackButton" Text="← الكورسات"
-                    Style="{StaticResource GhostButton}"
-                    HorizontalOptions="Start" Clicked="OnBackClicked" />
+            <!-- ══ Header ════════════════════════════════════════════════ -->
+            <VerticalStackLayout Spacing="12" IsVisible="{Binding Course.HasData}"
+                                 BindingContext="{Binding Course.Value}"
+                                 x:DataType="vm:CourseDetail">
 
-            <!-- Header is a plain region, not a card: nested cards are forbidden. -->
-            <VerticalStackLayout Spacing="12" BindingContext="{Binding Course.Value}" x:DataType="vm:CourseDetail"
-                                 IsVisible="{Binding Source={RelativeSource AncestorType={x:Type vm:CourseDetailViewModel}}, Path=Course.HasData}">
-
-                <HorizontalStackLayout Spacing="12">
-                    <Label Text="{Binding Name}" Style="{StaticResource TitleLabel}" VerticalOptions="Center" />
-                    <Border VerticalOptions="Center" Padding="8,2"
-                            StrokeThickness="0" StrokeShape="RoundRectangle 9999"
+                <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="12">
+                    <Label Grid.Column="0" Text="{Binding Name}"
+                           Style="{StaticResource HeadingLabel}" VerticalOptions="Center" />
+                    <Border Grid.Column="1" Style="{StaticResource Pill}"
                             BackgroundColor="{Binding IsOnline, Converter={StaticResource SystemTypeTint}}">
-                        <Label Text="{Binding SystemTypeDisplay}"
-                               FontSize="{StaticResource FontLabel}"
+                        <Label Text="{Binding SystemTypeDisplay}" Style="{StaticResource PillLabel}"
                                TextColor="{Binding IsOnline, Converter={StaticResource SystemTypeInk}}" />
                     </Border>
-                </HorizontalStackLayout>
-
-                <Label Text="{Binding Description}" Style="{StaticResource CopyLabel}" />
-
-                <!-- Three stat columns: وحدات / محاضرات / تقدّم -->
-                <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="32">
-                    <VerticalStackLayout Grid.Column="0" Spacing="2">
-                        <Label Text="وحدات" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding UnitCountLabel}" Style="{StaticResource HeadingLabel}" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="1" Spacing="2">
-                        <Label Text="محاضرات" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding LessonCountLabel}" Style="{StaticResource HeadingLabel}" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="2" Spacing="2">
-                        <Label Text="تقدّم" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding PercentLabel}" Style="{StaticResource HeadingLabel}" />
-                    </VerticalStackLayout>
+                    <BoxView Grid.Column="2" Style="{StaticResource SectionRule}" />
                 </Grid>
 
+                <!-- Description on the leading two-thirds, the figures beside it. -->
+                <Grid ColumnDefinitions="2*,*" ColumnSpacing="24">
+                    <Label Grid.Column="0" Text="{Binding Description}"
+                           Style="{StaticResource CopyLabel}"
+                           FontSize="{StaticResource FontBody}" VerticalOptions="Start" />
+
+                    <Grid Grid.Column="1" ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="الوحدات" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding UnitCountLabel}"
+                                   Style="{StaticResource HeadingLabel}"
+                                   FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                            <Label Text="المحاضرات" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding LessonCountLabel}"
+                                   Style="{StaticResource HeadingLabel}"
+                                   FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" Spacing="2">
+                            <Label Text="التقدّم" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding PercentLabel}"
+                                   Style="{StaticResource HeadingLabel}"
+                                   FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Grid>
+
+                <!-- Teacher, then the course-wide bar running to the edge. -->
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                     <Label Grid.Column="0" Text="{Binding TeacherName}"
-                           Style="{StaticResource SecondaryLabel}" VerticalOptions="Center" />
-                    <ProgressBar Grid.Column="1" VerticalOptions="Center"
-                                 Progress="{Binding Percent, Converter={StaticResource PercentToFraction}}"
-                                 ProgressColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+                           Style="{StaticResource CellLabelSecondary}" />
+                    <Border Grid.Column="1" Style="{StaticResource ProgressTrack}">
+                        <ProgressBar HeightRequest="4" BackgroundColor="Transparent"
+                                     Progress="{Binding Percent, Converter={StaticResource PercentToFraction}}"
+                                     ProgressColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+                    </Border>
                 </Grid>
             </VerticalStackLayout>
 
-            <!-- States -->
-            <Label Text="جارٍ التحميل…" Style="{StaticResource MutedLabel}"
-                   IsVisible="{Binding Course.IsLoading}" />
-            <Label Text="لم تُضف محاضرات إلى هذا الكورس بعد." Style="{StaticResource SecondaryLabel}"
-                   IsVisible="{Binding Course.IsEmpty}" />
+            <!-- ══ Content ═══════════════════════════════════════════════ -->
+            <VerticalStackLayout Spacing="12">
 
-            <HorizontalStackLayout Spacing="8" IsVisible="{Binding Course.HasError}">
-                <Label Text="{Binding Course.ErrorMessage}" Style="{StaticResource SecondaryLabel}"
-                       VerticalOptions="Center" />
-                <Button Text="إعادة المحاولة" Command="{Binding Course.LoadCommand}"
-                        Style="{StaticResource NeutralButtonSmall}" />
-            </HorizontalStackLayout>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <Label Grid.Column="0" Text="محتوى الكورس"
+                           Style="{StaticResource HeadingLabel}" />
+                    <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                </Grid>
 
-            <!-- Units accordion. Expanded by default; a unit is a heading with
-                 its lesson rows beneath, not a nested card. -->
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Course.Value.Units}"
-                                 IsVisible="{Binding Course.HasData}" Spacing="16">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="vm:UnitRow">
-                        <VerticalStackLayout Spacing="4">
-                            <Grid ColumnDefinitions="*,Auto" HeightRequest="40">
-                                <Label Grid.Column="0" Text="{Binding Name}"
-                                       Style="{StaticResource HeadingLabel}" VerticalOptions="Center" />
-                                <Label Grid.Column="1" Text="{Binding ProgressLabel}"
-                                       Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                            </Grid>
-                            <BoxView HeightRequest="1"
-                                     Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+                <Border Style="{StaticResource TableCard}">
+                    <VerticalStackLayout>
 
-                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Lessons}">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:LessonRow">
-                                        <Grid ColumnDefinitions="28,*,Auto,Auto,Auto" HeightRequest="40" ColumnSpacing="8">
+                        <!--
+                            One card holding every unit. Each unit is a 40px
+                            header that collapses its own lessons; they open by
+                            default, because a student arriving here wants the
+                            lectures, not a list of headings to click through.
+                        -->
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Course.Value.Units}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:UnitRow">
+                                    <VerticalStackLayout>
+
+                                        <Grid Style="{StaticResource TableRow}"
+                                              HeightRequest="40"
+                                              ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                                            <shapes:Path Grid.Column="0"
+                                                         Style="{StaticResource IconPathMuted}"
+                                                         WidthRequest="14" HeightRequest="14"
+                                                         StrokeThickness="2"
+                                                         Data="{Binding IsExpanded, Converter={StaticResource ExpandChevron}}" />
+                                            <Label Grid.Column="1" Text="{Binding Name}"
+                                                   Style="{StaticResource CellLabel}" FontAttributes="Bold" />
+                                            <Label Grid.Column="2" Text="{Binding MetaLabel}"
+                                                   Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+
+                                            <BoxView Grid.ColumnSpan="3" Style="{StaticResource RowRule}" Margin="-16,0" />
+
                                             <Grid.GestureRecognizers>
-                                                <TapGestureRecognizer
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CourseDetailViewModel}}, Path=OpenLessonCommand}"
-                                                    CommandParameter="{Binding .}" />
+                                                <TapGestureRecognizer Command="{Binding ToggleCommand}" />
                                             </Grid.GestureRecognizers>
-
-                                            <Label Grid.Column="0" Text="{Binding IndexLabel}"
-                                                   Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                                            <Label Grid.Column="1" Text="{Binding Title}"
-                                                   Style="{StaticResource BodyLabel}" VerticalOptions="Center" />
-                                            <Label Grid.Column="2" Text="{Binding DurationLabel}"
-                                                   Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                                            <Label Grid.Column="3" Text="الملف المرفق"
-                                                   IsVisible="{Binding HasAttachment}"
-                                                   Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                                            <Label Grid.Column="4" Text="{Binding StatusLabel}"
-                                                   VerticalOptions="Center"
-                                                   FontSize="{StaticResource FontLabel}"
-                                                   TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                                         </Grid>
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
-                            </VerticalStackLayout>
-                        </VerticalStackLayout>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
-            </VerticalStackLayout>
 
+                                        <VerticalStackLayout IsVisible="{Binding IsExpanded}"
+                                                             BindableLayout.ItemsSource="{Binding Lessons}">
+                                            <BindableLayout.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:LessonRow">
+                                                    <Grid Style="{StaticResource TableRow}"
+                                                          HeightRequest="40"
+                                                          ColumnDefinitions="24,2.6*,*,1.2*,96" ColumnSpacing="12">
+
+                                                        <Label Grid.Column="0" Text="{Binding IndexLabel}"
+                                                               Style="{StaticResource CellLabelNumeric}" />
+
+                                                        <!-- A finished lecture reads as
+                                                             finished down the column, not
+                                                             only by the trailing marker. -->
+                                                        <Label Grid.Column="1" Text="{Binding Title}"
+                                                               Style="{StaticResource CellLabel}"
+                                                               TextColor="{Binding IsCompleted, Converter={StaticResource CompletedInk}}" />
+
+                                                        <Label Grid.Column="2" Text="{Binding DurationLabel}"
+                                                               Style="{StaticResource CellLabelNumeric}" />
+
+                                                        <!-- PDF only. The list serializer
+                                                             does not carry the exercise, so
+                                                             a تمرين chip here would need one
+                                                             fetch per row. -->
+                                                        <Border Grid.Column="3" Style="{StaticResource Chip}"
+                                                                HorizontalOptions="Start"
+                                                                IsVisible="{Binding HasAttachment}">
+                                                            <Label Text="PDF" Style="{StaticResource ChipLabel}"
+                                                                   FlowDirection="LeftToRight" />
+                                                        </Border>
+
+                                                        <Label Grid.Column="4" Text="{Binding StatusLabel}"
+                                                               Style="{StaticResource PillLabel}"
+                                                               HorizontalTextAlignment="Center"
+                                                               TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
+
+                                                        <BoxView Grid.ColumnSpan="5" Style="{StaticResource RowRule}" Margin="-16,0" />
+
+                                                        <Grid.GestureRecognizers>
+                                                            <TapGestureRecognizer
+                                                                Command="{Binding Source={x:Reference Root}, Path=BindingContext.OpenLessonCommand}"
+                                                                CommandParameter="{Binding .}" />
+                                                        </Grid.GestureRecognizers>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </BindableLayout.ItemTemplate>
+                                        </VerticalStackLayout>
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+
+                        <!-- ── States ────────────────────────────────────── -->
+                        <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                             IsVisible="{Binding Course.IsLoading}">
+                            <Border Style="{StaticResource SkeletonLine}" WidthRequest="360" />
+                            <Border Style="{StaticResource SkeletonLine}" WidthRequest="300" />
+                            <Border Style="{StaticResource SkeletonLine}" WidthRequest="330" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                             IsVisible="{Binding Course.IsEmpty}">
+                            <Label Text="لم تُضف محاضرات إلى هذا الكورس بعد."
+                                   Style="{StaticResource CellLabelSecondary}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                             IsVisible="{Binding Course.HasError}">
+                            <Label Text="{Binding Course.ErrorMessage}"
+                                   Style="{StaticResource CellLabelSecondary}"
+                                   HorizontalTextAlignment="Center" />
+                            <Button Text="إعادة المحاولة" Style="{StaticResource SecondaryButton}"
+                                    HorizontalOptions="Center"
+                                    Command="{Binding LoadCommand}" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
         </VerticalStackLayout>
     </ScrollView>
 </ContentView>
