@@ -351,6 +351,20 @@ public partial class App : Application
     {
         var shell = _services.GetRequiredService<ShellPage>();
 
+        // No back arrow in the title bar.
+        //
+        // NavigationPage puts one there for any page pushed onto it, and the
+        // only thing under the shell is the login form — so the arrow at the
+        // top of the window popped a signed-in student back to the sign-in
+        // screen, and took the render thread down with it on the way
+        // (COMException 0x88990011, D2DERR_BAD_NUMBER, out of OnDraw).
+        //
+        // There is no route back from the shell by design: the way out of a
+        // session is تسجيل الخروج, which clears the tokens. An arrow that
+        // returns to a login form while the session is still live is not a
+        // shortcut for that, it is a way to a screen with no way forward.
+        NavigationPage.SetHasBackButton(shell, false);
+
         shell.SignedOut += async (_, _) =>
         {
             if (Current?.Windows.FirstOrDefault()?.Page is NavigationPage back)

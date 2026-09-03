@@ -157,37 +157,24 @@ def absolute_start(d):
     return f"M{x} {y}" + (" " + tail if tail else "")
 
 
-# Pins every icon to the full 24x24 grid.
+# NOT padded to the 24x24 grid.
 #
-# A Path with Aspect="Uniform" scales the geometry's OWN bounding box to fill
-# its slot, and Lucide icons do not fill the grid equally - a bell is 13 units
-# tall, a graduation cap is 19. Rendered straight, each was blown up by a
-# different factor: 138% between the largest and smallest in one row of tiles,
-# and the stroke scales with it, so weights drifted from 1.46 to 2.02 against a
-# style asking for 1.75. The shared grid is what makes a set look like a set,
-# and self-scaling threw it away.
+# Lucide icons do not fill the grid equally, so a Path with Aspect="Uniform"
+# scales each one's own bounding box to its slot and the set renders at
+# inconsistent sizes and stroke weights - a 138% spread across one row of tiles.
 #
-# Two empty figures at opposite corners fix the bounds at 0,0-24,24 for every
-# icon, so they all take the same scale factor. A figure with no segments draws
-# nothing.
+# The obvious fix is to pad every icon out to the full grid, and it cannot be
+# done here. These are STROKED paths: any geometry added to pad them is drawn,
+# so the only invisible padding is a figure with no segments - and Direct2D
+# will not combine one of those into a clip. It threw
+# ArgumentException("the figure was already begun") when the padding was two
+# bare moves, and COMException 0x88990011 out of CanvasGeometry.CombineWith
+# when they were closed. The second took the app down on the back button, whose
+# icon sits inside a bordered container that already has a clip for the icon's
+# own to combine with.
 #
-# Each one is CLOSED. Two bare moves in a row are two BeginFigure calls with no
-# EndFigure between them, and Win2D throws ArgumentException on the second -
-# "the figure was already begun" - which took the app down on every screen that
-# drew an icon.
-#
-# It goes LAST: leading with it would leave a following relative command
-# measured from 24,24 rather than from the origin.
-GRID_ANCHOR = "M 0 0 Z M 24 24 Z"
-
-
-ARGC = {"M":2,"L":2,"H":1,"V":1,"C":6,"S":4,"Q":4,"T":2,"A":7,"Z":0}
-NUM = re.compile(r"[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?")
-
-
-def _fmt(v):
-    s = f"{v:.4f}".rstrip("0").rstrip(".")
-    return "0" if s in ("", "-0") else s
+# Consistent sizing has to come from the size given to each Path, which is a
+# decision for the usage sites, not for the geometry.
 
 
 def canonical(d):
@@ -292,7 +279,7 @@ def convert(svg):
 
     body = " ".join(p.strip().replace("\n", " ") for p in parts)
 
-    return f"{canonical(body)} {GRID_ANCHOR}" if body else body
+    return canonical(body) if body else body
 
 
 def main():
