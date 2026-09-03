@@ -83,7 +83,7 @@
 
                                                 <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                                                     <Label Text="{Binding SessionName}"
-                                                           Style="{StaticResource CellLabel}" FontAttributes="Bold" />
+                                                           Style="{StaticResource CellLabelStrong}" />
                                                     <Label Text="{Binding Description}"
                                                            Style="{StaticResource MutedLabel}" />
                                                 </VerticalStackLayout>

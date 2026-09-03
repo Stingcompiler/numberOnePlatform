@@ -33,7 +33,7 @@
                                 BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
                             <Label Text="١" TextColor="#FFFFFF"
                                    FontSize="{StaticResource FontHeading}"
-                                   FontAttributes="Bold"
+                                   FontFamily="{StaticResource FontUiBold}"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
                         </Border>
                         <Label Text="{x:Static vm:UiText.BrandShortName}"
@@ -193,7 +193,7 @@
                         <Border WidthRequest="40" HeightRequest="40" Padding="0"
                                 StrokeThickness="0" StrokeShape="RoundRectangle 20"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">
-                            <Label Text="!" FontAttributes="Bold"
+                            <Label Text="!" FontFamily="{StaticResource FontUiBold}"
                                    FontSize="{StaticResource FontHeading}"
                                    TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}"
                                    HorizontalOptions="Center" VerticalOptions="Center" />

@@ -36,7 +36,7 @@
                     <Label Grid.Column="3" Text="{Binding BalanceLabel}"
                            Style="{StaticResource CellLabel}"
                            IsVisible="{Binding HasBalance}"
-                           FontAttributes="Bold"
+                           FontFamily="{StaticResource FontUiMedium}"
                            TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
 
                     <Border Grid.Column="4" Style="{StaticResource IconButtonBare}">
@@ -108,7 +108,7 @@
                              Fill="{Binding IsLiveNow, Converter={StaticResource LiveDot}}" />
 
                     <Label Grid.Column="1" Text="{Binding BannerTitle}"
-                           Style="{StaticResource CellLabel}" FontAttributes="Bold" />
+                           Style="{StaticResource CellLabelStrong}" />
 
                     <Label Grid.Column="2" Text="{Binding BannerMeta}"
                            Style="{StaticResource CellLabelSecondary}" />
@@ -234,7 +234,7 @@
                                     <VerticalStackLayout Spacing="8">
                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                             <Label Grid.Column="0" Text="{Binding Course.Name}"
-                                                   Style="{StaticResource CellLabel}" FontAttributes="Bold" />
+                                                   Style="{StaticResource CellLabelStrong}" />
                                             <Label Grid.Column="1" Text="{Binding TeacherName}"
                                                    Style="{StaticResource MutedLabel}" VerticalOptions="End" />
                                             <Label Grid.Column="2" Text="{Binding PercentLabel}"
@@ -304,7 +304,7 @@
 
                                             <VerticalStackLayout Grid.Column="1" Spacing="2">
                                                 <Label Text="{Binding Title}" Style="{StaticResource CellLabel}"
-                                                       FontAttributes="{Binding IsRead, Converter={StaticResource UnreadWeight}}" />
+                                                       FontFamily="{Binding IsRead, Converter={StaticResource UnreadWeight}}" />
                                                 <Label Text="{Binding Message}" Style="{StaticResource CopyLabel}" />
                                             </VerticalStackLayout>
 

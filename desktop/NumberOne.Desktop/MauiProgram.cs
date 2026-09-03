@@ -38,12 +38,27 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
             {
-                // PLACEHOLDER. The design calls for Cairo (UI) and Tajawal
-                // (running copy) at 400/500/700, bundled rather than fetched at
-                // runtime - the app has to work on a lab PC behind a filter.
-                // Those files are not in the repo yet; registering a font that
-                // is not present fails at startup, so the template faces stay
-                // until the real ones land with the typography work.
+                // Cairo for UI, Tajawal for running copy, at 400 / 500 / 700 —
+                // the design's ramp. Bundled, never fetched at runtime: the app
+                // has to work on a lab PC behind a filter, and a webfont that
+                // fails to load would fall back to a Latin face that cannot
+                // shape Arabic at all.
+                //
+                // Each weight is its own alias. MAUI resolves a font by family
+                // name and can only ask for bold on top of it, so 500 is
+                // unreachable through FontAttributes and has to be registered
+                // as a family in its own right.
+                fonts.AddFont("Cairo-Regular.ttf", "Cairo");
+                fonts.AddFont("CairoMedium-Regular.ttf", "CairoMedium");
+                fonts.AddFont("Cairo-Bold.ttf", "CairoBold");
+
+                fonts.AddFont("Tajawal-Regular.ttf", "Tajawal");
+                fonts.AddFont("Tajawal-Medium.ttf", "TajawalMedium");
+                fonts.AddFont("Tajawal-Bold.ttf", "TajawalBold");
+
+                // Kept registered: the MAUI template's own styles in
+                // Styles.xaml still name them, and dropping them here would
+                // break every control that has not been restyled.
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });

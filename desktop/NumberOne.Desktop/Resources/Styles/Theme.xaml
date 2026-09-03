@@ -16,7 +16,6 @@
     <Style x:Key="TitleLabel" TargetType="Label">
         <Setter Property="FontSize" Value="{StaticResource FontTitle}" />
         <Setter Property="FontFamily" Value="{StaticResource FontUiBold}" />
-        <Setter Property="FontAttributes" Value="Bold" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
         <Setter Property="LineHeight" Value="1.3" />
     </Style>
@@ -24,7 +23,6 @@
     <Style x:Key="HeadingLabel" TargetType="Label">
         <Setter Property="FontSize" Value="{StaticResource FontHeading}" />
         <Setter Property="FontFamily" Value="{StaticResource FontUiBold}" />
-        <Setter Property="FontAttributes" Value="Bold" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
         <Setter Property="LineHeight" Value="1.3" />
     </Style>

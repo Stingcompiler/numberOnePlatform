@@ -74,16 +74,35 @@ public sealed class LiveInkConverter : IValueConverter
 }
 
 /// <summary>
-/// Bold while unread. Takes IsRead, so the sense is inverted here rather than
-/// adding a second property to the DTO for one binding.
+/// The face an unread notification's title takes: medium while unread, regular
+/// once read. Takes IsRead, so the sense is inverted here rather than adding a
+/// second property to the DTO for one binding.
+///
+/// Returns a family name, not FontAttributes. The design's emphasis here is
+/// 500, and FontAttributes can only ask for bold — which MAUI would synthesise
+/// over the 400 outline, landing heavier than the section heading above it.
 /// </summary>
 public sealed class UnreadWeightConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is true ? FontAttributes.None : FontAttributes.Bold;
+        => Fonts.Resolve(value is true ? "FontUi" : "FontUiMedium");
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
+}
+
+/// <summary>
+/// Font family names, resolved from Tokens.xaml rather than spelled out.
+///
+/// The aliases live in one place so swapping a face is one edit; a converter
+/// hard-coding "Cairo" would quietly survive that edit and diverge.
+/// </summary>
+internal static class Fonts
+{
+    public static string Resolve(string token)
+        => Application.Current?.Resources.TryGetValue(token, out var value) == true
+            ? (string)value
+            : "";
 }
 
 /// <summary>

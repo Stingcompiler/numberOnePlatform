@@ -36,14 +36,14 @@
                     <Border Grid.Column="0" WidthRequest="28" HeightRequest="28" Padding="0"
                             StrokeThickness="0" StrokeShape="RoundRectangle 6"
                             BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
-                        <Label Text="١" TextColor="#FFFFFF" FontAttributes="Bold"
+                        <Label Text="١" TextColor="#FFFFFF" FontFamily="{StaticResource FontUiBold}"
                                FontSize="{StaticResource FontHeading}"
                                HorizontalOptions="Center" VerticalOptions="Center" />
                     </Border>
                     <VerticalStackLayout Grid.Column="1" x:Name="BrandText"
                                          Spacing="1" VerticalOptions="Center">
                         <Label Text="{x:Static vm:UiText.BrandShortName}"
-                               FontSize="{StaticResource FontBody}" FontAttributes="Bold"
+                               FontSize="{StaticResource FontBody}"
                                FontFamily="{StaticResource FontUiBold}"
                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                         <Label Text="منصة الطالب" Style="{StaticResource MutedLabel}" />
@@ -239,7 +239,7 @@
                                 StrokeThickness="0" StrokeShape="RoundRectangle 13"
                                 VerticalOptions="Center"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryTintLight}, Dark={StaticResource SecondaryTintDark}}">
-                            <Label x:Name="SidebarInitial" FontAttributes="Bold"
+                            <Label x:Name="SidebarInitial" FontFamily="{StaticResource FontUiBold}"
                                    FontSize="{StaticResource FontLabel}"
                                    HorizontalOptions="Center" VerticalOptions="Center"
                                    TextColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />

@@ -86,7 +86,7 @@
                         <Label Text="{Binding CurrentQuestion.Text}"
                                Style="{StaticResource CopyLabel}"
                                FontSize="{StaticResource FontHeading}"
-                               FontAttributes="Bold"
+                               FontFamily="{StaticResource FontCopyMedium}"
                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
 
                         <VerticalStackLayout x:Name="AnswerHost" Spacing="8" />

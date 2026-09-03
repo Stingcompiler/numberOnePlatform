@@ -328,7 +328,11 @@ public partial class ShellPage : ContentPage
         var ink = current ? Themed("Text") : Themed("TextSecondary");
         icon.Stroke = ink;
         label.TextColor = ink;
-        label.FontAttributes = current ? FontAttributes.Bold : FontAttributes.None;
+
+        // The design's active row is 500, not bold. FontAttributes could only
+        // ask for bold, which MAUI would synthesise over the 400 outline — a
+        // heavier, blurrier stroke than the medium face this swaps in.
+        label.FontFamily = Fonts.Resolve(current ? "FontUiMedium" : "FontUi");
     }
 
     /// <summary>

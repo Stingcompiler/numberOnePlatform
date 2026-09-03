@@ -50,7 +50,7 @@
                                       HeightRequest="48">
 
                                     <Label Grid.Column="0" Text="{Binding Name}"
-                                           Style="{StaticResource CellLabel}" FontAttributes="Bold" />
+                                           Style="{StaticResource CellLabelStrong}" />
 
                                     <Label Grid.Column="1" Text="{Binding TeacherName}"
                                            Style="{StaticResource CellLabelSecondary}" />

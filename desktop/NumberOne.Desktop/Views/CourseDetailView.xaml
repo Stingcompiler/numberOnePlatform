@@ -106,7 +106,7 @@
                                                          StrokeThickness="2"
                                                          Data="{Binding IsExpanded, Converter={StaticResource ExpandChevron}}" />
                                             <Label Grid.Column="1" Text="{Binding Name}"
-                                                   Style="{StaticResource CellLabel}" FontAttributes="Bold" />
+                                                   Style="{StaticResource CellLabelStrong}" />
                                             <Label Grid.Column="2" Text="{Binding MetaLabel}"
                                                    Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
 

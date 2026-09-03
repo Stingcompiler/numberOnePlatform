@@ -126,8 +126,7 @@
                             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" Spacing="2">
                                     <Label Text="النوع" Style="{StaticResource MutedLabel}" />
-                                    <Label Text="{Binding DeviceType}" Style="{StaticResource CellLabel}"
-                                           FontAttributes="Bold"
+                                    <Label Text="{Binding DeviceType}" Style="{StaticResource CellLabelStrong}"
                                            FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
                                 </VerticalStackLayout>
 
@@ -157,8 +156,7 @@
 
                                 <VerticalStackLayout Grid.Column="2" Spacing="2">
                                     <Label Text="تاريخ الربط" Style="{StaticResource MutedLabel}" />
-                                    <Label Text="{Binding DeviceBoundAt}" Style="{StaticResource CellLabel}"
-                                           FontAttributes="Bold"
+                                    <Label Text="{Binding DeviceBoundAt}" Style="{StaticResource CellLabelStrong}"
                                            FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
                                 </VerticalStackLayout>
                             </Grid>
@@ -190,9 +188,9 @@
                     <Border Style="{StaticResource TableCard}">
                         <Grid HeightRequest="40" Padding="16,0" ColumnDefinitions="*,Auto">
                             <Label Grid.Column="0" Text="المتبقي"
-                                   Style="{StaticResource CellLabel}" FontAttributes="Bold" />
+                                   Style="{StaticResource CellLabelStrong}" />
                             <Label Grid.Column="1" Text="{Binding BalanceLabel}"
-                                   Style="{StaticResource CellLabel}" FontAttributes="Bold"
+                                   Style="{StaticResource CellLabelStrong}"
                                    TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
                         </Grid>
                     </Border>
