@@ -159,7 +159,7 @@ public class ScreenViewModelTests
         await vm.LoadAsync();
 
         string? toast = null;
-        vm.Toast += (_, text) => toast = text;
+        vm.Toasted += (_, message) => toast = message.Text;
         vm.BrowserLauncher = _ => throw new UnreachableException();
 
         var ended = vm.Rooms.Value![0].Sessions.Single(s => s.Status == LiveStatuses.Ended);
@@ -178,7 +178,7 @@ public class ScreenViewModelTests
         await vm.LoadAsync();
 
         string? toast = null;
-        vm.Toast += (_, text) => toast = text;
+        vm.Toasted += (_, message) => toast = message.Text;
 
         await vm.JoinCommand.ExecuteAsync(vm.Rooms.Value![0].Sessions[0]);
 
@@ -192,7 +192,7 @@ public class ScreenViewModelTests
         await vm.LoadAsync();
 
         string? toast = null;
-        vm.Toast += (_, text) => toast = text;
+        vm.Toasted += (_, message) => toast = message.Text;
         vm.BrowserLauncher = _ => Task.FromResult(false);
 
         var live = vm.Rooms.Value![0].Sessions.Single(s => s.Status == LiveStatuses.Live);
@@ -223,7 +223,7 @@ public class ScreenViewModelTests
         // student receives only on first payment. The server's wording is
         // accurate but leaves them with nothing to do about it.
         var api = ForbiddenApi("ليس لديك صلاحية الوصول لهذه المحاضرة.");
-        var vm = new LessonViewModel(api, SignedInAuth(), new Uri("https://numberoneschools.com/api/"), 1);
+        var vm = new LessonViewModel(api, SignedInAuth(), new Uri("https://numberoneschools.com/api/"), 1, 1);
 
         await vm.LoadAsync();
 
@@ -294,7 +294,7 @@ public class ScreenViewModelTests
 
         var vm = new LessonViewModel(
             new StudentApi(client), SignedInAuth(),
-            new Uri("https://numberoneschools.com/api/"), 1);
+            new Uri("https://numberoneschools.com/api/"), 1, 1);
 
         await vm.LoadAsync();
         return vm;
@@ -326,10 +326,17 @@ public class ScreenViewModelTests
         string? copied = null;
         vm.ClipboardWriter = text => { copied = text; return Task.CompletedTask; };
 
+        ToastMessage? toast = null;
+        vm.Toasted += (_, message) => toast = message;
+
         await vm.CopyDeviceIdCommand.ExecuteAsync(null);
 
         Assert.Equal("hw-win-4f2a91c7d0e51b6a", copied);
-        Assert.True(vm.HasToast);
+
+        // The confirmation is the chrome's to render — this screen has nowhere
+        // of its own to put one.
+        Assert.NotNull(toast);
+        Assert.Equal(ToastKind.Success, toast!.Kind);
     }
 
     // ── Plumbing ─────────────────────────────────────────────────────────────

@@ -62,6 +62,12 @@ public sealed partial class ProfileViewModel : ObservableObject
     /// </summary>
     public string Balance => Profile?.Balance ?? "0.00";
 
+    /// <summary>
+    /// The figure with its unit. Sudanese pounds, not the design mock's د.ع —
+    /// finance/models.py names the field balance_sdg.
+    /// </summary>
+    public string BalanceLabel => UiText.ToArabicIndicDigits(Balance) + " ج.س";
+
     // ── الجهاز المرتبط ───────────────────────────────────────────────────────
 
     public string DeviceType => Profile?.DeviceType ?? "";
@@ -73,11 +79,8 @@ public sealed partial class ProfileViewModel : ObservableObject
     public const string UnbindExplanation =
         "لفك ارتباط الجهاز يرجى التواصل مع إدارة المدرسة.";
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasToast))]
-    private string? _toastMessage;
-
-    public bool HasToast => !string.IsNullOrWhiteSpace(ToastMessage);
+    /// <summary>The chrome renders it; this screen has nowhere of its own.</summary>
+    public event EventHandler<ToastMessage>? Toasted;
 
     /// <summary>Set by the host to the platform clipboard.</summary>
     public Func<string, Task> ClipboardWriter { get; set; } = _ => Task.CompletedTask;
@@ -93,6 +96,6 @@ public sealed partial class ProfileViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(DeviceId)) return;
 
         await ClipboardWriter(DeviceId).ConfigureAwait(true);
-        ToastMessage = UiText.DeviceIdCopied;
+        Toasted?.Invoke(this, new ToastMessage(UiText.DeviceIdCopied));
     }
 }

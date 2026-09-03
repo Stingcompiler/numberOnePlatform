@@ -39,6 +39,50 @@ public sealed class ExamSummary
     [JsonIgnore]
     public ExamAttemptSummary? BestAttempt =>
         Attempts.OrderByDescending(a => a.Percentage).FirstOrDefault();
+
+    /// <summary>"٣٠ دقيقة" for the المدة column.</summary>
+    [JsonIgnore]
+    public string DurationLabel =>
+        ViewModels.UiText.Count(DurationMinutes, "دقيقة", "دقيقتان", "دقائق");
+
+    /// <summary>"١٢ سؤالاً" — the row's second line, under the title.</summary>
+    [JsonIgnore]
+    public string QuestionCountLabel =>
+        ViewModels.UiText.Count(QuestionCount, "سؤال", "سؤالان", "أسئلة", "واحد");
+
+    /// <summary>"٥٠ درجة" — the mark the exam is out of.</summary>
+    [JsonIgnore]
+    public string TotalMarksLabel =>
+        ViewModels.UiText.ToArabicIndicDigits(Whole(TotalMarks)) + " درجة";
+
+    /// <summary>
+    /// The best attempt as "٤٢ / ٥٠". Empty where nothing has been attempted,
+    /// which is what the available tab shows.
+    /// </summary>
+    [JsonIgnore]
+    public string BestScoreLabel => BestAttempt is { } best
+        ? $"{ViewModels.UiText.ToArabicIndicDigits(Whole(best.Score))} / " +
+          $"{ViewModels.UiText.ToArabicIndicDigits(Whole(TotalMarks))}"
+        : "";
+
+    [JsonIgnore] public bool BestAttemptPassed => BestAttempt?.IsPassed == true;
+
+    [JsonIgnore]
+    public string BestVerdictLabel => BestAttempt is null ? "" : BestAttemptPassed ? "ناجح" : "راسب";
+
+    [JsonIgnore]
+    public string BestAttemptDateLabel =>
+        BestAttempt?.SubmittedAt is { } at ? ViewModels.UiText.FormatDate(at) : "";
+
+    /// <summary>
+    /// "ابدأ" the first time, "إعادة المحاولة" after. There is no server-side
+    /// attempt limit, so a completed exam can always be sat again.
+    /// </summary>
+    [JsonIgnore]
+    public string StartLabel => HasBeenAttempted ? "إعادة المحاولة" : "ابدأ";
+
+    private static string Whole(double value) =>
+        value == Math.Floor(value) ? ((int)value).ToString() : value.ToString("0.##");
 }
 
 public sealed class ExamAttemptSummary

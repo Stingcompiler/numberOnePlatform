@@ -13,7 +13,7 @@ namespace NumberOne.Core.ViewModels;
 /// dashboard: a progress bar with no progress is worse than a moment's wait,
 /// and the two are meaningless apart.
 /// </summary>
-public sealed partial class CoursesViewModel : ObservableObject
+public sealed partial class CoursesViewModel : ObservableObject, ISearchable
 {
     private readonly StudentApi _api;
     private readonly AuthService _auth;
@@ -31,8 +31,64 @@ public sealed partial class CoursesViewModel : ObservableObject
     /// <summary>Raised when a row is opened. The host navigates to the detail.</summary>
     public event EventHandler<int>? CourseOpened;
 
+    /// <summary>The label the top bar prints beside the title.</summary>
+    public event EventHandler<string>? CountChanged;
+
+    // ── Search ───────────────────────────────────────────────────────────────
+
+    public string SearchPlaceholder => "ابحث في الكورسات";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Visible), nameof(HasRows), nameof(IsFilteredEmpty))]
+    private string _query = "";
+
+    public void ApplySearch(string query) => Query = query;
+
+    /// <summary>Rows after the search. Matches the course name or the teacher.</summary>
+    public IReadOnlyList<CourseRow> Visible
+    {
+        get
+        {
+            var rows = (IEnumerable<CourseRow>)(Courses.Value ?? new List<CourseRow>());
+
+            if (!string.IsNullOrWhiteSpace(Query))
+            {
+                var needle = Query.Trim();
+                rows = rows.Where(r =>
+                    r.Name.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+                    r.TeacherName.Contains(needle, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return rows.ToList();
+        }
+    }
+
+    public bool HasRows => Visible.Count > 0;
+
+    /// <summary>
+    /// The student has courses, but none match what they typed. A different
+    /// message from "you have no courses", and a different remedy: clear the
+    /// search rather than call the school.
+    /// </summary>
+    public bool IsFilteredEmpty => Courses.HasData && Visible.Count == 0;
+
     [RelayCommand]
-    public Task LoadAsync(CancellationToken ct = default) => Courses.LoadAsync(ct);
+    private void ClearSearch() => Query = "";
+
+    [RelayCommand]
+    public async Task LoadAsync(CancellationToken ct = default)
+    {
+        await Courses.LoadAsync(ct).ConfigureAwait(true);
+
+        OnPropertyChanged(nameof(Visible));
+        OnPropertyChanged(nameof(HasRows));
+        OnPropertyChanged(nameof(IsFilteredEmpty));
+
+        CountChanged?.Invoke(this, CountLabel());
+    }
+
+    /// <summary>"٦ كورسات" — plural forms, because Arabic has four of them.</summary>
+    private string CountLabel() => UiText.Count(Courses.Value?.Count ?? 0, "كورس", "كورسان", "كورسات", "واحد");
 
     [RelayCommand]
     private void OpenCourse(CourseRow? row)
@@ -91,10 +147,13 @@ public sealed record CourseRow
     /// <summary>"٧٥٪" — content digits are Arabic-Indic.</summary>
     public string PercentLabel => UiText.ToArabicIndicDigits(Percent.ToString()) + "٪";
 
+    /// <summary>The fill fraction the progress bar binds to.</summary>
+    public double Fraction => Percent / 100.0;
+
     /// <summary>"٣ وحدات · ١٢ محاضرة" for the المحتوى column.</summary>
     public string ContentLabel =>
-        $"{UiText.ToArabicIndicDigits(UnitCount.ToString())} وحدات · " +
-        $"{UiText.ToArabicIndicDigits(LessonCount.ToString())} محاضرة";
+        $"{UiText.Count(UnitCount, "وحدة", "وحدتان", "وحدات")} · " +
+        $"{UiText.Count(LessonCount, "محاضرة", "محاضرتان", "محاضرات")}";
 
     public static CourseRow From(Course course, IReadOnlySet<int> completedLessonIds)
     {

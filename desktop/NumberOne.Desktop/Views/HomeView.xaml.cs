@@ -12,7 +12,24 @@ public partial class HomeView : ContentView
 
         _vm = vm;
         BindingContext = vm;
+
+        // "انضم الآن" on the live banner opens the session outside the app, the
+        // same way the live screen does. There is no embedded player anywhere.
+        vm.BrowserLauncher = async url =>
+        {
+            try
+            {
+                await Launcher.Default.OpenAsync(url);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        };
     }
+
+    public HomeViewModel ViewModel => _vm;
 
     /// <summary>
     /// Starts every section loading. Deliberately not awaited by the caller:

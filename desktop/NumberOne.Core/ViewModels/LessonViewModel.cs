@@ -15,18 +15,60 @@ public sealed partial class LessonViewModel : ObservableObject
     private readonly AuthService _auth;
     private readonly Uri _apiBase;
     private readonly int _lessonId;
+    private readonly int _courseId;
 
-    public LessonViewModel(StudentApi api, AuthService auth, Uri apiBase, int lessonId)
+    public LessonViewModel(StudentApi api, AuthService auth, Uri apiBase, int lessonId, int courseId)
     {
         _api = api;
         _auth = auth;
         _apiBase = apiBase;
         _lessonId = lessonId;
+        _courseId = courseId;
 
         Lesson = new SectionState<Lesson>(LoadLessonAsync, l => string.IsNullOrWhiteSpace(l.Title));
+
+        // Its own section: the playlist is a convenience, and a course fetch
+        // that fails must not take the video down with it.
+        Playlist = new SectionState<UnitPlaylist>(LoadPlaylistAsync, p => p.Lessons.Count == 0);
     }
 
     public SectionState<Lesson> Lesson { get; }
+
+    /// <summary>
+    /// The sibling lectures in this lesson's unit — the design's محتويات الوحدة
+    /// rail. Built from the course tree, because my-lessons/{id}/ returns the
+    /// lesson alone and knows nothing of its neighbours.
+    /// </summary>
+    public SectionState<UnitPlaylist> Playlist { get; }
+
+    /// <summary>Raised when another lecture is picked out of the rail.</summary>
+    public event EventHandler<int>? LessonPicked;
+
+    [RelayCommand]
+    private void OpenLesson(PlaylistRow? row)
+    {
+        if (row is not null && row.Id != _lessonId) LessonPicked?.Invoke(this, row.Id);
+    }
+
+    /// <summary>The lesson's own line under the title: unit, duration, course.</summary>
+    public string LessonMeta
+    {
+        get
+        {
+            var parts = new List<string>();
+
+            if (Playlist.Value is { } playlist)
+            {
+                if (!string.IsNullOrWhiteSpace(playlist.CourseName)) parts.Add(playlist.CourseName);
+                if (!string.IsNullOrWhiteSpace(playlist.UnitName)) parts.Add(playlist.UnitName);
+            }
+
+            if (Lesson.Value?.DurationMinutes is > 0 and int minutes)
+                parts.Add(UiText.Count(minutes, "دقيقة", "دقيقتان", "دقائق"));
+
+            return string.Join(" · ", parts);
+        }
+    }
 
     /// <summary>
     /// Shown when the server refuses the lecture. Names the cause, because
@@ -192,6 +234,44 @@ public sealed partial class LessonViewModel : ObservableObject
 
     public bool HasExercise => Exercise is { Questions.Count: > 0 };
 
+    /// <summary>"٤ أسئلة" beside the exercise heading.</summary>
+    public string ExerciseCountLabel => Exercise is null
+        ? ""
+        : UiText.Count(Exercise.Questions.Count, "سؤال", "سؤالان", "أسئلة", "واحد");
+
+    // ── Attachment ───────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Opens the lecture's PDF in the system handler. Supplied by the host so
+    /// this view model stays free of platform types.
+    /// </summary>
+    public Func<string, Task<bool>> BrowserLauncher { get; set; } = _ => Task.FromResult(false);
+
+    public event EventHandler<ToastMessage>? Toasted;
+
+    /// <summary>
+    /// The attachment opens outside the app rather than in the WebView. The
+    /// player's window already carries capture protection; a second WebView
+    /// showing the same material would not, and would quietly become the way
+    /// around it.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenAttachmentAsync()
+    {
+        var url = Lesson.Value?.PdfFile;
+
+        if (string.IsNullOrWhiteSpace(url) ||
+            !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            uri.Scheme is not ("http" or "https"))
+        {
+            Toasted?.Invoke(this, new ToastMessage("الملف المرفق غير متاح — راجع الإدارة", ToastKind.Error));
+            return;
+        }
+
+        if (!await BrowserLauncher(url!).ConfigureAwait(true))
+            Toasted?.Invoke(this, new ToastMessage("تعذّر فتح الملف على هذا الجهاز", ToastKind.Error));
+    }
+
     /// <summary>question id → chosen choice id.</summary>
     private readonly Dictionary<int, int> _answers = new();
 
@@ -262,10 +342,14 @@ public sealed partial class LessonViewModel : ObservableObject
     [RelayCommand]
     public async Task LoadAsync(CancellationToken ct = default)
     {
+        // The video first, the rail after: the student came here to watch, and
+        // the playlist arriving a moment later costs them nothing.
         await Lesson.LoadAsync(ct).ConfigureAwait(true);
 
         if (VideoId is not null)
             _playerPageAvailable = await _api.PlayerPageAvailableAsync(ct).ConfigureAwait(true);
+
+        _ = LoadPlaylistSectionAsync(ct);
 
         OnPropertyChanged(nameof(IsServerOutdatedForPlayback));
         OnPropertyChanged(nameof(EmbedUrl));
@@ -273,6 +357,8 @@ public sealed partial class LessonViewModel : ObservableObject
         OnPropertyChanged(nameof(HasVideo));
         OnPropertyChanged(nameof(Exercise));
         OnPropertyChanged(nameof(HasExercise));
+        OnPropertyChanged(nameof(ExerciseCountLabel));
+        OnPropertyChanged(nameof(LessonMeta));
 
         MarkCompleteCommand.NotifyCanExecuteChanged();
         SubmitExerciseCommand.NotifyCanExecuteChanged();
@@ -310,6 +396,96 @@ public sealed partial class LessonViewModel : ObservableObject
 
         return lesson;
     }
+
+    private async Task LoadPlaylistSectionAsync(CancellationToken ct)
+    {
+        await Playlist.LoadAsync(ct).ConfigureAwait(true);
+
+        OnPropertyChanged(nameof(LessonMeta));
+    }
+
+    private async Task<UnitPlaylist> LoadPlaylistAsync(CancellationToken ct)
+    {
+        var courseTask = _api.GetCourseAsync(_courseId, _auth.CurrentUser?.StudentProfile, ct);
+        var progressTask = _api.GetMyProgressAsync(ct);
+
+        await Task.WhenAll(courseTask, progressTask).ConfigureAwait(true);
+
+        var course = courseTask.Result;
+        if (course is null) return UnitPlaylist.Empty;
+
+        var completed = progressTask.Result
+            .Where(p => p.IsCompleted)
+            .Select(p => p.Lesson)
+            .ToHashSet();
+
+        var unit = course.Units.FirstOrDefault(u => u.Lessons.Any(l => l.Id == _lessonId));
+        if (unit is null) return UnitPlaylist.Empty;
+
+        var rows = unit.Lessons
+            .OrderBy(l => l.DisplayOrder)
+            .Select((l, index) => new PlaylistRow
+            {
+                Id = l.Id,
+                Index = index + 1,
+                Title = l.Title,
+                DurationMinutes = l.DurationMinutes,
+                IsCompleted = completed.Contains(l.Id),
+                IsCurrent = l.Id == _lessonId,
+            })
+            .ToList();
+
+        return new UnitPlaylist
+        {
+            CourseName = course.Name,
+            UnitName = unit.Name,
+            Lessons = rows,
+        };
+    }
+}
+
+/// <summary>The unit rail beside the player.</summary>
+public sealed record UnitPlaylist
+{
+    public required string CourseName { get; init; }
+    public required string UnitName { get; init; }
+    public required IReadOnlyList<PlaylistRow> Lessons { get; init; }
+
+    public static UnitPlaylist Empty { get; } =
+        new() { CourseName = "", UnitName = "", Lessons = Array.Empty<PlaylistRow>() };
+
+    public int CompletedCount => Lessons.Count(l => l.IsCompleted);
+
+    /// <summary>"٣ من ٥" in the rail's header.</summary>
+    public string DoneLabel =>
+        $"{UiText.ToArabicIndicDigits(CompletedCount.ToString())} من " +
+        $"{UiText.ToArabicIndicDigits(Lessons.Count.ToString())}";
+
+    public int Percent => Lessons.Count == 0
+        ? 0
+        : (int)Math.Round(CompletedCount * 100.0 / Lessons.Count);
+
+    public double Fraction => Percent / 100.0;
+
+    public string PercentLabel => UiText.ToArabicIndicDigits(Percent.ToString()) + "٪";
+}
+
+public sealed record PlaylistRow
+{
+    public required int Id { get; init; }
+    public required int Index { get; init; }
+    public required string Title { get; init; }
+    public required int? DurationMinutes { get; init; }
+    public required bool IsCompleted { get; init; }
+
+    /// <summary>The lecture being watched. Carries the leading bar and the tint.</summary>
+    public required bool IsCurrent { get; init; }
+
+    public string IndexLabel => UiText.ToArabicIndicDigits(Index.ToString());
+
+    public string DurationLabel => DurationMinutes is > 0
+        ? UiText.Count(DurationMinutes.Value, "دقيقة", "دقيقتان", "دقائق")
+        : "";
 }
 
 public enum ChoiceOutcome

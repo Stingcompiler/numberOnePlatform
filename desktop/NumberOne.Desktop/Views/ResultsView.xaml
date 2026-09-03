@@ -1,120 +1,256 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
              x:Class="NumberOne.Desktop.Views.ResultsView"
+             x:Name="Root"
              x:DataType="vm:ResultsViewModel">
 
     <!--
-        Read-only history. There is deliberately no delete action and no export:
-        a student able to delete their own exam record makes the academic record
-        falsifiable by the very person it grades. The backend has no endpoint for
-        either, and neither should be added.
+        النتائج — a performance summary over a sortable, filterable, paged table.
+
+        The table is READ-ONLY history and must stay that way. A student able to
+        delete their own exam record makes the academic record falsifiable by the
+        very person it grades: a failed attempt could vanish before a parent saw
+        it. There is no delete and no export here, and no endpoint for either.
     -->
+
     <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="16">
+        <VerticalStackLayout Padding="24" Spacing="24">
 
-            <Label Text="النتائج" Style="{StaticResource TitleLabel}" />
+            <!-- ══ ملخّص الأداء ══════════════════════════════════════════ -->
+            <VerticalStackLayout Spacing="12">
 
-            <!-- Performance summary -->
-            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
-                <Border Grid.Column="0" Style="{StaticResource Panel}">
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="المحاولات" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding TotalCount}" Style="{StaticResource TitleLabel}" />
-                    </VerticalStackLayout>
-                </Border>
-                <Border Grid.Column="1" Style="{StaticResource Panel}">
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="ناجح" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding PassedCount}" Style="{StaticResource TitleLabel}"
-                               TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
-                    </VerticalStackLayout>
-                </Border>
-                <Border Grid.Column="2" Style="{StaticResource Panel}">
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="راسب" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding FailedCount}" Style="{StaticResource TitleLabel}"
-                               TextColor="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
-                    </VerticalStackLayout>
-                </Border>
-                <Border Grid.Column="3" Style="{StaticResource Panel}">
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="المعدّل" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding AveragePercent, StringFormat='{0}٪'}" Style="{StaticResource TitleLabel}" />
-                    </VerticalStackLayout>
-                </Border>
-            </Grid>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <Label Grid.Column="0" Text="ملخّص الأداء"
+                           Style="{StaticResource HeadingLabel}" />
+                    <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                </Grid>
 
-            <!-- Filters -->
-            <HorizontalStackLayout Spacing="8">
-                <Button Text="الكل" Command="{Binding FilterAllCommand}" Style="{StaticResource NeutralButtonSmall}" />
-                <Button Text="ناجح" Command="{Binding FilterPassedCommand}" Style="{StaticResource NeutralButtonSmall}" />
-                <Button Text="راسب" Command="{Binding FilterFailedCommand}" Style="{StaticResource NeutralButtonSmall}" />
-                <Border Style="{StaticResource InputShell}" HeightRequest="32" WidthRequest="220">
-                    <Entry Text="{Binding Query}" Placeholder="بحث"
-                           FontSize="{StaticResource FontBody}" VerticalOptions="Center"
-                           BackgroundColor="Transparent" />
-                </Border>
-            </HorizontalStackLayout>
+                <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="16">
 
-            <!-- Header -->
-            <Grid ColumnDefinitions="2*,1.4*,1*,1*,1*" HeightRequest="36">
-                <Label Grid.Column="0" Text="الاختبار" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                <Label Grid.Column="1" Text="الكورس" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                <Label Grid.Column="2" Text="التاريخ" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                <Label Grid.Column="3" Text="الدرجة" Style="{StaticResource MutedLabel}" VerticalOptions="Center"
-                       HorizontalTextAlignment="End" />
-                <Label Grid.Column="4" Text="النتيجة" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-            </Grid>
-            <BoxView HeightRequest="1"
-                     Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
-
-            <Label Text="جارٍ التحميل…" Style="{StaticResource MutedLabel}"
-                   IsVisible="{Binding Results.IsLoading}" />
-            <Label Text="لا توجد نتائج بعد." Style="{StaticResource SecondaryLabel}"
-                   IsVisible="{Binding Results.IsEmpty}" />
-
-            <HorizontalStackLayout Spacing="8" IsVisible="{Binding Results.HasError}">
-                <Label Text="{Binding Results.ErrorMessage}" Style="{StaticResource SecondaryLabel}"
-                       VerticalOptions="Center" />
-                <Button Text="إعادة المحاولة" Command="{Binding LoadCommand}"
-                        Style="{StaticResource NeutralButtonSmall}" />
-            </HorizontalStackLayout>
-
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Visible}">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ResultRow">
-                        <VerticalStackLayout>
-                            <Grid ColumnDefinitions="2*,1.4*,1*,1*,1*" HeightRequest="40">
-                                <!-- The only row action: عرض التفاصيل. There is
-                                     deliberately no delete and no export. -->
-                                <Grid.GestureRecognizers>
-                                    <TapGestureRecognizer
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ResultsViewModel}}, Path=OpenAttemptCommand}"
-                                        CommandParameter="{Binding .}" />
-                                </Grid.GestureRecognizers>
-                                <Label Grid.Column="0" Text="{Binding ExamTitle}"
-                                       Style="{StaticResource BodyLabel}" VerticalOptions="Center" />
-                                <Label Grid.Column="1" Text="{Binding CourseName}"
-                                       Style="{StaticResource SecondaryLabel}" VerticalOptions="Center" />
-                                <Label Grid.Column="2" Text="{Binding DateLabel}"
-                                       Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                                <Label Grid.Column="3" Text="{Binding ScoreLabel}"
-                                       Style="{StaticResource BodyLabel}" VerticalOptions="Center"
-                                       HorizontalTextAlignment="End" />
-                                <Label Grid.Column="4" Text="{Binding VerdictLabel}"
-                                       VerticalOptions="Center"
-                                       FontSize="{StaticResource FontSecondary}"
-                                       TextColor="{Binding IsPassed, Converter={StaticResource VerdictInk}}" />
-                            </Grid>
-                            <BoxView HeightRequest="1"
-                                     Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+                    <Border Grid.Column="0" Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="متوسط الدرجات" Style="{StaticResource StatLabel}" />
+                            <Label Text="{Binding AverageLabel}" Style="{StaticResource StatValue}" />
+                            <!-- The design compares against "الفصل السابق".
+                                 Nothing in the schema models a term, so the card
+                                 states the base the mean is over instead. -->
+                            <Label Text="{Binding ShownLabel}" Style="{StaticResource StatCaption}" />
                         </VerticalStackLayout>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
+                    </Border>
+
+                    <Border Grid.Column="1" Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="محاولات ناجحة" Style="{StaticResource StatLabel}" />
+                            <Label Text="{Binding PassedCount}" Style="{StaticResource StatValue}" />
+                            <Label Text="{Binding PassedCaption}" Style="{StaticResource StatCaption}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="محاولات راسبة" Style="{StaticResource StatLabel}" />
+                            <Label Text="{Binding FailedCount}" Style="{StaticResource StatValue}" />
+                            <Label Text="تتطلب إعادة" Style="{StaticResource StatCaption}"
+                                   IsVisible="{Binding HasFailures}"
+                                   TextColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="3" Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="أعلى درجة" Style="{StaticResource StatLabel}" />
+                            <Label Text="{Binding BestScoreLabel}" Style="{StaticResource StatValue}" />
+                            <Label Text="{Binding BestExamName}" Style="{StaticResource StatCaption}"
+                                   LineBreakMode="TailTruncation" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
             </VerticalStackLayout>
 
+            <!-- ══ سجل الاختبارات ════════════════════════════════════════ -->
+            <VerticalStackLayout Spacing="12">
+
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <Label Grid.Column="0" Text="سجل الاختبارات"
+                           Style="{StaticResource HeadingLabel}" />
+                    <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="Auto,Auto,Auto,*" ColumnSpacing="8">
+                    <Button Grid.Column="0" Text="الكل" Style="{StaticResource TabButton}"
+                            Command="{Binding FilterAllCommand}"
+                            BackgroundColor="{Binding IsAllSelected, Converter={StaticResource SelectedTabTint}}"
+                            BorderColor="{Binding IsAllSelected, Converter={StaticResource SelectedTabBorder}}"
+                            TextColor="{Binding IsAllSelected, Converter={StaticResource SelectedTabInk}}" />
+                    <Button Grid.Column="1" Text="ناجح" Style="{StaticResource TabButton}"
+                            Command="{Binding FilterPassedCommand}"
+                            BackgroundColor="{Binding IsPassedSelected, Converter={StaticResource SelectedTabTint}}"
+                            BorderColor="{Binding IsPassedSelected, Converter={StaticResource SelectedTabBorder}}"
+                            TextColor="{Binding IsPassedSelected, Converter={StaticResource SelectedTabInk}}" />
+                    <Button Grid.Column="2" Text="راسب" Style="{StaticResource TabButton}"
+                            Command="{Binding FilterFailedCommand}"
+                            BackgroundColor="{Binding IsFailedSelected, Converter={StaticResource SelectedTabTint}}"
+                            BorderColor="{Binding IsFailedSelected, Converter={StaticResource SelectedTabBorder}}"
+                            TextColor="{Binding IsFailedSelected, Converter={StaticResource SelectedTabInk}}" />
+                    <Label Grid.Column="3" Text="{Binding ShownLabel}"
+                           Style="{StaticResource MutedLabel}"
+                           HorizontalTextAlignment="End" VerticalOptions="Center" />
+                </Grid>
+
+                <Border Style="{StaticResource TableCard}">
+                    <VerticalStackLayout>
+
+                        <!-- Sortable heads. Each toggles its own column; the
+                             whole cell is the target, not just the caret. -->
+                        <Grid Style="{StaticResource TableHeaderRow}"
+                              ColumnDefinitions="2.6*,1.3*,*,*,*,96">
+                            <Label Grid.Column="0" Text="الاختبار" Style="{StaticResource TableHeaderLabel}">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SortByTitleCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                            <Label Grid.Column="1" Text="الكورس" Style="{StaticResource TableHeaderLabel}">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SortByCourseCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                            <Label Grid.Column="2" Text="التاريخ" Style="{StaticResource TableHeaderLabel}">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SortByDateCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                            <Label Grid.Column="3" Text="الدرجة" Style="{StaticResource TableHeaderLabel}"
+                                   HorizontalTextAlignment="End">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SortByScoreCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                            <Label Grid.Column="4" Text="النتيجة" Style="{StaticResource TableHeaderLabel}" />
+                            <Label Grid.Column="5" Text="إجراءات" Style="{StaticResource TableHeaderLabel}"
+                                   HorizontalTextAlignment="Center" />
+                            <BoxView Grid.ColumnSpan="6" Style="{StaticResource RowRule}" Margin="-16,0" />
+                        </Grid>
+
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding PageRows}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ResultRow">
+                                    <Grid Style="{StaticResource TableRow}"
+                                          ColumnDefinitions="2.6*,1.3*,*,*,*,96" HeightRequest="40">
+
+                                        <Label Grid.Column="0" Text="{Binding ExamTitle}"
+                                               Style="{StaticResource CellLabel}" />
+                                        <Label Grid.Column="1" Text="{Binding CourseName}"
+                                               Style="{StaticResource CellLabelSecondary}" />
+                                        <Label Grid.Column="2" Text="{Binding DateLabel}"
+                                               Style="{StaticResource CellLabelNumeric}" />
+                                        <Label Grid.Column="3" Text="{Binding ScoreLabel}"
+                                               Style="{StaticResource CellLabelNumeric}"
+                                               HorizontalTextAlignment="End" FontFamily="{StaticResource FontUiMedium}"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                                        <HorizontalStackLayout Grid.Column="4" Spacing="6" VerticalOptions="Center">
+                                            <Ellipse WidthRequest="6" HeightRequest="6" VerticalOptions="Center"
+                                                     Fill="{Binding IsPassed, Converter={StaticResource VerdictInk}}" />
+                                            <Label Text="{Binding VerdictLabel}"
+                                                   Style="{StaticResource PillLabel}"
+                                                   TextColor="{Binding IsPassed, Converter={StaticResource VerdictInk}}" />
+                                        </HorizontalStackLayout>
+
+                                        <!-- The one row action there is. -->
+                                        <Border Grid.Column="5" WidthRequest="26" HeightRequest="26"
+                                                Padding="0" StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 6"
+                                                HorizontalOptions="Center" BackgroundColor="Transparent">
+                                            <shapes:Path Style="{StaticResource IconPath}"
+                                                         WidthRequest="14" HeightRequest="14"
+                                                         Data="{StaticResource IconEye}" />
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer
+                                                    Command="{Binding Source={x:Reference Root}, Path=BindingContext.OpenAttemptCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            </Border.GestureRecognizers>
+                                        </Border>
+
+                                        <BoxView Grid.ColumnSpan="6" Style="{StaticResource RowRule}" Margin="-16,0" />
+
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding Source={x:Reference Root}, Path=BindingContext.OpenAttemptCommand}"
+                                                CommandParameter="{Binding .}" />
+                                        </Grid.GestureRecognizers>
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+
+                        <!-- ── States ────────────────────────────────────── -->
+                        <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                             IsVisible="{Binding Results.IsLoading}">
+                            <Border Style="{StaticResource SkeletonLine}" WidthRequest="360" />
+                            <Border Style="{StaticResource SkeletonLine}" WidthRequest="320" />
+                            <Border Style="{StaticResource SkeletonLine}" WidthRequest="340" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                             IsVisible="{Binding Results.IsEmpty}">
+                            <Label Text="لم تُجرِ أي اختبار بعد."
+                                   Style="{StaticResource CellLabelSecondary}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                             IsVisible="{Binding IsFilteredEmpty}">
+                            <Label Text="لا توجد نتائج مطابقة للبحث أو الفلتر الحالي."
+                                   Style="{StaticResource CellLabelSecondary}"
+                                   HorizontalTextAlignment="Center" />
+                            <Button Text="إزالة الفلاتر" Style="{StaticResource NeutralButton}"
+                                    HorizontalOptions="Center"
+                                    Command="{Binding ClearFiltersCommand}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                             IsVisible="{Binding Results.HasError}">
+                            <Label Text="{Binding Results.ErrorMessage}"
+                                   Style="{StaticResource CellLabelSecondary}"
+                                   HorizontalTextAlignment="Center" />
+                            <Button Text="إعادة المحاولة" Style="{StaticResource SecondaryButton}"
+                                    HorizontalOptions="Center" Command="{Binding LoadCommand}" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ── Pager ─────────────────────────────────────────────── -->
+                <!-- In RTL, "previous" points right and "next" points left. -->
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="4"
+                      IsVisible="{Binding Results.HasData}">
+                    <Label Grid.Column="0" Text="{Binding PageLabel}"
+                           Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+
+                    <Border Grid.Column="2" Style="{StaticResource IconButton}"
+                            IsEnabled="{Binding CanGoBack}"
+                            Opacity="{Binding CanGoBack, Converter={StaticResource EnabledOpacity}}">
+                        <shapes:Path Style="{StaticResource IconPath}"
+                                     WidthRequest="14" HeightRequest="14" StrokeThickness="2"
+                                     Data="{StaticResource IconChevronRight}" />
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding PreviousPageCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+
+                    <Border Grid.Column="3" Style="{StaticResource IconButton}"
+                            IsEnabled="{Binding CanGoForward}"
+                            Opacity="{Binding CanGoForward, Converter={StaticResource EnabledOpacity}}">
+                        <shapes:Path Style="{StaticResource IconPath}"
+                                     WidthRequest="14" HeightRequest="14" StrokeThickness="2"
+                                     Data="{StaticResource IconChevronLeft}" />
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NextPageCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
         </VerticalStackLayout>
     </ScrollView>
 </ContentView>

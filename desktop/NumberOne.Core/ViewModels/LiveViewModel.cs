@@ -34,7 +34,10 @@ public sealed partial class LiveViewModel : ObservableObject
     public Func<string, Task<bool>> BrowserLauncher { get; set; } = _ => Task.FromResult(false);
 
     /// <summary>Error and warning toasts; the host renders them.</summary>
-    public event EventHandler<string>? Toast;
+    public event EventHandler<ToastMessage>? Toasted;
+
+    /// <summary>The label the top bar prints beside the title.</summary>
+    public event EventHandler<string>? CountChanged;
 
     public const string HeaderNote = "تُفتح الجلسات في المتصفح خارج التطبيق";
 
@@ -47,7 +50,8 @@ public sealed partial class LiveViewModel : ObservableObject
         // here too: the list can go stale while the screen is open.
         if (session.Status is LiveStatuses.Ended or LiveStatuses.Archived)
         {
-            Toast?.Invoke(this, "انتهت هذه الجلسة ولم يبقَ رابط للدخول");
+            Toasted?.Invoke(this, new ToastMessage(
+                "انتهت هذه الجلسة ولم يبقَ رابط للدخول", ToastKind.Warning));
             return;
         }
 
@@ -56,14 +60,31 @@ public sealed partial class LiveViewModel : ObservableObject
             uri.Scheme is not ("http" or "https"))
         {
             // A relative or non-http link is a data problem, not a student one.
-            Toast?.Invoke(this, "رابط الجلسة غير صالح — راجع الإدارة");
+            Toasted?.Invoke(this, new ToastMessage(
+                "رابط الجلسة غير صالح — راجع الإدارة", ToastKind.Error));
             return;
         }
 
-        if (!await BrowserLauncher(session.StreamUrl!).ConfigureAwait(true))
-            Toast?.Invoke(this, "تعذّر فتح المتصفح على هذا الجهاز");
+        if (await BrowserLauncher(session.StreamUrl!).ConfigureAwait(true))
+        {
+            Toasted?.Invoke(this, new ToastMessage(
+                $"جارٍ فتح {session.ProviderLabel} في المتصفح…"));
+        }
+        else
+        {
+            Toasted?.Invoke(this, new ToastMessage(
+                "تعذّر فتح المتصفح على هذا الجهاز", ToastKind.Error));
+        }
     }
 
     [RelayCommand]
-    public Task LoadAsync(CancellationToken ct = default) => Rooms.LoadAsync(ct);
+    public async Task LoadAsync(CancellationToken ct = default)
+    {
+        await Rooms.LoadAsync(ct).ConfigureAwait(true);
+
+        // Sessions, not rooms: a student with three rooms and no sessions has
+        // nothing to attend, and the count should say so.
+        var sessions = Rooms.Value?.Sum(r => r.Sessions.Count) ?? 0;
+        CountChanged?.Invoke(this, UiText.Count(sessions, "جلسة", "جلستان", "جلسات"));
+    }
 }

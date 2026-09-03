@@ -131,11 +131,27 @@ public sealed record CourseDetail
     }
 }
 
-public sealed record UnitRow
+/// <summary>
+/// A unit, and whether its lessons are showing.
+///
+/// A class rather than a record because the expansion state changes while the
+/// screen is open, and the accordion must repaint when it does.
+/// </summary>
+public sealed partial class UnitRow : ObservableObject
 {
     public required int Id { get; init; }
     public required string Name { get; init; }
     public required IReadOnlyList<LessonRow> Lessons { get; init; }
+
+    /// <summary>
+    /// Units open by default. A student arriving at a course wants to see the
+    /// lectures, not a list of headings to click through first.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isExpanded = true;
+
+    [RelayCommand]
+    private void Toggle() => IsExpanded = !IsExpanded;
 
     public int CompletedCount => Lessons.Count(l => l.IsCompleted);
 
@@ -143,6 +159,24 @@ public sealed record UnitRow
     public string ProgressLabel =>
         $"{UiText.ToArabicIndicDigits(CompletedCount.ToString())} من " +
         $"{UiText.ToArabicIndicDigits(Lessons.Count.ToString())}";
+
+    /// <summary>
+    /// "٥ محاضرات · ١٣٤ دقيقة" beside the unit name. The running time is
+    /// omitted rather than shown as zero where no lesson carries a duration —
+    /// duration_minutes is optional on Lesson.
+    /// </summary>
+    public string MetaLabel
+    {
+        get
+        {
+            var lessons = UiText.Count(Lessons.Count, "محاضرة", "محاضرتان", "محاضرات");
+            var minutes = Lessons.Sum(l => l.DurationMinutes ?? 0);
+
+            return minutes == 0
+                ? lessons
+                : $"{lessons} · {UiText.Count(minutes, "دقيقة", "دقيقتان", "دقائق")}";
+        }
+    }
 }
 
 public sealed record LessonRow

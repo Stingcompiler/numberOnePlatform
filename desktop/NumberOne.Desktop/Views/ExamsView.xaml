@@ -1,91 +1,171 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:models="clr-namespace:NumberOne.Core.Models;assembly=NumberOne.Core"
              x:Class="NumberOne.Desktop.Views.ExamsView"
+             x:Name="Root"
              x:DataType="vm:ExamsViewModel">
 
+    <!--
+        الإختبارات والإمتحانات — two tabs over one payload.
+
+        /exams/student/list/ returns every active exam with the student's own
+        attempts nested, so "المتاحة" and "المكتملة" are two views of the same
+        list rather than two fetches.
+
+        The design's الإغلاق column is absent, and cannot be added: exams.Exam
+        carries a duration and nothing else — no opening date, no closing date.
+        An exam is active or it is not. The column would have to be invented.
+    -->
+
     <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="16">
+        <VerticalStackLayout Padding="24" Spacing="12">
 
-            <Label Text="الاختبارات" Style="{StaticResource TitleLabel}" />
-
+            <!-- ══ Tabs ══════════════════════════════════════════════════ -->
             <HorizontalStackLayout Spacing="8">
-                <Button Text="المتاحة" Command="{Binding ShowAvailableCommand}"
-                        Style="{StaticResource NeutralButtonSmall}" />
-                <Button Text="المكتملة" Command="{Binding ShowCompletedCommand}"
-                        Style="{StaticResource NeutralButtonSmall}" />
+                <Button Text="المتاحة" Style="{StaticResource TabButton}"
+                        Command="{Binding ShowAvailableCommand}"
+                        BackgroundColor="{Binding ShowingAvailable, Converter={StaticResource SelectedTabTint}}"
+                        BorderColor="{Binding ShowingAvailable, Converter={StaticResource SelectedTabBorder}}"
+                        TextColor="{Binding ShowingAvailable, Converter={StaticResource SelectedTabInk}}" />
+                <Button Text="المكتملة" Style="{StaticResource TabButton}"
+                        Command="{Binding ShowCompletedCommand}"
+                        BackgroundColor="{Binding ShowingCompleted, Converter={StaticResource SelectedTabTint}}"
+                        BorderColor="{Binding ShowingCompleted, Converter={StaticResource SelectedTabBorder}}"
+                        TextColor="{Binding ShowingCompleted, Converter={StaticResource SelectedTabInk}}" />
             </HorizontalStackLayout>
 
-            <Label Text="جارٍ التحميل…" Style="{StaticResource MutedLabel}"
-                   IsVisible="{Binding Exams.IsLoading}" />
-            <Label Text="لا توجد اختبارات." Style="{StaticResource SecondaryLabel}"
-                   IsVisible="{Binding Exams.IsEmpty}" />
+            <!-- ══ المتاحة ═══════════════════════════════════════════════ -->
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding ShowingAvailable}">
+                <VerticalStackLayout>
 
-            <HorizontalStackLayout Spacing="8" IsVisible="{Binding Exams.HasError}">
-                <Label Text="{Binding Exams.ErrorMessage}" Style="{StaticResource SecondaryLabel}"
-                       VerticalOptions="Center" />
-                <Button Text="إعادة المحاولة" Command="{Binding LoadCommand}"
-                        Style="{StaticResource NeutralButtonSmall}" />
-            </HorizontalStackLayout>
+                    <Grid Style="{StaticResource TableHeaderRow}"
+                          ColumnDefinitions="2.6*,1.2*,*,*,88">
+                        <Label Grid.Column="0" Text="الاختبار" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="1" Text="الكورس" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="2" Text="المدة" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="3" Text="الأسئلة" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="4" Text="إجراء" Style="{StaticResource TableHeaderLabel}"
+                               HorizontalTextAlignment="Center" />
+                        <BoxView Grid.ColumnSpan="5" Style="{StaticResource RowRule}" Margin="-16,0" />
+                    </Grid>
 
-            <!-- Available -->
-            <VerticalStackLayout IsVisible="{Binding ShowingAvailable}"
-                                 BindableLayout.ItemsSource="{Binding Available}">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="models:ExamSummary">
-                        <VerticalStackLayout>
-                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" HeightRequest="48" ColumnSpacing="12">
-                                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
-                                    <Label Text="{Binding Title}" Style="{StaticResource BodyLabel}" />
-                                    <Label Text="{Binding CourseName}" Style="{StaticResource MutedLabel}" />
-                                </VerticalStackLayout>
-                                <Label Grid.Column="1" VerticalOptions="Center"
-                                       Text="{Binding DurationMinutes, StringFormat='{0} دقيقة'}"
-                                       Style="{StaticResource MutedLabel}" />
-                                <Label Grid.Column="2" VerticalOptions="Center"
-                                       Text="{Binding QuestionCount, StringFormat='{0} سؤال'}"
-                                       Style="{StaticResource MutedLabel}" />
-                                <Button Grid.Column="3" Text="ابدأ" VerticalOptions="Center"
-                                        Style="{StaticResource PrimaryButton}"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ExamsViewModel}}, Path=StartExamCommand}"
-                                        CommandParameter="{Binding .}" />
-                            </Grid>
-                            <BoxView HeightRequest="1"
-                                     Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
-                        </VerticalStackLayout>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
-            </VerticalStackLayout>
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Available}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:ExamSummary">
+                                <Grid Style="{StaticResource TableRow}"
+                                      ColumnDefinitions="2.6*,1.2*,*,*,88" HeightRequest="44">
 
-            <!-- Completed -->
-            <VerticalStackLayout IsVisible="{Binding ShowingAvailable, Converter={StaticResource Invert}}"
-                                 BindableLayout.ItemsSource="{Binding Completed}">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="models:ExamSummary">
-                        <VerticalStackLayout>
-                            <Grid ColumnDefinitions="*,Auto,Auto" HeightRequest="48" ColumnSpacing="12">
-                                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
-                                    <Label Text="{Binding Title}" Style="{StaticResource BodyLabel}" />
-                                    <Label Text="{Binding CourseName}" Style="{StaticResource MutedLabel}" />
-                                </VerticalStackLayout>
-                                <Label Grid.Column="1" VerticalOptions="Center"
-                                       Text="{Binding BestAttempt.Score}"
-                                       Style="{StaticResource BodyLabel}"
-                                       HorizontalTextAlignment="End" />
-                                <Label Grid.Column="2" VerticalOptions="Center"
-                                       Text="{Binding BestAttempt.IsPassed, Converter={StaticResource VerdictWord}}"
-                                       FontSize="{StaticResource FontSecondary}"
-                                       TextColor="{Binding BestAttempt.IsPassed, Converter={StaticResource VerdictInk}}" />
-                            </Grid>
-                            <BoxView HeightRequest="1"
-                                     Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
-                        </VerticalStackLayout>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
-            </VerticalStackLayout>
+                                    <Label Grid.Column="0" Text="{Binding Title}"
+                                           Style="{StaticResource CellLabel}" />
+                                    <Label Grid.Column="1" Text="{Binding CourseName}"
+                                           Style="{StaticResource CellLabelSecondary}" />
+                                    <Label Grid.Column="2" Text="{Binding DurationLabel}"
+                                           Style="{StaticResource CellLabelNumeric}" />
+                                    <Label Grid.Column="3" Text="{Binding QuestionCountLabel}"
+                                           Style="{StaticResource CellLabelNumeric}" />
 
+                                    <Button Grid.Column="4" Text="{Binding StartLabel}"
+                                            Style="{StaticResource PrimaryButtonSmall}"
+                                            HorizontalOptions="Center"
+                                            Command="{Binding Source={x:Reference Root}, Path=BindingContext.StartExamCommand}"
+                                            CommandParameter="{Binding .}" />
+
+                                    <BoxView Grid.ColumnSpan="5" Style="{StaticResource RowRule}" Margin="-16,0" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ══ المكتملة ══════════════════════════════════════════════ -->
+            <!--
+                The best attempt, not the last: there is no server-side attempt
+                limit, so a student may have several, and the record that counts
+                is the strongest one.
+            -->
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding ShowingCompleted}">
+                <VerticalStackLayout>
+
+                    <Grid Style="{StaticResource TableHeaderRow}"
+                          ColumnDefinitions="2.6*,1.2*,*,*,*">
+                        <Label Grid.Column="0" Text="الاختبار" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="1" Text="الكورس" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="2" Text="التاريخ" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="3" Text="الدرجة" Style="{StaticResource TableHeaderLabel}"
+                               HorizontalTextAlignment="End" />
+                        <Label Grid.Column="4" Text="النتيجة" Style="{StaticResource TableHeaderLabel}" />
+                        <BoxView Grid.ColumnSpan="5" Style="{StaticResource RowRule}" Margin="-16,0" />
+                    </Grid>
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Completed}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:ExamSummary">
+                                <Grid Style="{StaticResource TableRow}"
+                                      ColumnDefinitions="2.6*,1.2*,*,*,*" HeightRequest="44">
+
+                                    <Label Grid.Column="0" Text="{Binding Title}"
+                                           Style="{StaticResource CellLabel}" />
+                                    <Label Grid.Column="1" Text="{Binding CourseName}"
+                                           Style="{StaticResource CellLabelSecondary}" />
+                                    <Label Grid.Column="2" Text="{Binding BestAttemptDateLabel}"
+                                           Style="{StaticResource CellLabelNumeric}" />
+                                    <Label Grid.Column="3" Text="{Binding BestScoreLabel}"
+                                           Style="{StaticResource CellLabelNumeric}"
+                                           HorizontalTextAlignment="End" FontFamily="{StaticResource FontUiMedium}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                                    <HorizontalStackLayout Grid.Column="4" Spacing="6" VerticalOptions="Center">
+                                        <Ellipse WidthRequest="6" HeightRequest="6" VerticalOptions="Center"
+                                                 Fill="{Binding BestAttemptPassed, Converter={StaticResource VerdictInk}}" />
+                                        <Label Text="{Binding BestVerdictLabel}"
+                                               Style="{StaticResource PillLabel}"
+                                               TextColor="{Binding BestAttemptPassed, Converter={StaticResource VerdictInk}}" />
+                                    </HorizontalStackLayout>
+
+                                    <BoxView Grid.ColumnSpan="5" Style="{StaticResource RowRule}" Margin="-16,0" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ══ States, shared by both tabs ═══════════════════════════ -->
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding Exams.IsLoading}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="320" />
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="260" />
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="290" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding Exams.IsEmpty}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Label Text="لا توجد اختبارات في كورساتك بعد."
+                           Style="{StaticResource CellLabelSecondary}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding IsFilteredEmpty}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Label Text="لا توجد اختبارات مطابقة." Style="{StaticResource CellLabelSecondary}" />
+                    <Button Text="إزالة البحث" Style="{StaticResource NeutralButton}"
+                            HorizontalOptions="Center" Command="{Binding ClearSearchCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding Exams.HasError}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Label Text="{Binding Exams.ErrorMessage}"
+                           Style="{StaticResource CellLabelSecondary}"
+                           HorizontalTextAlignment="Center" />
+                    <Button Text="إعادة المحاولة" Style="{StaticResource SecondaryButton}"
+                            HorizontalOptions="Center" Command="{Binding LoadCommand}" />
+                </VerticalStackLayout>
+            </Border>
         </VerticalStackLayout>
     </ScrollView>
 </ContentView>

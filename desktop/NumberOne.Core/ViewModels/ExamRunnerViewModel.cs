@@ -168,10 +168,17 @@ public sealed partial class ExamRunnerViewModel : ObservableObject
     // ── Result ───────────────────────────────────────────────────────────────
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasResult), nameof(VerdictLabel), nameof(ScoreLabel))]
+    [NotifyPropertyChangedFor(nameof(HasResult), nameof(IsRunning), nameof(VerdictLabel), nameof(ScoreLabel))]
     private ExamAttemptDetail? _result;
 
     public bool HasResult => Result is not null;
+
+    /// <summary>
+    /// The question card is showing. Not simply the negation of HasResult: it
+    /// must also be gone while the exam is still loading or has failed, or an
+    /// empty card sits above the error panel.
+    /// </summary>
+    public bool IsRunning => Result is null && Exam.HasData;
 
     public string VerdictLabel => Result?.IsPassed == true ? "ناجح" : "راسب";
 
@@ -217,6 +224,7 @@ public sealed partial class ExamRunnerViewModel : ObservableObject
             Remaining = TimeSpan.FromMinutes(Exam.Value.DurationMinutes);
 
         QuestionIndex = 0;
+        OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(Questions));
         OnPropertyChanged(nameof(CurrentQuestion));
         OnPropertyChanged(nameof(QuestionLabel));

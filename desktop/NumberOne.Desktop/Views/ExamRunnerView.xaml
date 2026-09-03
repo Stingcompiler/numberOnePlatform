@@ -1,102 +1,159 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
              x:Class="NumberOne.Desktop.Views.ExamRunnerView"
              x:DataType="vm:ExamRunnerViewModel">
 
+    <!--
+        Sitting an exam. One question at a time, in a 720px column centred in
+        the window — the only screen in the app that is not full-width, because
+        it is the only one where everything else is a distraction.
+
+        The clock is CLIENT-SIDE and advisory. Nothing on the server enforces
+        the duration: exams.Exam carries duration_minutes and the submit
+        endpoint does not check elapsed time. Running out does not void the
+        attempt, and this screen must never imply that it does.
+    -->
+
     <ScrollView>
-        <VerticalStackLayout Padding="24" HorizontalOptions="Center" WidthRequest="720" Spacing="16">
+        <VerticalStackLayout Padding="24" HorizontalOptions="Center"
+                             WidthRequest="720" Spacing="16">
 
-            <Label Text="جارٍ التحميل…" Style="{StaticResource MutedLabel}"
-                   IsVisible="{Binding Exam.IsLoading}" />
-
-            <HorizontalStackLayout Spacing="8" IsVisible="{Binding Exam.HasError}">
-                <Label Text="{Binding Exam.ErrorMessage}" Style="{StaticResource SecondaryLabel}"
-                       VerticalOptions="Center" />
-                <Button Text="إعادة المحاولة" Command="{Binding LoadCommand}"
-                        Style="{StaticResource NeutralButtonSmall}" />
-            </HorizontalStackLayout>
-
-            <!-- ── In progress ─────────────────────────────────────────── -->
-            <Border Style="{StaticResource Panel}"
-                    IsVisible="{Binding HasResult, Converter={StaticResource Invert}}">
-                <VerticalStackLayout Spacing="16">
-
-                    <Grid ColumnDefinitions="*,Auto">
-                        <VerticalStackLayout Grid.Column="0" Spacing="2">
-                            <Label Text="{Binding Exam.Value.Title}" Style="{StaticResource HeadingLabel}" />
-                            <Label Text="{Binding Exam.Value.CourseName}" Style="{StaticResource MutedLabel}" />
-                        </VerticalStackLayout>
-
-                        <!-- The clock is client-side and advisory: nothing on the
-                             server enforces the duration. -->
-                        <Border Grid.Column="1" Style="{StaticResource WarningPanel}"
-                                Padding="10,4" VerticalOptions="Center">
-                            <Label Text="{Binding RemainingLabel}"
-                                   FontSize="{StaticResource FontBody}"
-                                   FlowDirection="LeftToRight"
-                                   TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
-                        </Border>
-                    </Grid>
-
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding QuestionLabel}" Style="{StaticResource MutedLabel}" />
-                        <ProgressBar Progress="{Binding Progress}" HeightRequest="4"
-                                     ProgressColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
-                    </VerticalStackLayout>
-
-                    <Label Text="{Binding CurrentQuestion.Text}" Style="{StaticResource CopyLabel}"
-                           FontSize="{StaticResource FontHeading}" />
-
-                    <VerticalStackLayout x:Name="AnswerHost" Spacing="8" />
-
-                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
-                        <Button Grid.Column="0" Text="السابق"
-                                IsVisible="{Binding IsFirstQuestion, Converter={StaticResource Invert}}"
-                                Command="{Binding PreviousCommand}"
-                                Style="{StaticResource NeutralButton}" />
-                        <Button Grid.Column="1" Text="حفظ والخروج"
-                                Command="{Binding SaveAndExitCommand}"
-                                Style="{StaticResource GhostButton}" />
-                        <Button Grid.Column="3" Text="{Binding NextLabel}"
-                                Command="{Binding NextCommand}"
-                                Style="{StaticResource PrimaryButton}" />
-                    </Grid>
-
-                    <Label x:Name="WarningLabel" IsVisible="False"
-                           Style="{StaticResource MutedLabel}"
-                           TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
-
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding Exam.IsLoading}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="420" />
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="360" />
                 </VerticalStackLayout>
             </Border>
 
-            <!-- ── Result ──────────────────────────────────────────────── -->
-            <Border Style="{StaticResource Panel}" IsVisible="{Binding HasResult}">
-                <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding Exam.HasError}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Label Text="{Binding Exam.ErrorMessage}"
+                           Style="{StaticResource CellLabelSecondary}"
+                           HorizontalTextAlignment="Center" />
+                    <Button Text="إعادة المحاولة" Style="{StaticResource SecondaryButton}"
+                            HorizontalOptions="Center" Command="{Binding LoadCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ══ In progress ═══════════════════════════════════════════ -->
+            <Border Style="{StaticResource TableCard}"
+                    IsVisible="{Binding IsRunning}">
+                <VerticalStackLayout>
+
+                    <!-- Head: title, course, and the clock. -->
+                    <Grid Padding="16" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="{Binding Exam.Value.Title}"
+                                   Style="{StaticResource HeadingLabel}" />
+                            <Label Text="{Binding Exam.Value.CourseName}"
+                                   Style="{StaticResource CellLabelSecondary}" />
+                        </VerticalStackLayout>
+
+                        <Border Grid.Column="1" Style="{StaticResource Pill}"
+                                HeightRequest="28"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">
+                            <HorizontalStackLayout Spacing="6">
+                                <shapes:Path Style="{StaticResource IconPathSmall}"
+                                             Data="{StaticResource IconClock}"
+                                             Stroke="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+                                <Label Text="{Binding RemainingLabel}"
+                                       Style="{StaticResource PillLabel}"
+                                       FontSize="{StaticResource FontSecondary}"
+                                       FlowDirection="LeftToRight"
+                                       TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+                            </HorizontalStackLayout>
+                        </Border>
+
+                        <BoxView Grid.ColumnSpan="2" Style="{StaticResource RowRule}" Margin="-16,0" />
+                    </Grid>
+
+                    <!-- Body. -->
+                    <VerticalStackLayout Padding="16" Spacing="16">
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding QuestionLabel}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource ProgressTrack}">
+                                <ProgressBar HeightRequest="4" BackgroundColor="Transparent"
+                                             Progress="{Binding Progress}"
+                                             ProgressColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Running copy: the question is prose, not a label. -->
+                        <Label Text="{Binding CurrentQuestion.Text}"
+                               Style="{StaticResource CopyLabel}"
+                               FontSize="{StaticResource FontHeading}"
+                               FontFamily="{StaticResource FontCopyMedium}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                        <VerticalStackLayout x:Name="AnswerHost" Spacing="8" />
+
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="السابق"
+                                    IsVisible="{Binding IsFirstQuestion, Converter={StaticResource Invert}}"
+                                    Command="{Binding PreviousCommand}"
+                                    Style="{StaticResource NeutralButton}" />
+
+                            <!-- Honest wording: there is no server-side draft.
+                                 Leaving keeps nothing, and the exams screen says
+                                 so when the student returns. -->
+                            <Button Grid.Column="1" Text="حفظ والخروج"
+                                    Command="{Binding SaveAndExitCommand}"
+                                    Style="{StaticResource GhostButton}" />
+
+                            <Button Grid.Column="3" Text="{Binding NextLabel}"
+                                    Command="{Binding NextCommand}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Padding="18,0" />
+                        </Grid>
+
+                        <Label x:Name="WarningLabel" IsVisible="False"
+                               Style="{StaticResource MutedLabel}"
+                               TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ══ Result ════════════════════════════════════════════════ -->
+            <Border Style="{StaticResource Panel}" Padding="32" IsVisible="{Binding HasResult}">
+                <VerticalStackLayout Spacing="16" HorizontalOptions="Center">
 
                     <Border WidthRequest="64" HeightRequest="64" Padding="0"
                             HorizontalOptions="Center" StrokeThickness="0"
                             StrokeShape="RoundRectangle 32"
                             BackgroundColor="{Binding Result.IsPassed, Converter={StaticResource VerdictTint}}">
-                        <Label Text="{Binding VerdictLabel}"
-                               FontSize="{StaticResource FontBody}" FontAttributes="Bold"
-                               HorizontalOptions="Center" VerticalOptions="Center"
-                               TextColor="{Binding Result.IsPassed, Converter={StaticResource VerdictInk}}" />
+                        <shapes:Path Style="{StaticResource IconPathLarge}"
+                                     Data="{StaticResource IconResults}"
+                                     Stroke="{Binding Result.IsPassed, Converter={StaticResource VerdictInk}}" />
                     </Border>
 
-                    <Label Text="{Binding Exam.Value.Title}" Style="{StaticResource HeadingLabel}"
+                    <Label Text="{Binding VerdictLabel}" Style="{StaticResource TitleLabel}"
+                           HorizontalOptions="Center"
+                           TextColor="{Binding Result.IsPassed, Converter={StaticResource VerdictInk}}" />
+
+                    <Label Text="{Binding Exam.Value.Title}"
+                           Style="{StaticResource CellLabelSecondary}"
+                           HorizontalTextAlignment="Center" />
+
+                    <Label Text="{Binding ScoreLabel}" Style="{StaticResource StatValue}"
                            HorizontalOptions="Center" />
-                    <Label Text="{Binding ScoreLabel}" Style="{StaticResource TitleLabel}"
-                           HorizontalOptions="Center" />
+
+                    <Border Style="{StaticResource ProgressTrack}" WidthRequest="360">
+                        <ProgressBar HeightRequest="4" BackgroundColor="Transparent"
+                                     Progress="{Binding Result.Percentage, Converter={StaticResource PercentToFraction}}"
+                                     ProgressColor="{Binding Result.IsPassed, Converter={StaticResource VerdictInk}}" />
+                    </Border>
 
                     <Button Text="العودة إلى الاختبارات"
                             Command="{Binding FinishCommand}"
                             Style="{StaticResource PrimaryButton}"
+                            Padding="18,0"
                             HorizontalOptions="Center" />
                 </VerticalStackLayout>
             </Border>
-
         </VerticalStackLayout>
     </ScrollView>
 </ContentView>

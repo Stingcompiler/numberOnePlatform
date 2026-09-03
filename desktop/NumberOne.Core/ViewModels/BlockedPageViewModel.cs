@@ -31,7 +31,17 @@ public sealed partial class BlockedPageViewModel : ObservableObject
     /// held by another student. Placeholders until the Lucide SVGs land with the
     /// icon pass.
     /// </summary>
-    public string Glyph => _state.Kind == BlockedKind.AccountBoundElsewhere ? "🔒" : "🖥";
+    /// <summary>
+    /// Which icon the 64px circle carries. A key rather than a glyph: the view
+    /// resolves it against Icons.xaml, so the two blocked screens draw from the
+    /// same stroked set as the rest of the app instead of falling back to an
+    /// emoji whose shape and weight are the font's decision, not the design's.
+    ///
+    /// A padlock for "your account is bound elsewhere" — the account is locked.
+    /// A monitor for "this machine is bound to someone else" — the machine is.
+    /// </summary>
+    public string IconKey =>
+        _state.Kind == BlockedKind.AccountBoundElsewhere ? "IconLock" : "IconMonitor";
 
     // ── The other device, when we know it ────────────────────────────────────
 

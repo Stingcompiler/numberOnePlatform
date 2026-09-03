@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
              x:Class="NumberOne.Desktop.Views.LoginPage"
              x:DataType="vm:LoginViewModel"
              FlowDirection="RightToLeft"
@@ -32,7 +33,7 @@
                                 BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
                             <Label Text="١" TextColor="#FFFFFF"
                                    FontSize="{StaticResource FontHeading}"
-                                   FontAttributes="Bold"
+                                   FontFamily="{StaticResource FontUiBold}"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
                         </Border>
                         <Label Text="{x:Static vm:UiText.BrandShortName}"
@@ -49,18 +50,24 @@
 
                     <VerticalStackLayout Spacing="10" Margin="0,12,0,0">
                         <HorizontalStackLayout Spacing="8">
-                            <Label Text="✓" TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}"
-                                   FontSize="{StaticResource FontBody}" VerticalOptions="Center" />
+                            <shapes:Path Style="{StaticResource IconPath}" StrokeThickness="2"
+                                         WidthRequest="15" HeightRequest="15"
+                                         Data="{StaticResource IconCheck}"
+                                         Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                             <Label Text="{x:Static vm:UiText.BrandBulletOne}" Style="{StaticResource SecondaryLabel}" />
                         </HorizontalStackLayout>
                         <HorizontalStackLayout Spacing="8">
-                            <Label Text="✓" TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}"
-                                   FontSize="{StaticResource FontBody}" VerticalOptions="Center" />
+                            <shapes:Path Style="{StaticResource IconPath}" StrokeThickness="2"
+                                         WidthRequest="15" HeightRequest="15"
+                                         Data="{StaticResource IconCheck}"
+                                         Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                             <Label Text="{x:Static vm:UiText.BrandBulletTwo}" Style="{StaticResource SecondaryLabel}" />
                         </HorizontalStackLayout>
                         <HorizontalStackLayout Spacing="8">
-                            <Label Text="✓" TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}"
-                                   FontSize="{StaticResource FontBody}" VerticalOptions="Center" />
+                            <shapes:Path Style="{StaticResource IconPath}" StrokeThickness="2"
+                                         WidthRequest="15" HeightRequest="15"
+                                         Data="{StaticResource IconCheck}"
+                                         Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                             <Label Text="{x:Static vm:UiText.BrandBulletThree}" Style="{StaticResource SecondaryLabel}" />
                         </HorizontalStackLayout>
                     </VerticalStackLayout>
@@ -71,66 +78,100 @@
             <!-- ── Form ────────────────────────────────────────────────── -->
             <ScrollView Grid.Column="1">
                 <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center"
-                                     WidthRequest="420" Padding="24,48" Spacing="8">
+                                     Padding="24,48" Spacing="12">
 
-                    <Label Text="{x:Static vm:UiText.LoginTitle}" Style="{StaticResource TitleLabel}" />
-                    <Label Text="{x:Static vm:UiText.LoginSubtitle}" Style="{StaticResource MutedLabel}"
-                           FontSize="{StaticResource FontSecondary}" Margin="0,0,0,16" />
-
-                    <!-- Username -->
-                    <Label Text="{x:Static vm:UiText.UsernameLabel}" Style="{StaticResource FieldLabel}" />
-                    <Border Style="{StaticResource InputShell}">
-                        <Entry Text="{Binding Username}"
-                               Style="{StaticResource LoginEntry}"
-                               ReturnType="Next"
-                               VerticalOptions="Center" />
+                    <!-- The school's own mark, above the card. -->
+                    <Border WidthRequest="96" HeightRequest="96" Padding="0"
+                            StrokeThickness="0" StrokeShape="RoundRectangle 48"
+                            HorizontalOptions="Center">
+                        <Image Source="number_one_logo.jpg" Aspect="AspectFill"
+                               WidthRequest="96" HeightRequest="96" />
                     </Border>
 
-                    <!-- Password, with the eye toggle -->
-                    <Label Text="{x:Static vm:UiText.PasswordLabel}" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
-                    <Border Style="{StaticResource InputShell}">
-                        <Grid ColumnDefinitions="*,24">
-                            <Entry Grid.Column="0"
-                                   Text="{Binding Password}"
-                                   IsPassword="{Binding PasswordVisible, Converter={StaticResource Invert}}"
-                                   Style="{StaticResource LoginEntry}"
-                                   ReturnType="Go"
-                                   ReturnCommand="{Binding SignInCommand}"
-                                   VerticalOptions="Center" />
-                            <Label Grid.Column="1" Text="👁"
-                                   FontSize="{StaticResource FontBody}"
-                                   VerticalOptions="Center" HorizontalOptions="Center"
-                                   ToolTipProperties.Text="{x:Static vm:UiText.ShowPassword}"
-                                   TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}">
-                                <Label.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding TogglePasswordVisibilityCommand}" />
-                                </Label.GestureRecognizers>
-                            </Label>
-                        </Grid>
+                    <Border Style="{StaticResource Panel}" Padding="24" WidthRequest="420">
+                        <VerticalStackLayout Spacing="16">
+
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{x:Static vm:UiText.LoginTitle}" Style="{StaticResource TitleLabel}" />
+                                <Label Text="{x:Static vm:UiText.LoginSubtitle}" Style="{StaticResource MutedLabel}"
+                                       FontSize="{StaticResource FontSecondary}" />
+                            </VerticalStackLayout>
+
+                            <!-- Username -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{x:Static vm:UiText.UsernameLabel}" Style="{StaticResource MutedLabel}" />
+                                <Border Style="{StaticResource InputShell}">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                        <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
+                                                     WidthRequest="15" HeightRequest="15"
+                                                     Data="{StaticResource IconUser}" />
+                                        <Entry Grid.Column="1" Text="{Binding Username}"
+                                               Style="{StaticResource LoginEntry}"
+                                               ReturnType="Next"
+                                               VerticalOptions="Center" />
+                                    </Grid>
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <!-- Password, with the eye toggle -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{x:Static vm:UiText.PasswordLabel}" Style="{StaticResource MutedLabel}" />
+                                <Border Style="{StaticResource InputShell}">
+                                    <Grid ColumnDefinitions="Auto,*,24" ColumnSpacing="8">
+                                        <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
+                                                     WidthRequest="15" HeightRequest="15"
+                                                     Data="{StaticResource IconLock}" />
+                                        <Entry Grid.Column="1"
+                                               Text="{Binding Password}"
+                                               IsPassword="{Binding PasswordVisible, Converter={StaticResource Invert}}"
+                                               Style="{StaticResource LoginEntry}"
+                                               ReturnType="Go"
+                                               ReturnCommand="{Binding SignInCommand}"
+                                               VerticalOptions="Center" />
+                                        <shapes:Path Grid.Column="2" Style="{StaticResource IconPathMuted}"
+                                                     WidthRequest="15" HeightRequest="15"
+                                                     Data="{StaticResource IconEye}"
+                                                     ToolTipProperties.Text="{x:Static vm:UiText.ShowPassword}">
+                                            <shapes:Path.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding TogglePasswordVisibilityCommand}" />
+                                            </shapes:Path.GestureRecognizers>
+                                        </shapes:Path>
+                                    </Grid>
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <!--
+                                Error panel: tint fill with a 1px danger border
+                                and the message inside. Never a filled red block.
+                            -->
+                            <Border Style="{StaticResource ErrorPanel}" IsVisible="{Binding HasError}">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
+                                                 WidthRequest="14" HeightRequest="14"
+                                                 Data="{StaticResource IconAlertCircle}"
+                                                 Stroke="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
+                                    <Label Grid.Column="1" Text="{Binding ErrorMessage}"
+                                           Style="{StaticResource CopyLabel}"
+                                           TextColor="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
+                                </Grid>
+                            </Border>
+
+                            <Button Text="{Binding SubmitLabel}"
+                                    Command="{Binding SignInCommand}"
+                                    Style="{StaticResource PrimaryButtonLarge}" />
+                        </VerticalStackLayout>
                     </Border>
 
-                    <!--
-                        Error panel: tint fill with a 1px danger border and the
-                        message inside. Never a filled red block.
-                    -->
-                    <Border Style="{StaticResource ErrorPanel}"
-                            IsVisible="{Binding HasError}"
-                            Margin="0,16,0,0">
-                        <Label Text="{Binding ErrorMessage}"
-                               Style="{StaticResource CopyLabel}"
-                               TextColor="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
-                    </Border>
-
-                    <Button Text="{Binding SubmitLabel}"
-                            Command="{Binding SignInCommand}"
-                            Style="{StaticResource PrimaryButtonLarge}"
-                            Margin="0,16,0,0" />
-
-                    <Label Text="{Binding DeviceFootnote}"
-                           Style="{StaticResource MutedLabel}"
-                           HorizontalTextAlignment="Center"
-                           Margin="0,12,0,0" />
-
+                    <!-- Which machine this is, and what signing in here will
+                         bind. Said before the binding, not after it. -->
+                    <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8"
+                          HorizontalOptions="Center" WidthRequest="420">
+                        <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
+                                     WidthRequest="13" HeightRequest="13"
+                                     Data="{StaticResource IconMonitor}" />
+                        <Label Grid.Column="1" Text="{Binding DeviceFootnote}"
+                               Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                    </Grid>
                 </VerticalStackLayout>
             </ScrollView>
         </Grid>
@@ -152,7 +193,7 @@
                         <Border WidthRequest="40" HeightRequest="40" Padding="0"
                                 StrokeThickness="0" StrokeShape="RoundRectangle 20"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">
-                            <Label Text="!" FontAttributes="Bold"
+                            <Label Text="!" FontFamily="{StaticResource FontUiBold}"
                                    FontSize="{StaticResource FontHeading}"
                                    TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}"
                                    HorizontalOptions="Center" VerticalOptions="Center" />

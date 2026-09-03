@@ -31,6 +31,24 @@ public sealed class Notification
     /// <summary>Parsed id, or null when it is absent or not numeric.</summary>
     [JsonIgnore]
     public int? RelatedId => int.TryParse(RelatedObjectId, out var id) ? id : null;
+
+    /// <summary>
+    /// The trailing timestamp on a row. Today's notifications show a clock time
+    /// and older ones a date: inside a list already grouped by day, repeating
+    /// the date on every row says nothing.
+    /// </summary>
+    [JsonIgnore]
+    public string TimeLabel
+    {
+        get
+        {
+            var local = CreatedAt.ToLocalTime();
+
+            return local.Date == DateTimeOffset.Now.ToLocalTime().Date
+                ? ViewModels.UiText.ToArabicIndicDigits(local.ToString("HH:mm"))
+                : ViewModels.UiText.FormatDate(CreatedAt);
+        }
+    }
 }
 
 public static class NotificationTypes

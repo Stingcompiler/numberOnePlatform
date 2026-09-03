@@ -256,23 +256,24 @@ class StudentExamListView(APIView):
 
     def get(self, request):
         student = request.user.student_profile
-        
-        if student.system_type == "online":
-            from academic.models import Course
-            courses = Course.objects.filter(
-                grade=student.enrolled_grade,
-                system_type="online",
-                is_active=True
-            )
-        else:
-            from academic.models import StudentCourseAccess
-            access_qs = StudentCourseAccess.objects.filter(
-                student=student, is_active=True
-            ).select_related("course")
-            courses = [acc.course for acc in access_qs]
 
-        # تصفية الاختبارات النشطة للكورسات المتاحة
-        exams = Exam.objects.filter(course__in=courses, is_active=True).select_related("course").prefetch_related("questions")
+        # القاعدة المشتركة في academic/access.py، لا نسخة منها هنا.
+        #
+        # كانت هذه الواجهة تقرأ enrolled_grade وحدها لطالب الأونلاين، وهي أحد
+        # الطرفين اللذين كُتب access.py لتوحيدهما. بعد تحويل واجهات الكورسات
+        # والمحاضرات إليه وحدها، صار الطالب الأونلاين الذي مُنح كورساً خارج
+        # مرحلته يفتح محاضراته ولا يرى اختباراته إطلاقاً.
+        #
+        # الاتحاد أوسع من المرحلة ولا يسحب شيئاً: كل ما كانت تعرضه القاعدة
+        # القديمة ما زال داخله.
+        from academic.access import accessible_course_ids
+
+        exams = (
+            Exam.objects
+            .filter(course_id__in=accessible_course_ids(student), is_active=True)
+            .select_related("course")
+            .prefetch_related("questions")
+        )
 
         # جلب محاولات الطالب
         attempts = ExamAttempt.objects.filter(student=student).select_related("exam")

@@ -1,132 +1,200 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
              x:Class="NumberOne.Desktop.Views.ProfileView"
              x:DataType="vm:ProfileViewModel">
 
     <!--
-        Two things are deliberately absent and must stay absent:
+        حسابي — read-only, in two columns: the record on the leading side, the
+        device and the money on the trailing one.
 
-        No password control. Students never change their own password; it is
-        issued and reset by the administration and the server refuses the request.
+        Two things are deliberately absent and must stay absent.
 
-        No unbind control. Clearing a device binding goes through the
-        administration; this screen explains that and shows the identifier.
+        There is NO password control. Students never change their own password;
+        it is issued and reset by the administration, and the server refuses the
+        request outright (IsStudentReadOnly on /auth/change-password/). A field
+        here would fail every time it was used.
+
+        There is NO unbind control. Clearing a device binding goes through the
+        administration; this screen explains that and shows the identifier so a
+        student can quote it accurately over the phone.
     -->
+
     <ScrollView>
-        <Grid Padding="24" ColumnDefinitions="*,*" ColumnSpacing="24" RowDefinitions="Auto">
+        <Grid Padding="24" ColumnDefinitions="*,*" ColumnSpacing="24"
+              RowDefinitions="Auto">
 
-            <!-- البيانات الشخصية -->
-            <VerticalStackLayout Grid.Column="0" Spacing="12">
-                <Label Text="البيانات الشخصية" Style="{StaticResource HeadingLabel}" />
-                <BoxView HeightRequest="1"
-                         Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+            <!-- ══ البيانات الشخصية ══════════════════════════════════════ -->
+            <VerticalStackLayout Grid.Column="0" Spacing="12" VerticalOptions="Start">
 
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <Label Grid.Column="0" Text="البيانات الشخصية"
+                           Style="{StaticResource HeadingLabel}" />
+                    <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                </Grid>
+
+                <!--
+                    Read-only fields drawn as inputs: the box says "this is your
+                    record" without implying it can be typed into. The one field
+                    that genuinely cannot change — نوع النظام — takes the
+                    disabled fill, so the difference is visible rather than
+                    discovered by clicking.
+                -->
                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto"
                       ColumnSpacing="16" RowSpacing="12">
 
-                    <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="2">
-                        <Label Text="الاسم الكامل" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding FullName}" Style="{StaticResource BodyLabel}" />
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="4">
+                        <Label Text="اسم الطالب" Style="{StaticResource MutedLabel}" />
+                        <Border Style="{StaticResource TopBarField}">
+                            <Label Text="{Binding FullName}" Style="{StaticResource CellLabel}" />
+                        </Border>
                     </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="2">
+
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="4">
                         <Label Text="اسم المستخدم" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding Username}" Style="{StaticResource MonoLtrLabel}" />
+                        <Border Style="{StaticResource TopBarField}">
+                            <Label Text="{Binding Username}" Style="{StaticResource CellLabel}"
+                                   FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                        </Border>
                     </VerticalStackLayout>
 
-                    <VerticalStackLayout Grid.Row="1" Grid.Column="0" Spacing="2">
-                        <Label Text="الهاتف" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding Phone}" Style="{StaticResource MonoLtrLabel}" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="2">
-                        <Label Text="ولي الأمر" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding GuardianName}" Style="{StaticResource BodyLabel}" />
-                    </VerticalStackLayout>
-
-                    <VerticalStackLayout Grid.Row="2" Grid.Column="0" Spacing="2">
-                        <Label Text="الفصل" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding Grade}" Style="{StaticResource BodyLabel}" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Row="2" Grid.Column="1" Spacing="2">
-                        <Label Text="المرحلة" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding Level}" Style="{StaticResource BodyLabel}" />
+                    <VerticalStackLayout Grid.Row="1" Grid.Column="0" Spacing="4">
+                        <Label Text="رقم الهاتف" Style="{StaticResource MutedLabel}" />
+                        <Border Style="{StaticResource TopBarField}">
+                            <Label Text="{Binding Phone}" Style="{StaticResource CellLabel}"
+                                   FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                        </Border>
                     </VerticalStackLayout>
 
-                    <VerticalStackLayout Grid.Row="3" Grid.Column="0" Spacing="2">
-                        <Label Text="نوع النظام" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding SystemTypeDisplay}" Style="{StaticResource BodyLabel}" />
+                    <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="4">
+                        <Label Text="هاتف ولي الأمر" Style="{StaticResource MutedLabel}" />
+                        <Border Style="{StaticResource TopBarField}">
+                            <Label Text="{Binding GuardianPhone}" Style="{StaticResource CellLabel}"
+                                   FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                        </Border>
                     </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Row="3" Grid.Column="1" Spacing="2">
+
+                    <VerticalStackLayout Grid.Row="2" Grid.Column="0" Spacing="4">
+                        <Label Text="اسم ولي الأمر" Style="{StaticResource MutedLabel}" />
+                        <Border Style="{StaticResource TopBarField}">
+                            <Label Text="{Binding GuardianName}" Style="{StaticResource CellLabel}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Grid.Row="2" Grid.Column="1" Spacing="4">
+                        <Label Text="السكن" Style="{StaticResource MutedLabel}" />
+                        <Border Style="{StaticResource TopBarField}">
+                            <Label Text="{Binding Address}" Style="{StaticResource CellLabel}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Grid.Row="3" Grid.Column="0" Spacing="4">
                         <Label Text="المشرفة" Style="{StaticResource MutedLabel}" />
-                        <!-- "توزيع إداري تلقائي" where unassigned, never a dash. -->
-                        <Label Text="{Binding SupervisorName}" Style="{StaticResource BodyLabel}" />
+                        <Border Style="{StaticResource TopBarField}">
+                            <Label Text="{Binding SupervisorName}"
+                                   Style="{StaticResource CellLabelSecondary}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Grid.Row="3" Grid.Column="1" Spacing="4">
+                        <Label Text="نوع النظام" Style="{StaticResource MutedLabel}" />
+                        <Border Style="{StaticResource TopBarField}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource DisabledBgLight}, Dark={StaticResource DisabledBgDark}}">
+                            <Label Text="{Binding SystemTypeDisplay}"
+                                   Style="{StaticResource CellLabel}"
+                                   TextColor="{AppThemeBinding Light={StaticResource DisabledTextLight}, Dark={StaticResource DisabledTextDark}}" />
+                        </Border>
                     </VerticalStackLayout>
                 </Grid>
             </VerticalStackLayout>
 
-            <!-- الجهاز المرتبط + الملف المالي -->
-            <VerticalStackLayout Grid.Column="1" Spacing="16">
+            <!-- ══ الجهاز والملف المالي ══════════════════════════════════ -->
+            <VerticalStackLayout Grid.Column="1" Spacing="24" VerticalOptions="Start">
 
                 <VerticalStackLayout Spacing="12">
-                    <Label Text="الجهاز المرتبط" Style="{StaticResource HeadingLabel}" />
-                    <BoxView HeightRequest="1"
-                             Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Label Grid.Column="0" Text="الجهاز المرتبط"
+                               Style="{StaticResource HeadingLabel}" />
+                        <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                    </Grid>
 
                     <Border Style="{StaticResource Panel}">
-                        <VerticalStackLayout Spacing="10">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <Label Grid.Column="0" Text="النوع" Style="{StaticResource SecondaryLabel}" />
-                                <Label Grid.Column="1" Text="{Binding DeviceType}" Style="{StaticResource MonoLtrLabel}" />
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <Label Grid.Column="0" Text="تاريخ الربط" Style="{StaticResource SecondaryLabel}" />
-                                <Label Grid.Column="1" Text="{Binding DeviceBoundAt}" Style="{StaticResource SecondaryLabel}" />
+                        <VerticalStackLayout Spacing="12">
+
+                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="النوع" Style="{StaticResource MutedLabel}" />
+                                    <Label Text="{Binding DeviceType}" Style="{StaticResource CellLabelStrong}"
+                                           FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                                </VerticalStackLayout>
+
+                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                    <Label Text="المعرّف" Style="{StaticResource MutedLabel}" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                        <!-- Monospace and LTR. A device id read
+                                             right-to-left is one the student
+                                             cannot dictate over a phone. -->
+                                        <Label Grid.Column="0" Text="{Binding DeviceId}"
+                                               Style="{StaticResource MonoLtrLabel}"
+                                               FontSize="{StaticResource FontSecondary}"
+                                               LineBreakMode="MiddleTruncation" />
+                                        <Border Grid.Column="1" WidthRequest="24" HeightRequest="24"
+                                                Padding="0" StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 4"
+                                                BackgroundColor="Transparent">
+                                            <shapes:Path Style="{StaticResource IconPathMuted}"
+                                                         WidthRequest="13" HeightRequest="13"
+                                                         Data="{StaticResource IconCopy}" />
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding CopyDeviceIdCommand}" />
+                                            </Border.GestureRecognizers>
+                                        </Border>
+                                    </Grid>
+                                </VerticalStackLayout>
+
+                                <VerticalStackLayout Grid.Column="2" Spacing="2">
+                                    <Label Text="تاريخ الربط" Style="{StaticResource MutedLabel}" />
+                                    <Label Text="{Binding DeviceBoundAt}" Style="{StaticResource CellLabelStrong}"
+                                           FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                                </VerticalStackLayout>
                             </Grid>
 
-                            <!-- Copyable: a student phoning to be unbound has to
-                                 convey a string nobody can dictate accurately. -->
-                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
-                                <Label Grid.Row="0" Grid.Column="0" Text="معرّف الجهاز"
-                                       Style="{StaticResource SecondaryLabel}" />
-                                <Label Grid.Row="0" Grid.Column="1" Text="{Binding DeviceId}"
-                                       Style="{StaticResource MonoLtrLabel}" />
-                                <Button Grid.Row="1" Grid.ColumnSpan="2" Text="نسخ المعرّف"
-                                        Command="{Binding CopyDeviceIdCommand}"
-                                        Style="{StaticResource NeutralButtonSmall}"
-                                        HorizontalOptions="Start" />
-                            </Grid>
+                            <BoxView Style="{StaticResource SectionRule}" />
 
-                            <Label Text="{x:Static vm:ProfileViewModel.UnbindExplanation}"
+                            <Label Text="حسابك مرتبط بهذا الجهاز فقط. لاستخدام جهاز آخر يجب مراجعة الإدارة لفك الارتباط."
                                    Style="{StaticResource CopyLabel}" />
-
-                            <Label Text="{Binding ToastMessage}" IsVisible="{Binding HasToast}"
-                                   Style="{StaticResource MutedLabel}"
-                                   TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                         </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
 
                 <VerticalStackLayout Spacing="12">
-                    <Label Text="الملف المالي" Style="{StaticResource HeadingLabel}" />
-                    <BoxView HeightRequest="1"
-                             Color="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Label Grid.Column="0" Text="الملف المالي"
+                               Style="{StaticResource HeadingLabel}" />
+                        <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                    </Grid>
 
-                    <Border Style="{StaticResource Panel}">
-                        <Grid ColumnDefinitions="*,Auto">
+                    <!--
+                        One line, not the design's three.
+
+                        The design shows إجمالي المطلوب and إجمالي المدفوع above
+                        المتبقي. Neither is reachable by a student: finance's
+                        StudentFinancialFileView is IsAdminOrManager, and the only
+                        figure that rides along on /auth/me/ is the balance. The
+                        two rows are omitted rather than filled with a guess.
+                    -->
+                    <Border Style="{StaticResource TableCard}">
+                        <Grid HeightRequest="40" Padding="16,0" ColumnDefinitions="*,Auto">
                             <Label Grid.Column="0" Text="المتبقي"
-                                   Style="{StaticResource SecondaryLabel}" VerticalOptions="Center" />
-                            <Label Grid.Column="1" Text="{Binding Balance}"
-                                   FontSize="{StaticResource FontHeading}" FontAttributes="Bold"
+                                   Style="{StaticResource CellLabelStrong}" />
+                            <Label Grid.Column="1" Text="{Binding BalanceLabel}"
+                                   Style="{StaticResource CellLabelStrong}"
                                    TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
                         </Grid>
                     </Border>
-
-                    <!-- The payments table the design shows has no student
-                         endpoint: finance's StudentFinancialFileView is
-                         IsAdminOrManager. Only the balance is reachable. -->
                 </VerticalStackLayout>
-
             </VerticalStackLayout>
         </Grid>
     </ScrollView>

@@ -84,6 +84,11 @@
     <Color x:Key="DisabledTextLight">#94A3B8</Color>
     <Color x:Key="DisabledTextDark">#7E8DA8</Color>
 
+    <!-- Skeleton fill. Its own token rather than a reuse of Hover: a skeleton
+         must read as absent content, and Hover reads as an interaction. -->
+    <Color x:Key="SkeletonLight">#EEF2F8</Color>
+    <Color x:Key="SkeletonDark">#1A2235</Color>
+
     <!-- Scrim behind dialogs, and the video letterbox surround. The surround is
          the same value in both themes - a letterbox is not theme-dependent. -->
     <Color x:Key="Scrim">#730F172A</Color>
@@ -110,14 +115,27 @@
     <x:Double x:Key="FontLabel">11</x:Double>
 
     <!--
-        PLACEHOLDER faces. The design calls for Cairo (UI) and Tajawal (running
-        copy) at 400/500/700. Those files are not in the repo yet, and MAUI
-        fails at startup on a font alias that was never registered, so these
-        point at the template faces. Swapping the two aliases below is the whole
-        change once the real files land in Resources/Fonts.
+        The design's two faces, bundled in Resources/Fonts under the OFL.
+
+        Cairo carries the UI - labels, table cells, buttons, nav. Tajawal
+        carries running copy: descriptions, notification bodies, exam questions,
+        the blocked-screen explanations. The split is the design's, and it is
+        what keeps a paragraph from reading like a control.
+
+        One alias per weight, because MAUI resolves a font by family name and
+        can only ask for bold on top of it - 500 is unreachable through
+        FontAttributes. Registered in MauiProgram.ConfigureFonts.
+
+        Cairo's 400/500/700 are static instances cut from Google's variable
+        Cairo, which ships with no statics of its own; see the header of
+        desktop/tools/instance_cairo.py.
     -->
-    <x:String x:Key="FontUi">OpenSansRegular</x:String>
-    <x:String x:Key="FontUiBold">OpenSansSemibold</x:String>
-    <x:String x:Key="FontCopy">OpenSansRegular</x:String>
+    <x:String x:Key="FontUi">Cairo</x:String>
+    <x:String x:Key="FontUiMedium">CairoMedium</x:String>
+    <x:String x:Key="FontUiBold">CairoBold</x:String>
+
+    <x:String x:Key="FontCopy">Tajawal</x:String>
+    <x:String x:Key="FontCopyMedium">TajawalMedium</x:String>
+    <x:String x:Key="FontCopyBold">TajawalBold</x:String>
 
 </ResourceDictionary>

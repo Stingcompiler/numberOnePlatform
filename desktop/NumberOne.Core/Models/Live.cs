@@ -66,6 +66,55 @@ public sealed class LiveSession
     public bool CanJoin =>
         !string.IsNullOrWhiteSpace(StreamUrl) &&
         Status is not (LiveStatuses.Ended or LiveStatuses.Archived);
+
+    /// <summary>
+    /// Zoom / Google Meet / Teams / YouTube, in Latin and rendered LTR.
+    ///
+    /// Mapped from the raw provider rather than taken from provider_display,
+    /// which the server localises: "Microsoft Teams" for teams, "YouTube Live"
+    /// for youtube. The design names the product, not the plan.
+    /// </summary>
+    [JsonIgnore]
+    public string ProviderLabel => LiveProviders.Display(Provider, ProviderDisplay);
+
+    /// <summary>"16:00 — 17:30", or just the start where no end was set.</summary>
+    [JsonIgnore]
+    public string TimeLabel
+    {
+        get
+        {
+            if (ScheduledStart is not { } start) return "";
+
+            var day = start.ToLocalTime().Date == DateTimeOffset.Now.ToLocalTime().Date
+                ? ""
+                : ViewModels.UiText.FormatDate(start) + " ";
+
+            var from = start.ToLocalTime().ToString("HH:mm");
+
+            return ScheduledEnd is { } end
+                ? $"{day}{from} — {end.ToLocalTime():HH\\:mm}"
+                : day + from;
+        }
+    }
+
+    [JsonIgnore]
+    public string StatusLabel => LiveStatuses.Display(Status);
+
+    /// <summary>A pulsing dot rides the pill, but only while it is actually live.</summary>
+    [JsonIgnore]
+    public bool IsLiveNow => Status == LiveStatuses.Live;
+
+    /// <summary>
+    /// What the trailing control says. An ended session keeps the control but
+    /// states its own state rather than offering a link that leads nowhere.
+    /// </summary>
+    [JsonIgnore]
+    public string ActionLabel => Status switch
+    {
+        LiveStatuses.Ended => "انتهت",
+        LiveStatuses.Archived => "مؤرشفة",
+        _ => "دخول",
+    };
 }
 
 public static class LiveProviders
@@ -75,6 +124,21 @@ public static class LiveProviders
     public const string Teams = "teams";
     public const string YouTube = "youtube";
     public const string Other = "other";
+
+    /// <summary>
+    /// The product name, in Latin. Falls back to whatever the server sent for
+    /// a provider added after this client shipped, and only then to "أخرى" —
+    /// a new provider should read as itself, not as unknown.
+    /// </summary>
+    public static string Display(string? provider, string? serverDisplay = null) => provider switch
+    {
+        Zoom => "Zoom",
+        GoogleMeet => "Google Meet",
+        Teams => "Teams",
+        YouTube => "YouTube",
+        Other => "أخرى",
+        _ => string.IsNullOrWhiteSpace(serverDisplay) ? "أخرى" : serverDisplay!,
+    };
 }
 
 public static class LiveStatuses

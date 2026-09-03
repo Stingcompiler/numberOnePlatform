@@ -14,7 +14,7 @@ namespace NumberOne.Core.ViewModels;
 /// grades — a failed exam could disappear before a parent saw it. The backend
 /// has no endpoint for either operation.
 /// </summary>
-public sealed partial class ResultsViewModel : ObservableObject
+public sealed partial class ResultsViewModel : ObservableObject, ISearchable
 {
     private readonly StudentApi _api;
 
@@ -29,21 +29,35 @@ public sealed partial class ResultsViewModel : ObservableObject
     /// <summary>Raised by the only row action there is: "عرض التفاصيل".</summary>
     public event EventHandler<int>? AttemptOpened;
 
-    // ── Filters ──────────────────────────────────────────────────────────────
+    /// <summary>The label the top bar prints beside the title.</summary>
+    public event EventHandler<string>? CountChanged;
+
+    // ── Search and filters ───────────────────────────────────────────────────
+
+    public string SearchPlaceholder => "ابحث في النتائج";
+
+    public void ApplySearch(string query) => Query = query;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Visible))]
+    [NotifyPropertyChangedFor(nameof(Visible), nameof(PageRows), nameof(PageLabel),
+                              nameof(ShownLabel), nameof(IsFilteredEmpty))]
     private string _query = "";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Visible))]
+    [NotifyPropertyChangedFor(nameof(Visible), nameof(PageRows), nameof(PageLabel),
+                              nameof(ShownLabel), nameof(IsFilteredEmpty),
+                              nameof(IsAllSelected), nameof(IsPassedSelected), nameof(IsFailedSelected))]
     private VerdictFilter _verdict = VerdictFilter.All;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Visible))]
+    [NotifyPropertyChangedFor(nameof(Visible), nameof(PageRows))]
     private ResultSort _sort = ResultSort.DateDescending;
 
-    /// <summary>The rows after search, filter and sort.</summary>
+    public bool IsAllSelected => Verdict == VerdictFilter.All;
+    public bool IsPassedSelected => Verdict == VerdictFilter.Passed;
+    public bool IsFailedSelected => Verdict == VerdictFilter.Failed;
+
+    /// <summary>The rows after search, filter and sort — before paging.</summary>
     public IReadOnlyList<ResultRow> Visible
     {
         get
@@ -70,10 +84,53 @@ public sealed partial class ResultsViewModel : ObservableObject
                 ResultSort.DateAscending => rows.OrderBy(r => r.SubmittedAt).ToList(),
                 ResultSort.ScoreDescending => rows.OrderByDescending(r => r.Percentage).ToList(),
                 ResultSort.ScoreAscending => rows.OrderBy(r => r.Percentage).ToList(),
+                ResultSort.TitleAscending => rows.OrderBy(r => r.ExamTitle, StringComparer.CurrentCulture).ToList(),
+                ResultSort.TitleDescending => rows.OrderByDescending(r => r.ExamTitle, StringComparer.CurrentCulture).ToList(),
+                ResultSort.CourseAscending => rows.OrderBy(r => r.CourseName, StringComparer.CurrentCulture).ToList(),
+                ResultSort.CourseDescending => rows.OrderByDescending(r => r.CourseName, StringComparer.CurrentCulture).ToList(),
                 _ => rows.OrderByDescending(r => r.SubmittedAt).ToList(),
             };
         }
     }
+
+    public bool IsFilteredEmpty => Results.HasData && Visible.Count == 0;
+
+    // ── Paging ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Eight rows to a page. The table sits under a summary and above the
+    /// pager on a 900px-tall window; more than eight and the pager falls below
+    /// the fold, which is the one place it must not be.
+    /// </summary>
+    public const int PageSize = 8;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PageRows), nameof(PageLabel), nameof(CanGoBack), nameof(CanGoForward))]
+    private int _page = 1;
+
+    public int PageCount => Math.Max(1, (int)Math.Ceiling(Visible.Count / (double)PageSize));
+
+    /// <summary>The rows actually rendered: the current page of the filtered set.</summary>
+    public IReadOnlyList<ResultRow> PageRows =>
+        Visible.Skip((Math.Clamp(Page, 1, PageCount) - 1) * PageSize).Take(PageSize).ToList();
+
+    public bool CanGoBack => Page > 1;
+    public bool CanGoForward => Page < PageCount;
+
+    public string PageLabel =>
+        $"صفحة {UiText.ToArabicIndicDigits(Math.Clamp(Page, 1, PageCount).ToString())} " +
+        $"من {UiText.ToArabicIndicDigits(PageCount.ToString())}";
+
+    /// <summary>"عرض ٨ من ١٣" — what the filter left, against the whole record.</summary>
+    public string ShownLabel =>
+        $"عرض {UiText.ToArabicIndicDigits(Visible.Count.ToString())} " +
+        $"من {UiText.ToArabicIndicDigits(TotalCount.ToString())}";
+
+    [RelayCommand]
+    private void NextPage() { if (CanGoForward) Page++; }
+
+    [RelayCommand]
+    private void PreviousPage() { if (CanGoBack) Page--; }
 
     // ── Summary ──────────────────────────────────────────────────────────────
 
@@ -86,6 +143,19 @@ public sealed partial class ResultsViewModel : ObservableObject
         ? (int)Math.Round(rows.Average(r => r.Percentage))
         : 0;
 
+    public string AverageLabel => UiText.ToArabicIndicDigits(AveragePercent.ToString()) + "٪";
+
+    /// <summary>"١١" over the caption "من ١٣ اختباراً".</summary>
+    public string PassedCaption => $"من {UiText.ToArabicIndicDigits(TotalCount.ToString())} محاولة";
+
+    /// <summary>The single best attempt, for the أعلى درجة card.</summary>
+    private ResultRow? Best => Results.Value?.OrderByDescending(r => r.Percentage).FirstOrDefault();
+
+    public string BestScoreLabel => Best?.ScoreLabel ?? "—";
+    public string BestExamName => Best?.ExamTitle ?? "";
+
+    public bool HasFailures => FailedCount > 0;
+
     [RelayCommand]
     private void OpenAttempt(ResultRow? row)
     {
@@ -93,24 +163,77 @@ public sealed partial class ResultsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void FilterAll() => Verdict = VerdictFilter.All;
+    private void FilterAll() => SetVerdict(VerdictFilter.All);
 
     [RelayCommand]
-    private void FilterPassed() => Verdict = VerdictFilter.Passed;
+    private void FilterPassed() => SetVerdict(VerdictFilter.Passed);
 
     [RelayCommand]
-    private void FilterFailed() => Verdict = VerdictFilter.Failed;
+    private void FilterFailed() => SetVerdict(VerdictFilter.Failed);
+
+    private void SetVerdict(VerdictFilter verdict)
+    {
+        Verdict = verdict;
+
+        // Page 3 of an unfiltered table is usually past the end of a filtered
+        // one, and an empty page reads as "no results" rather than "wrong page".
+        Page = 1;
+    }
+
+    // ── Sorting ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Each header toggles its own column between ascending and descending, and
+    /// switching columns starts that column at its natural direction: names
+    /// ascending, dates and scores descending.
+    /// </summary>
+    [RelayCommand]
+    private void SortByTitle() => Sort =
+        Sort == ResultSort.TitleAscending ? ResultSort.TitleDescending : ResultSort.TitleAscending;
+
+    [RelayCommand]
+    private void SortByCourse() => Sort =
+        Sort == ResultSort.CourseAscending ? ResultSort.CourseDescending : ResultSort.CourseAscending;
+
+    [RelayCommand]
+    private void SortByDate() => Sort =
+        Sort == ResultSort.DateDescending ? ResultSort.DateAscending : ResultSort.DateDescending;
+
+    [RelayCommand]
+    private void SortByScore() => Sort =
+        Sort == ResultSort.ScoreDescending ? ResultSort.ScoreAscending : ResultSort.ScoreDescending;
+
+    [RelayCommand]
+    private void ClearFilters()
+    {
+        Query = "";
+        Verdict = VerdictFilter.All;
+        Page = 1;
+    }
 
     [RelayCommand]
     public async Task LoadAsync(CancellationToken ct = default)
     {
         await Results.LoadAsync(ct).ConfigureAwait(true);
 
+        Page = 1;
+
         OnPropertyChanged(nameof(Visible));
+        OnPropertyChanged(nameof(PageRows));
+        OnPropertyChanged(nameof(PageLabel));
+        OnPropertyChanged(nameof(ShownLabel));
+        OnPropertyChanged(nameof(IsFilteredEmpty));
         OnPropertyChanged(nameof(TotalCount));
         OnPropertyChanged(nameof(PassedCount));
         OnPropertyChanged(nameof(FailedCount));
+        OnPropertyChanged(nameof(HasFailures));
         OnPropertyChanged(nameof(AveragePercent));
+        OnPropertyChanged(nameof(AverageLabel));
+        OnPropertyChanged(nameof(PassedCaption));
+        OnPropertyChanged(nameof(BestScoreLabel));
+        OnPropertyChanged(nameof(BestExamName));
+
+        CountChanged?.Invoke(this, UiText.Count(TotalCount, "نتيجة", "نتيجتان", "نتائج"));
     }
 
     /// <summary>
@@ -176,4 +299,8 @@ public enum ResultSort
     DateAscending,
     ScoreDescending,
     ScoreAscending,
+    TitleAscending,
+    TitleDescending,
+    CourseAscending,
+    CourseDescending,
 }

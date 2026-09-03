@@ -30,12 +30,30 @@ public partial class LessonView : ContentView
         // The notice must not claim protection the platform does not provide.
         // On macOS, and on Windows builds older than 2004, capture blocking is
         // simply absent and saying otherwise would be a lie to the student.
-        SecurityNotice.Text = protection.IsSupported
+        SecurityNotice.Text = (protection.IsSupported
             ? "التسجيل والتقاط الشاشة معطّلان لحماية المحتوى"
-            : "هذا المحتوى محمي بحقوق النشر — التسجيل أو إعادة النشر مخالفة.";
+            : "هذا المحتوى محمي بحقوق النشر — التسجيل أو إعادة النشر مخالفة.")
+            + " · 920 × 518";
+
+        // The attachment opens in the system handler, outside the app. A second
+        // WebView showing the same material would not carry the player window's
+        // capture protection, and would quietly become the way around it.
+        vm.BrowserLauncher = async url =>
+        {
+            try
+            {
+                await Launcher.Default.OpenAsync(url);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        };
     }
 
-    public event EventHandler? BackRequested;
+    public LessonViewModel ViewModel => _vm;
+
 
     public void BeginLoad()
     {
@@ -202,5 +220,4 @@ public partial class LessonView : ContentView
         label.TextColor = ink;
     }
 
-    private void OnBackClicked(object? sender, EventArgs e) => BackRequested?.Invoke(this, EventArgs.Empty);
 }

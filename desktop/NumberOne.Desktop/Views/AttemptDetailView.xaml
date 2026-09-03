@@ -8,18 +8,24 @@
     <ScrollView>
         <VerticalStackLayout Padding="24" Spacing="16">
 
-            <Button Text="← النتائج" Command="{Binding BackCommand}"
-                    Style="{StaticResource GhostButton}" HorizontalOptions="Start" />
+            <!-- Back lives in the top bar, not here. -->
 
-            <Label Text="جارٍ التحميل…" Style="{StaticResource MutedLabel}"
-                   IsVisible="{Binding Attempt.IsLoading}" />
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding Attempt.IsLoading}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="400" />
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="340" />
+                </VerticalStackLayout>
+            </Border>
 
-            <HorizontalStackLayout Spacing="8" IsVisible="{Binding Attempt.HasError}">
-                <Label Text="{Binding Attempt.ErrorMessage}" Style="{StaticResource SecondaryLabel}"
-                       VerticalOptions="Center" />
-                <Button Text="إعادة المحاولة" Command="{Binding LoadCommand}"
-                        Style="{StaticResource NeutralButtonSmall}" />
-            </HorizontalStackLayout>
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding Attempt.HasError}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Label Text="{Binding Attempt.ErrorMessage}"
+                           Style="{StaticResource CellLabelSecondary}"
+                           HorizontalTextAlignment="Center" />
+                    <Button Text="إعادة المحاولة" Style="{StaticResource SecondaryButton}"
+                            HorizontalOptions="Center" Command="{Binding LoadCommand}" />
+                </VerticalStackLayout>
+            </Border>
 
             <VerticalStackLayout IsVisible="{Binding Attempt.HasData}" Spacing="16">
 

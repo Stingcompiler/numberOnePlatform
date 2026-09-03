@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
              x:Class="NumberOne.Desktop.Views.BlockedPage"
              x:DataType="vm:BlockedPageViewModel"
              FlowDirection="RightToLeft"
@@ -21,10 +22,9 @@
                     HorizontalOptions="Center"
                     StrokeThickness="0" StrokeShape="RoundRectangle 32"
                     BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryTintLight}, Dark={StaticResource PrimaryTintDark}}">
-                <Label Text="{Binding Glyph}"
-                       FontSize="30"
-                       TextColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
-                       HorizontalOptions="Center" VerticalOptions="Center" />
+                <shapes:Path Style="{StaticResource IconPathLarge}"
+                             Data="{Binding IconKey, Converter={StaticResource IconKey}}"
+                             Stroke="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
             </Border>
 
             <Label Text="{Binding Title}"
