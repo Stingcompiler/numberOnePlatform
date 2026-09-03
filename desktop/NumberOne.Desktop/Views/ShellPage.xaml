@@ -296,10 +296,18 @@
         </Grid>
 
         <!-- ══ Top bar and content ═══════════════════════════════════════ -->
-        <Grid Grid.Column="1" RowDefinitions="48,Auto,*">
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <!-- Collapsed to zero for a fullscreen lecture. Hiding the bar
+                     alone would leave its 48px behind as a dead band. -->
+                <RowDefinition x:Name="TopBarRow" Height="48" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
             <!-- ── Top bar ───────────────────────────────────────────────── -->
-            <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto"
+            <Grid Grid.Row="0" x:Name="TopBar"
+                  ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto"
                   ColumnSpacing="16" Padding="24,0"
                   BackgroundColor="{AppThemeBinding Light={StaticResource BgLight}, Dark={StaticResource BgDark}}">
 

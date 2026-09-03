@@ -29,7 +29,8 @@
             </Grid.ColumnDefinitions>
 
             <!-- ══ Player and lesson ═════════════════════════════════════ -->
-            <VerticalStackLayout Grid.Column="0" Spacing="16" VerticalOptions="Start">
+            <VerticalStackLayout Grid.Column="0" x:Name="PlayerColumn"
+                                 Spacing="16" VerticalOptions="Start">
 
                 <VerticalStackLayout Style="{StaticResource StatePanel}"
                                      IsVisible="{Binding Lesson.IsLoading}">

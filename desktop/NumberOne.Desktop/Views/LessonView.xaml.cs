@@ -105,16 +105,37 @@ public partial class LessonView : ContentView
     /// </summary>
     private void ApplyFullscreen(bool on)
     {
-        VideoFrame.WidthRequest = on ? -1 : 920;
-        VideoFrame.HeightRequest = on ? -1 : 518;
-        VideoFrame.HorizontalOptions = on ? LayoutOptions.Fill : LayoutOptions.Center;
-
-        // What is left is the picture and nothing else. The rail goes by
-        // collapsing its column rather than by its IsVisible, which belongs to
-        // a binding on Playlist.HasData.
+        // The picture keeps its 920 x 518 — the 11in 16:9 surface — in every
+        // mode. It is a maximum as well as a size, and fullscreen is not an
+        // exception to it: a lecture stretched past it is a lecture being
+        // upscaled from the same source, softer rather than bigger.
+        //
+        // An earlier attempt cleared the two requests so the frame could fill.
+        // It collapsed to a strip instead: this Border sits in a
+        // VerticalStackLayout inside a ScrollView, which measures a child to
+        // its content, and a WebView has no intrinsic height to measure. The
+        // dimensions stay.
+        //
+        // What fullscreen actually removes is everything around the picture —
+        // the notes, the title, the exercise, the unit rail, and (through
+        // FullscreenChanged) the sidebar and top bar. The lecture is then the
+        // only thing on screen, centred, which is what the control is for.
         BelowVideo.IsVisible = !on;
         RailColumn.Width = on ? new GridLength(0) : new GridLength(200);
+
+        // Centred in what is left rather than pinned under a top bar that is
+        // no longer there.
+        PlayerColumn.VerticalOptions = on ? LayoutOptions.Center : LayoutOptions.Start;
+
+        FullscreenChanged?.Invoke(this, on);
     }
+
+    /// <summary>
+    /// Raised when the player enters or leaves fullscreen, so the shell can put
+    /// its own chrome away. The lecture screen cannot reach the sidebar or the
+    /// top bar itself — they belong to the page hosting it.
+    /// </summary>
+    public event EventHandler<bool>? FullscreenChanged;
 
     public void BeginLoad()
     {

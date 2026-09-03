@@ -143,6 +143,9 @@ public partial class ShellPage : ContentPage
         _teardownCurrent?.Invoke();
         _teardownCurrent = teardown;
 
+        // Leaving a lecture that was expanded must not take the nav with it.
+        ApplyChromeVisibility(true);
+
         _route = route;
         _goBack = back;
         _searchTarget = search;
@@ -168,6 +171,25 @@ public partial class ShellPage : ContentPage
     /// because a count printed before the data arrives would read as zero.
     /// </summary>
     private void SetCount(string text) => PageCount.Text = text;
+
+    /// <summary>
+    /// Hides the sidebar and top bar so a fullscreen lecture is the only thing
+    /// on screen, and restores them after.
+    ///
+    /// Always restored on navigation: leaving the lecture while it is expanded
+    /// would otherwise strand the student in a window with no nav and no way
+    /// back, which is the failure mode that makes a fullscreen toggle dangerous
+    /// rather than merely broken.
+    /// </summary>
+    private void ApplyChromeVisibility(bool visible)
+    {
+        Sidebar.IsVisible = visible;
+        TopBar.IsVisible = visible;
+
+        // The row is fixed at 48, so hiding the bar without collapsing it would
+        // leave a dead band above the picture.
+        TopBarRow.Height = visible ? new GridLength(48) : new GridLength(0);
+    }
 
     private void ShowHome()
     {
@@ -211,6 +233,11 @@ public partial class ShellPage : ContentPage
         // state and the playlist selection all belong to one lecture.
         lesson.ViewModel.LessonPicked += (_, nextLessonId) => ShowLesson(nextLessonId, courseId);
         lesson.ViewModel.Toasted += (_, message) => ShowToast(message.Text, message.Kind);
+
+        // Fullscreen means the lecture and nothing else, so the chrome goes
+        // too. It belongs to this page, which is why the lecture screen asks
+        // rather than doing it itself.
+        lesson.FullscreenChanged += (_, on) => ApplyChromeVisibility(!on);
 
         // Teardown stops the watermark clock when the student leaves.
         Host(lesson, Route.Courses, "المحاضرة",
