@@ -83,6 +83,9 @@ public partial class ShellPage : ContentPage
         _home.ViewModel.ShowExamsRequested += (_, _) => ShowExams();
         _home.ViewModel.ShowLiveRequested += (_, _) => ShowLive();
         _home.ViewModel.ShowNotificationsRequested += (_, _) => ShowNotifications();
+        _home.ViewModel.ShowCoursesRequested += (_, _) => ShowCourses();
+        _home.ViewModel.ShowResultsRequested += (_, _) => ShowResults();
+        _home.ViewModel.ShowProfileRequested += (_, _) => ShowProfile();
         _home.ViewModel.CourseOpened += (_, courseId) => ShowCourseDetail(courseId);
         _home.ViewModel.ExamStarted += (_, examId) => ShowExamRunner(examId);
         _home.ViewModel.Toasted += (_, message) => ShowToast(message.Text, message.Kind);

@@ -78,6 +78,12 @@
     <Color x:Key="DangerLight">#C0392B</Color>
     <Color x:Key="DangerDark">#E74C3C</Color>
 
+    <!-- Tints for the quick-access tiles. Same 8%/14% recipe as the tints
+         above: the icon carries the hue at full strength, its plate carries it
+         faintly, and neither competes with the primary. -->
+    <Color x:Key="SuccessTintLight">#14059669</Color>
+    <Color x:Key="SuccessTintDark">#2422C55E</Color>
+
     <!-- ── Disabled ─────────────────────────────────────────────────────── -->
     <Color x:Key="DisabledBgLight">#F1F5F9</Color>
     <Color x:Key="DisabledBgDark">#1A2235</Color>

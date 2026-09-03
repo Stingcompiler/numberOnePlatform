@@ -130,6 +130,127 @@
                 </Grid>
             </Border>
 
+            <!-- ══ الوصول السريع ═════════════════════════════════════════ -->
+            <!--
+                The six routes the sidebar carries, as tiles.
+
+                Six, not the mobile app's seven: there is no المحاضرات tile
+                because desktop has no lectures route to send it to. A lecture
+                is reached through its course — الكورسات → unit → lecture — and
+                a tile that quietly landed on the courses table would be a
+                second door to the same room wearing a different sign.
+
+                Redundant with the sidebar by design. The sidebar is for someone
+                who knows where they are going; this is for someone looking.
+            -->
+            <VerticalStackLayout Spacing="12">
+
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <Label Grid.Column="0" Text="الوصول السريع"
+                           Style="{StaticResource HeadingLabel}" />
+                    <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="12">
+
+                    <Border Grid.Column="0" Style="{StaticResource QuickTile}">
+                        <VerticalStackLayout Spacing="10">
+                            <Border Style="{StaticResource QuickTilePlate}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryTintLight}, Dark={StaticResource SecondaryTintDark}}">
+                                <shapes:Path Style="{StaticResource IconPath}"
+                                             WidthRequest="20" HeightRequest="20"
+                                             Data="{StaticResource IconCourses}"
+                                             Stroke="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+                            </Border>
+                            <Label Text="الكورسات" Style="{StaticResource QuickTileLabel}" />
+                        </VerticalStackLayout>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ShowCoursesCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+
+                    <Border Grid.Column="1" Style="{StaticResource QuickTile}">
+                        <VerticalStackLayout Spacing="10">
+                            <Border Style="{StaticResource QuickTilePlate}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryTintLight}, Dark={StaticResource PrimaryTintDark}}">
+                                <shapes:Path Style="{StaticResource IconPath}"
+                                             WidthRequest="20" HeightRequest="20"
+                                             Data="{StaticResource IconLive}"
+                                             Stroke="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                            </Border>
+                            <Label Text="البث المباشر" Style="{StaticResource QuickTileLabel}" />
+                        </VerticalStackLayout>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ShowLiveCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource QuickTile}">
+                        <VerticalStackLayout Spacing="10">
+                            <Border Style="{StaticResource QuickTilePlate}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">
+                                <shapes:Path Style="{StaticResource IconPath}"
+                                             WidthRequest="20" HeightRequest="20"
+                                             Data="{StaticResource IconExams}"
+                                             Stroke="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+                            </Border>
+                            <Label Text="الاختبارات" Style="{StaticResource QuickTileLabel}" />
+                        </VerticalStackLayout>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ShowExamsCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+
+                    <Border Grid.Column="3" Style="{StaticResource QuickTile}">
+                        <VerticalStackLayout Spacing="10">
+                            <Border Style="{StaticResource QuickTilePlate}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SuccessTintLight}, Dark={StaticResource SuccessTintDark}}">
+                                <shapes:Path Style="{StaticResource IconPath}"
+                                             WidthRequest="20" HeightRequest="20"
+                                             Data="{StaticResource IconResults}"
+                                             Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
+                            </Border>
+                            <Label Text="النتائج" Style="{StaticResource QuickTileLabel}" />
+                        </VerticalStackLayout>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ShowResultsCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+
+                    <Border Grid.Column="4" Style="{StaticResource QuickTile}">
+                        <VerticalStackLayout Spacing="10">
+                            <Border Style="{StaticResource QuickTilePlate}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryTintLight}, Dark={StaticResource SecondaryTintDark}}">
+                                <shapes:Path Style="{StaticResource IconPath}"
+                                             WidthRequest="20" HeightRequest="20"
+                                             Data="{StaticResource IconBell}"
+                                             Stroke="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+                            </Border>
+                            <Label Text="الإشعارات" Style="{StaticResource QuickTileLabel}" />
+                        </VerticalStackLayout>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ShowNotificationsCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+
+                    <Border Grid.Column="5" Style="{StaticResource QuickTile}">
+                        <VerticalStackLayout Spacing="10">
+                            <Border Style="{StaticResource QuickTilePlate}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">
+                                <shapes:Path Style="{StaticResource IconPath}"
+                                             WidthRequest="20" HeightRequest="20"
+                                             Data="{StaticResource IconUser}"
+                                             Stroke="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+                            </Border>
+                            <Label Text="حسابي" Style="{StaticResource QuickTileLabel}" />
+                        </VerticalStackLayout>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ShowProfileCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
+
             <!-- ══ Work, and the feed ════════════════════════════════════ -->
             <Grid ColumnDefinitions="1.35*,*" ColumnSpacing="24">
 
