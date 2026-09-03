@@ -17,6 +17,21 @@ public partial class App : MauiWinUIApplication
 	public App()
 	{
 		this.InitializeComponent();
+
+		// The one that actually fires for a fault on the UI thread.
+		//
+		// AppDomain.UnhandledException does not see these: WinUI raises its own
+		// event first, which is what the generated App.g.i.cs hook attaches to
+		// in a debug build — it breaks in the debugger and, with no debugger
+		// attached, the window simply closes. On a school machine that leaves
+		// nothing behind but "it broke".
+		//
+		// The exception is written to the crash log and NOT marked handled:
+		// continuing after an unknown fault would leave the app in a state
+		// nobody has reasoned about. This makes the failure legible, it does
+		// not pretend to survive it.
+		this.UnhandledException += (_, e) =>
+			NumberOne.Desktop.App.RecordUnhandled("WinUI", e.Exception);
 	}
 
 	protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();

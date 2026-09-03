@@ -80,15 +80,15 @@ public partial class ShellPage : ContentPage
         // The dashboard's cross-links and row actions are navigation, which
         // belongs to the host. Wired once: HomeView is a singleton instance
         // reused across visits, unlike the screens rebuilt in Show*.
-        _home.ViewModel.ShowExamsRequested += (_, _) => ShowExams();
-        _home.ViewModel.ShowLiveRequested += (_, _) => ShowLive();
-        _home.ViewModel.ShowNotificationsRequested += (_, _) => ShowNotifications();
-        _home.ViewModel.ShowCoursesRequested += (_, _) => ShowCourses();
-        _home.ViewModel.ShowLecturesRequested += (_, _) => ShowLectures();
-        _home.ViewModel.ShowResultsRequested += (_, _) => ShowResults();
-        _home.ViewModel.ShowProfileRequested += (_, _) => ShowProfile();
-        _home.ViewModel.CourseOpened += (_, courseId) => ShowCourseDetail(courseId);
-        _home.ViewModel.ExamStarted += (_, examId) => ShowExamRunner(examId);
+        _home.ViewModel.ShowExamsRequested += (_, _) => Navigate(ShowExams);
+        _home.ViewModel.ShowLiveRequested += (_, _) => Navigate(ShowLive);
+        _home.ViewModel.ShowNotificationsRequested += (_, _) => Navigate(ShowNotifications);
+        _home.ViewModel.ShowCoursesRequested += (_, _) => Navigate(ShowCourses);
+        _home.ViewModel.ShowLecturesRequested += (_, _) => Navigate(ShowLectures);
+        _home.ViewModel.ShowResultsRequested += (_, _) => Navigate(ShowResults);
+        _home.ViewModel.ShowProfileRequested += (_, _) => Navigate(ShowProfile);
+        _home.ViewModel.CourseOpened += (_, courseId) => Navigate(() => ShowCourseDetail(courseId));
+        _home.ViewModel.ExamStarted += (_, examId) => Navigate(() => ShowExamRunner(examId));
         _home.ViewModel.Toasted += (_, message) => ShowToast(message.Text, message.Kind);
 
         // Connectivity is polled by the platform, not inferred from a failed
@@ -178,6 +178,21 @@ public partial class ShellPage : ContentPage
     private void SetCount(string text) => PageCount.Text = text;
 
     /// <summary>
+    /// Runs a navigation after the current input event has finished.
+    ///
+    /// Every row and tile navigates from inside its own tap handler, and Host
+    /// replaces ContentHost.Content — which disconnects the handler of the very
+    /// view whose gesture is still unwinding. Tearing a native control out from
+    /// under an event it is still dispatching is a good way to fault inside the
+    /// platform, where the stack says nothing about this code.
+    ///
+    /// One dispatcher turn is enough: the gesture completes, then the screen
+    /// changes. Nothing about the navigation is asynchronous otherwise, so this
+    /// costs a frame and no correctness.
+    /// </summary>
+    private void Navigate(Action go) => Dispatcher.Dispatch(go);
+
+    /// <summary>
     /// Hides the sidebar and top bar so a fullscreen lecture is the only thing
     /// on screen, and restores them after.
     ///
@@ -211,7 +226,7 @@ public partial class ShellPage : ContentPage
         // Rebuilt on each visit so the table reflects progress made since the
         // last time it was open, rather than a stale snapshot.
         var courses = new CoursesView(new CoursesViewModel(_api, _auth));
-        courses.ViewModel.CourseOpened += (_, courseId) => ShowCourseDetail(courseId);
+        courses.ViewModel.CourseOpened += (_, courseId) => Navigate(() => ShowCourseDetail(courseId));
         courses.ViewModel.CountChanged += (_, label) => SetCount(label);
 
         Host(courses, Route.Courses, "الكورسات", search: courses.ViewModel);
@@ -228,7 +243,7 @@ public partial class ShellPage : ContentPage
         // the course rather than here — the rail is the better place to
         // continue from once a lecture is open.
         lectures.ViewModel.LectureOpened += (_, target) =>
-            ShowLesson(target.LessonId, target.CourseId);
+            Navigate(() => ShowLesson(target.LessonId, target.CourseId));
 
         Host(lectures, Route.Lectures, "المحاضرات", search: lectures.ViewModel);
         lectures.BeginLoad();
@@ -237,7 +252,7 @@ public partial class ShellPage : ContentPage
     private void ShowCourseDetail(int courseId)
     {
         var detail = new CourseDetailView(new CourseDetailViewModel(_api, _auth, courseId));
-        detail.ViewModel.LessonOpened += (_, lessonId) => ShowLesson(lessonId, courseId);
+        detail.ViewModel.LessonOpened += (_, lessonId) => Navigate(() => ShowLesson(lessonId, courseId));
 
         Host(detail, Route.Courses, "الكورس", back: ShowCourses);
         detail.BeginLoad();
@@ -252,7 +267,7 @@ public partial class ShellPage : ContentPage
         // Picking another lecture out of the unit rail rebuilds the screen
         // rather than swapping the source: the watermark clock, the exercise
         // state and the playlist selection all belong to one lecture.
-        lesson.ViewModel.LessonPicked += (_, nextLessonId) => ShowLesson(nextLessonId, courseId);
+        lesson.ViewModel.LessonPicked += (_, nextLessonId) => Navigate(() => ShowLesson(nextLessonId, courseId));
         lesson.ViewModel.Toasted += (_, message) => ShowToast(message.Text, message.Kind);
 
         // Fullscreen means the lecture and nothing else, so the chrome goes
@@ -270,7 +285,7 @@ public partial class ShellPage : ContentPage
     private void ShowExams()
     {
         var exams = new ExamsView(new ExamsViewModel(_api));
-        exams.ViewModel.ExamStarted += (_, examId) => ShowExamRunner(examId);
+        exams.ViewModel.ExamStarted += (_, examId) => Navigate(() => ShowExamRunner(examId));
         exams.ViewModel.CountChanged += (_, label) => SetCount(label);
 
         Host(exams, Route.Exams, "الإختبارات والإمتحانات", search: exams.ViewModel);
@@ -296,7 +311,7 @@ public partial class ShellPage : ContentPage
     private void ShowResults()
     {
         var results = new ResultsView(new ResultsViewModel(_api));
-        results.ViewModel.AttemptOpened += (_, attemptId) => ShowAttemptDetail(attemptId);
+        results.ViewModel.AttemptOpened += (_, attemptId) => Navigate(() => ShowAttemptDetail(attemptId));
         results.ViewModel.CountChanged += (_, label) => SetCount(label);
 
         Host(results, Route.Results, "النتائج", search: results.ViewModel);

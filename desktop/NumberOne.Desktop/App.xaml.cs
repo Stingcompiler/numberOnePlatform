@@ -17,7 +17,68 @@ public partial class App : Application
         InitializeComponent();
         _services = services;
 
+        RecordCrashes();
         ApplyStartupTheme();
+    }
+
+    /// <summary>Where an unhandled exception is written. Also shown to the student.</summary>
+    public static string CrashLogPath =>
+        Path.Combine(FileSystem.AppDataDirectory, "crash.log");
+
+    /// <summary>
+    /// Writes anything that gets away to a file.
+    ///
+    /// This app runs on school machines with no debugger and no console, so an
+    /// unhandled exception is currently a window that closes and a student who
+    /// says "it broke". The type, the message and the stack are what turn that
+    /// into something fixable, and they have to survive the process ending to
+    /// be worth anything.
+    ///
+    /// Appends rather than overwrites: the first failure is usually the real
+    /// one, and a crash on the way out of a crash must not erase it.
+    ///
+    /// This does NOT stop the crash. It only makes it legible — nothing here
+    /// marks an exception handled, because swallowing an unknown fault would
+    /// leave the app running in a state nobody has reasoned about.
+    /// </summary>
+    private static void RecordCrashes()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            Record("AppDomain", e.ExceptionObject as Exception);
+
+        // A faulted task nobody awaited. The write paths are guarded now, but
+        // an async void handler can still surface here.
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Record("UnobservedTask", e.Exception);
+            e.SetObserved();
+        };
+    }
+
+    /// <summary>
+    /// Records a fault the platform caught. Public because WinUI raises its own
+    /// UnhandledException on the UI thread, and that handler lives in the
+    /// platform App class rather than here.
+    /// </summary>
+    public static void RecordUnhandled(string source, Exception? ex) => Record(source, ex);
+
+    private static void Record(string source, Exception? ex)
+    {
+        if (ex is null) return;
+
+        try
+        {
+            var entry =
+                $"{Environment.NewLine}=== {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss} · {source} ==={Environment.NewLine}" +
+                ex + Environment.NewLine;
+
+            File.AppendAllText(CrashLogPath, entry);
+        }
+        catch (Exception)
+        {
+            // Logging a crash must never cause one. A full disk or a locked
+            // file is not worth taking the app down a second time for.
+        }
     }
 
     /// <summary>
