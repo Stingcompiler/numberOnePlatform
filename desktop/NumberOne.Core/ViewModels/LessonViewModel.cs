@@ -222,8 +222,20 @@ public sealed partial class LessonViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanComplete))]
     private async Task MarkCompleteAsync(CancellationToken ct)
     {
-        if (await _api.MarkLessonCompleteAsync(_lessonId, ct).ConfigureAwait(true))
+        // Never throws: a dropped connection here used to come out of a command
+        // with nothing to catch it.
+        var attempt = await ApiAttempt
+            .TryAsync(token => _api.MarkLessonCompleteAsync(_lessonId, token), ct)
+            .ConfigureAwait(true);
+
+        if (attempt.Ok && attempt.Value)
+        {
             IsCompleted = true;
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(attempt.Error))
+            Toasted?.Invoke(this, new ToastMessage(attempt.Error, ToastKind.Error));
     }
 
     private bool CanComplete() => Lesson.HasData && !IsCompleted;
@@ -349,7 +361,21 @@ public sealed partial class LessonViewModel : ObservableObject
                 .ToList(),
         };
 
-        Result = await _api.SubmitExerciseAsync(request, ct).ConfigureAwait(true);
+        // The student's answers stay in _answers on failure, so "تسليم" resends
+        // the same paper rather than clearing it.
+        var attempt = await ApiAttempt
+            .TryAsync(token => _api.SubmitExerciseAsync(request, token), ct)
+            .ConfigureAwait(true);
+
+        if (!attempt.Ok)
+        {
+            if (!string.IsNullOrEmpty(attempt.Error))
+                Toasted?.Invoke(this, new ToastMessage(attempt.Error, ToastKind.Error));
+
+            return;
+        }
+
+        Result = attempt.Value;
     }
 
     /// <summary>

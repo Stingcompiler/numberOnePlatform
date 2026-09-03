@@ -199,18 +199,57 @@ public sealed partial class ExamRunnerViewModel : ObservableObject
     [RelayCommand]
     public async Task SubmitAsync(CancellationToken ct = default)
     {
-        if (HasResult) return;
+        if (HasResult || IsSubmitting) return;
 
         var answers = Questions
             .Select(q => _answers.TryGetValue(q.Id, out var answer) ? answer : ExamAnswers.Blank(q.Id))
             .ToList();
 
-        var response = await _api
-            .SubmitExamAsync(_examId, new ExamSubmission { Answers = answers }, ct)
-            .ConfigureAwait(true);
+        IsSubmitting = true;
+        SubmitError = null;
 
-        Result = response?.Attempt;
+        // Never throws. This is reached from the countdown, whose Tick handler
+        // is `async void` — an exception there has nowhere to go and would take
+        // the process down at the exact moment a student's time expires and
+        // their answers are still unsent.
+        var attempt = await ApiAttempt.TryAsync(
+            token => _api.SubmitExamAsync(_examId, new ExamSubmission { Answers = answers }, token),
+            ct).ConfigureAwait(true);
+
+        IsSubmitting = false;
+
+        if (!attempt.Ok)
+        {
+            // The answers are still in _answers, so retrying sends the same
+            // paper rather than a blank one.
+            SubmitError = string.IsNullOrEmpty(attempt.Error)
+                ? null                       // the screen went away; say nothing
+                : attempt.Error;
+            return;
+        }
+
+        Result = attempt.Value?.Attempt;
     }
+
+    /// <summary>
+    /// A submit is in flight. Blocks a second one — the countdown and the
+    /// student's own button can both fire, and two submits are two attempts on
+    /// the record.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRunning))]
+    private bool _isSubmitting;
+
+    /// <summary>
+    /// Why the paper did not go. Non-null keeps the runner on screen with the
+    /// answers intact, because the alternative is a student who has finished an
+    /// exam, has no result, and no way to send it.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSubmitError), nameof(IsRunning))]
+    private string? _submitError;
+
+    public bool HasSubmitError => !string.IsNullOrWhiteSpace(SubmitError);
 
     [RelayCommand]
     private void Finish() => Finished?.Invoke(this, EventArgs.Empty);

@@ -57,8 +57,29 @@ public partial class ExamRunnerView : ContentView
         _clock.Start();
     }
 
+    /// <summary>
+    /// The countdown.
+    ///
+    /// `async void`, because a timer handler has no other shape — which is why
+    /// nothing inside it may throw. TickAsync auto-submits when the time runs
+    /// out, and an exception escaping here would have nowhere to go and would
+    /// take the process down with the student's answers still unsent. The
+    /// submit path itself is now non-throwing; this catch is the backstop for
+    /// anything else that ever gets added to the tick.
+    /// </summary>
     private async void OnClockTick(object? sender, EventArgs e)
-        => await _vm.TickAsync(TimeSpan.FromSeconds(1));
+    {
+        try
+        {
+            await _vm.TickAsync(TimeSpan.FromSeconds(1));
+        }
+        catch (Exception)
+        {
+            // Stop the clock rather than throwing once a second. The runner
+            // keeps the answers and its own submit control.
+            _clock?.Stop();
+        }
+    }
 
     private void OnViewModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {

@@ -113,6 +113,32 @@
                         <Label x:Name="WarningLabel" IsVisible="False"
                                Style="{StaticResource MutedLabel}"
                                TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+
+                        <!--
+                            The paper did not go.
+
+                            This must not be a toast. The student has finished
+                            an exam, has no result, and their answers are still
+                            in memory — so the runner stays on screen with the
+                            answers intact and offers to send them again. A
+                            message that fades after four seconds would leave
+                            them with a dead clock and no idea what happened.
+                        -->
+                        <Border Style="{StaticResource ErrorPanel}"
+                                IsVisible="{Binding HasSubmitError}">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
+                                             Data="{StaticResource IconAlertCircle}"
+                                             Stroke="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
+                                <Label Grid.Column="1" Text="{Binding SubmitError}"
+                                       Style="{StaticResource CopyLabel}" VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
+                                <Button Grid.Column="2" Text="إعادة الإرسال"
+                                        Style="{StaticResource NeutralButtonSmall}"
+                                        IsEnabled="{Binding IsSubmitting, Converter={StaticResource Invert}}"
+                                        Command="{Binding SubmitCommand}" />
+                            </Grid>
+                        </Border>
                     </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>

@@ -81,8 +81,13 @@ public sealed partial class NotificationsViewModel : ObservableObject
     {
         if (notification is null || notification.IsRead) return;
 
-        if (!await _api.MarkNotificationReadAsync(notification.Id, ct).ConfigureAwait(true))
-            return;
+        // Never throws. Reading a notification is not worth an error panel, but
+        // it was worth a crash before this: the call was bare inside a command.
+        var attempt = await ApiAttempt
+            .TryAsync(token => _api.MarkNotificationReadAsync(notification.Id, token), ct)
+            .ConfigureAwait(true);
+
+        if (!attempt.Ok || !attempt.Value) return;
 
         // Refetch rather than mutating in place: Notification is an immutable
         // DTO, and the badge has to come from the server anyway.
@@ -93,7 +98,11 @@ public sealed partial class NotificationsViewModel : ObservableObject
     [RelayCommand]
     private async Task MarkAllReadAsync(CancellationToken ct = default)
     {
-        if (!await _api.MarkAllNotificationsReadAsync(ct).ConfigureAwait(true)) return;
+        var attempt = await ApiAttempt
+            .TryAsync(_api.MarkAllNotificationsReadAsync, ct)
+            .ConfigureAwait(true);
+
+        if (!attempt.Ok || !attempt.Value) return;
 
         await LoadAsync(ct).ConfigureAwait(true);
         ReadStateChanged?.Invoke(this, EventArgs.Empty);
