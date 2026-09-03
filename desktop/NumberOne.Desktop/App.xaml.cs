@@ -246,6 +246,7 @@ public partial class App : Application
         window.Created += (_, _) =>
         {
             ProtectFromCapture(window);
+            UseSystemTitleBar(window);
             Maximize(window);
         };
 
@@ -330,6 +331,30 @@ public partial class App : Application
 #if WINDOWS
         if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window platformWindow)
             protection.Protect(platformWindow);
+#endif
+    }
+
+    /// <summary>
+    /// Lets Windows draw the title bar instead of MAUI.
+    ///
+    /// MAUI extends its own strip into the caption area and writes the app
+    /// title into it. That strip is part of the window content, so it inherits
+    /// the RightToLeft flow the rest of the UI needs — while the caption
+    /// buttons stay where the system put them. The title then starts at the
+    /// same edge the close button occupies and the two sit on top of each
+    /// other, which is what a student sees the moment the app opens.
+    ///
+    /// Handing the bar back to the system fixes it at the source rather than
+    /// nudging the text clear: Windows has drawn right-to-left captions for
+    /// decades, and puts the buttons and the title on opposite edges without
+    /// being asked. The app already draws its own header inside the content,
+    /// so nothing of the design is lost with the strip.
+    /// </summary>
+    private static void UseSystemTitleBar(Window window)
+    {
+#if WINDOWS
+        if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window platformWindow)
+            platformWindow.ExtendsContentIntoTitleBar = false;
 #endif
     }
 
