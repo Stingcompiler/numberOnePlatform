@@ -135,9 +135,49 @@ public partial class App : Application
             || string.IsNullOrWhiteSpace(com.StackTrace);
     }
 
+    /// <summary>
+    /// Signatures already written, with how many times. Compositor faults
+    /// repeat in bursts of five and six per navigation.
+    /// </summary>
+    private static readonly Dictionary<string, int> Seen = new();
+
+    private const int KeepPerSignature = 3;
+    private const long MaxLogBytes = 512 * 1024;
+
     private static void Record(string source, Exception? ex)
     {
         if (ex is null) return;
+
+        // A recoverable render fault repeats without limit - 373 of the first
+        // 377 entries in the field were the same compositor message, and the
+        // two real faults in that file were buried among them. Keeping a few of
+        // each proves it happened and how often; keeping every one costs the
+        // log its only purpose.
+        if (IsRenderThreadFault(ex))
+        {
+            var signature = ex.GetType().Name + ":" + ex.HResult + ":" + ex.Message;
+
+            lock (Seen)
+            {
+                Seen.TryGetValue(signature, out var count);
+                Seen[signature] = count + 1;
+
+                if (count >= KeepPerSignature) return;
+            }
+        }
+
+        try
+        {
+            // A student's machine is not somewhere a log may grow for ever.
+            // Starting over loses history, but the useful entry is nearly
+            // always the most recent one.
+            if (new FileInfo(CrashLogPath) is { Exists: true } file && file.Length > MaxLogBytes)
+                File.Delete(CrashLogPath);
+        }
+        catch (Exception)
+        {
+            // Cannot stat or delete it; the append below still tries.
+        }
 
         try
         {

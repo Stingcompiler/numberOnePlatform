@@ -167,13 +167,105 @@ def absolute_start(d):
 # style asking for 1.75. The shared grid is what makes a set look like a set,
 # and self-scaling threw it away.
 #
-# Two pen-up moves to opposite corners fix the bounds at 0,0-24,24 for every
+# Two empty figures at opposite corners fix the bounds at 0,0-24,24 for every
 # icon, so they all take the same scale factor. A figure with no segments draws
 # nothing.
 #
+# Each one is CLOSED. Two bare moves in a row are two BeginFigure calls with no
+# EndFigure between them, and Win2D throws ArgumentException on the second -
+# "the figure was already begun" - which took the app down on every screen that
+# drew an icon.
+#
 # It goes LAST: leading with it would leave a following relative command
 # measured from 24,24 rather than from the origin.
-GRID_ANCHOR = "M0 0 M24 24"
+GRID_ANCHOR = "M 0 0 Z M 24 24 Z"
+
+
+ARGC = {"M":2,"L":2,"H":1,"V":1,"C":6,"S":4,"Q":4,"T":2,"A":7,"Z":0}
+NUM = re.compile(r"[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?")
+
+
+def _fmt(v):
+    s = f"{v:.4f}".rstrip("0").rstrip(".")
+    return "0" if s in ("", "-0") else s
+
+
+def canonical(d):
+    """Rewrite SVG path data in the explicit form MAUI's PathBuilder accepts.
+
+    Lucide emits the compact SVG a browser is happy with, and MAUI is not a
+    browser. Three shorthands break it, each silently - the parse stops and the
+    rest of the icon is dropped, so it renders as a fragment rather than as
+    nothing:
+
+      * arc flags packed against the next number, "A2 2 0 0022 17", which is
+        large-arc 0, sweep 0, x 22 and not the number 22;
+      * a number whose separator is its own decimal point, "7.54.54";
+      * extra coordinate pairs riding on an M, "M20 6 9 17", where everything
+        after the first pair is a lineto and not another move.
+
+    The output says all of it out loud: one command letter per argument group,
+    every number spaced, arc flags standing alone. Same curves, same
+    coordinates, no shorthand.
+    """
+    i, n = 0, len(d)
+    out = []
+    cmd = None
+
+    def read_number():
+        nonlocal i
+        while i < n and d[i] in ", \t\r\n":
+            i += 1
+        m = NUM.match(d, i)
+        if not m:
+            raise ValueError(f"expected number at {i}: {d[i:i+20]!r}")
+        i = m.end()
+        return float(m.group())
+
+    def read_flag():
+        # An arc flag is exactly one character, which is what lets SVG write
+        # "0022" and mean three separate values.
+        nonlocal i
+        while i < n and d[i] in ", \t\r\n":
+            i += 1
+        if i >= n or d[i] not in "01":
+            raise ValueError(f"expected arc flag at {i}: {d[i:i+20]!r}")
+        i += 1
+        return d[i - 1]
+
+    while i < n:
+        c = d[i]
+        if c in ", \t\r\n":
+            i += 1
+            continue
+
+        if c.isalpha():
+            cmd = c
+            i += 1
+        elif cmd is None:
+            raise ValueError(f"data does not start with a command: {d[:20]!r}")
+        else:
+            # An implicit repeat: the previous command runs again. After an M
+            # the repeat is a lineto, per the SVG grammar.
+            if cmd in "Mm":
+                cmd = "L" if cmd == "M" else "l"
+
+        up = cmd.upper()
+        if up == "Z":
+            out.append(cmd)
+            continue
+
+        k = ARGC[up]
+        if up == "A":
+            a = [read_number(), read_number(), read_number()]
+            f1, f2 = read_flag(), read_flag()
+            a += [read_number(), read_number()]
+            out.append(f"{cmd} {_fmt(a[0])} {_fmt(a[1])} {_fmt(a[2])} {f1} {f2} {_fmt(a[3])} {_fmt(a[4])}")
+        else:
+            a = [read_number() for _ in range(k)]
+            out.append(cmd + " " + " ".join(_fmt(v) for v in a))
+
+    return " ".join(out)
 
 
 def convert(svg):
@@ -200,7 +292,7 @@ def convert(svg):
 
     body = " ".join(p.strip().replace("\n", " ") for p in parts)
 
-    return f"{body} {GRID_ANCHOR}" if body else body
+    return f"{canonical(body)} {GRID_ANCHOR}" if body else body
 
 
 def main():
