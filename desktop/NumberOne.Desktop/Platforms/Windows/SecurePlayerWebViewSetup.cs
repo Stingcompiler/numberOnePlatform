@@ -100,6 +100,20 @@ internal static class SecurePlayerWebViewSetup
         // A page that asks to close the window is not a lecture doing its job.
         core.WindowCloseRequested += (_, _) => { };
 
+        // The one message the injected player sends: its fullscreen control.
+        // Web messages are enabled by default; this is the only listener, and
+        // anything it does not recognise is ignored rather than acted on.
+        core.WebMessageReceived += (_, e) =>
+        {
+            string payload;
+
+            try { payload = e.TryGetWebMessageAsString(); }
+            catch (Exception) { return; }   // not a string message
+
+            if (SecurePlayerWebView.TryReadFullscreen(payload, out var on))
+                control.ReportFullscreen(on);
+        };
+
         // No downloads: the lecture is for watching.
         core.DownloadStarting += (_, e) => e.Cancel = true;
 

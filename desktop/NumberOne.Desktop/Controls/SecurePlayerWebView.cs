@@ -68,6 +68,33 @@ public sealed class SecurePlayerWebView : WebView
     internal void ReportBlocked(string target) => NavigationBlocked?.Invoke(this, target);
 
     /// <summary>
+    /// Raised when the player's fullscreen control is used; true to expand.
+    ///
+    /// The page cannot do this itself. requestFullscreen() inside a web view
+    /// fills the WEB VIEW, and this one is a fixed 920x518 box inside the
+    /// lecture screen — the page would go fullscreen and nothing would visibly
+    /// change. The host owns the layout, so the page asks and the host acts.
+    /// </summary>
+    public event EventHandler<bool>? FullscreenToggled;
+
+    internal void ReportFullscreen(bool on) => FullscreenToggled?.Invoke(this, on);
+
+    /// <summary>
+    /// Reads a message posted by the injected player. Returns false for
+    /// anything unrecognised — the channel carries exactly one message today,
+    /// and an unknown payload is ignored rather than guessed at.
+    /// </summary>
+    internal static bool TryReadFullscreen(string? json, out bool on)
+    {
+        on = false;
+
+        if (string.IsNullOrWhiteSpace(json) || !json.Contains("\"fullscreen\"")) return false;
+
+        on = json.Contains("\"on\":true") || json.Contains("\"on\": true");
+        return true;
+    }
+
+    /// <summary>
     /// True when the main frame may go to <paramref name="target"/>. Kept here
     /// so both platform handlers ask the same question of the same object.
     /// </summary>

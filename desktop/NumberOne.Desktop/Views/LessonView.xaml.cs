@@ -77,6 +77,8 @@ public partial class LessonView : ContentView
         // control.
         Player.NavigationBlocked += (_, _) => _vm.ReportBlockedNavigation();
 
+        Player.FullscreenToggled += (_, on) => ApplyFullscreen(on);
+
 #if WINDOWS
         Player.HandlerChanged += (_, _) =>
         {
@@ -86,6 +88,33 @@ public partial class LessonView : ContentView
 #endif
     }
 
+
+    /// <summary>
+    /// Expands the picture to fill the lecture screen, and back.
+    ///
+    /// Not the platform's fullscreen, deliberately. The window carries capture
+    /// protection (SetWindowDisplayAffinity), and a genuinely fullscreen
+    /// surface on another monitor or a detached window is exactly the kind of
+    /// thing that slips outside that. Filling the app instead keeps the
+    /// protected window the only place a lecture is ever drawn — and the
+    /// watermark rides the frame, so it grows with it rather than being left
+    /// behind at the old size.
+    ///
+    /// 920x518 is otherwise a maximum as well as a size; this is the one place
+    /// the student may exceed it, and only inside the app.
+    /// </summary>
+    private void ApplyFullscreen(bool on)
+    {
+        VideoFrame.WidthRequest = on ? -1 : 920;
+        VideoFrame.HeightRequest = on ? -1 : 518;
+        VideoFrame.HorizontalOptions = on ? LayoutOptions.Fill : LayoutOptions.Center;
+
+        // What is left is the picture and nothing else. The rail goes by
+        // collapsing its column rather than by its IsVisible, which belongs to
+        // a binding on Playlist.HasData.
+        BelowVideo.IsVisible = !on;
+        RailColumn.Width = on ? new GridLength(0) : new GridLength(200);
+    }
 
     public void BeginLoad()
     {

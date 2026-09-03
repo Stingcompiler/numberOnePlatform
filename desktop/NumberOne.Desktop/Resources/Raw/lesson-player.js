@@ -7,38 +7,30 @@
  * page's own script runs. It replaces whatever the page rendered with a player
  * this app controls end to end.
  *
- * Why injected rather than served: the page only has to exist to give the
- * frame a real origin — YouTube answers a top-level navigation to /embed/ with
+ * Why injected rather than served: the page only has to exist to give the frame
+ * a real origin — YouTube answers a top-level navigation to /embed/ with
  * "Error 153" and needs a genuine referer. Everything visible is decided here,
- * in the desktop layer, so the player can change without a deploy and cannot
- * drift from what the app enforces around it.
+ * in the desktop layer, so the player can change without a deploy.
  *
- * What this file is responsible for:
+ * TWO CONCERNS LIVE HERE, and they are not equal.
  *
- *   - Rebuilding the frame with controls=0 and the JS API on, so YouTube draws
- *     no chrome of its own.
- *   - Covering the frame with a shield that swallows every click, because
- *     YouTube still paints a logo and a title in some states and neither can be
- *     restyled across origins.
- *   - Driving playback over postMessage, which the shield does not block.
- *   - Drawing the only controls the student gets: play, seek, mute, speed.
+ * Protection — the shield, the disabled shortcuts, the neutered window.open.
+ * This is a SECOND layer. The web view refuses navigation itself, through
+ * PlayerNavigationPolicy, and that is the layer that actually holds; script in
+ * a page can be bypassed. Do not weaken the C# side on the strength of this
+ * file.
  *
- * What it is NOT responsible for: stopping navigation. Script in a page is the
- * wrong place for that — it can be bypassed and it cannot see a middle-click
- * that the host turns into a new window. The web view refuses navigation
- * itself, through PlayerNavigationPolicy. This file is the second layer, not
- * the only one.
+ * Controls — everything below the protection block. These are built here rather
+ * than taken from YouTube because YouTube's bar carries its logo, its share
+ * button and a route out of the app. Ours carries what a student watching a
+ * 40-minute lecture needs and nothing else.
  * ============================================================================
  */
 
 (function () {
   "use strict";
 
-  // ── Close the exits this layer can close ─────────────────────────────────
-  //
-  // The view refuses navigation regardless, so these are belt to that braces.
-  // They matter because a blocked navigation still costs a flash of intent,
-  // and because a script that opens a window and gets nothing may retry.
+  // ══ Protection ════════════════════════════════════════════════════════════
 
   window.open = function () { return null; };
 
@@ -46,33 +38,69 @@
   document.addEventListener("dragstart", function (e) { e.preventDefault(); }, true);
   document.addEventListener("auxclick", function (e) { e.preventDefault(); }, true);
 
-  document.addEventListener("keydown", function (e) {
-    var k = (e.key || "").toLowerCase();
-
-    // Ctrl/Cmd shortcuts that open windows, print, save or view source.
-    if ((e.ctrlKey || e.metaKey) && ["n", "t", "p", "s", "u", "o", "w"].indexOf(k) >= 0) {
-      e.preventDefault();
-      return;
-    }
-
-    if (k === " " || k === "k") { e.preventDefault(); toggle(); }
-    if (k === "f") { e.preventDefault(); }          // no fullscreen: the surface is fixed
-  }, true);
-
-  var VIDEO_ID = readVideoId();
+  // ══ Tuning ════════════════════════════════════════════════════════════════
 
   /**
-   * The id from the page's own query string.
+   * How long the bar stays after the pointer stops.
    *
-   * Read here rather than passed in, so injection needs no per-lecture
-   * templating and the script is a static asset.
+   * 2.5s: long enough to cross the bar and land on a button without it going
+   * out from under the pointer, short enough that it is gone during actual
+   * watching. The bar never hides while paused — a paused video with no
+   * controls looks broken rather than tidy.
    */
-  function readVideoId() {
-    var match = /[?&]v=([A-Za-z0-9_-]{6,20})(?:&|$)/.exec(window.location.search);
-    return match ? match[1] : "";
-  }
+  var IDLE_MS = 2500;
 
-  // ── The surface ──────────────────────────────────────────────────────────
+  var SKIP_SECONDS = 10;   // the skip buttons
+  var ARROW_SECONDS = 5;   // finer, because arrows are held down
+  var RATES = [0.75, 1, 1.25, 1.5, 1.75, 2];
+
+  var VIDEO_ID = (function () {
+    var m = /[?&]v=([A-Za-z0-9_-]{6,20})(?:&|$)/.exec(window.location.search);
+    return m ? m[1] : "";
+  })();
+
+  var player = null;
+  var ready = false;
+  var ticker = null;
+  var idleTimer = null;
+  var scrubbing = false;
+  var wasPlayingBeforeScrub = false;
+  var rateIndex = 1;              // 1x
+  var lastVolume = 100;
+  var isFullscreen = false;
+
+  function el(id) { return document.getElementById(id); }
+
+  // ══ Icons ═════════════════════════════════════════════════════════════════
+  // One family, one stroke weight, one size. Filled shapes only for play and
+  // pause, which read faster than an outline at 16px.
+
+  var ICON = {
+    play:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72L19 12z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.5 5h3.5v14H6.5zM14 5h3.5v14H14z"/></svg>',
+    back:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
+           'stroke-linecap="round" stroke-linejoin="round">' +
+           '<path d="M11.5 5.5 4.5 12l7 6.5"/><path d="M19.5 5.5 12.5 12l7 6.5"/></svg>',
+    fwd:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
+           'stroke-linecap="round" stroke-linejoin="round">' +
+           '<path d="M12.5 5.5 19.5 12l-7 6.5"/><path d="M4.5 5.5 11.5 12l-7 6.5"/></svg>',
+    vol:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
+           'stroke-linecap="round" stroke-linejoin="round">' +
+           '<path d="M11 5 6 9H3v6h3l5 4V5Z"/>' +
+           '<path class="w2" d="M15.2 8.6a4.6 4.6 0 0 1 0 6.8"/>' +
+           '<path class="w1" d="M18 6a8.5 8.5 0 0 1 0 12"/></svg>',
+    mute:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
+           'stroke-linecap="round" stroke-linejoin="round">' +
+           '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9.5 5 5m0-5-5 5"/></svg>',
+    expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
+           'stroke-linecap="round" stroke-linejoin="round">' +
+           '<path d="M8.5 3.5H3.5v5M15.5 3.5h5v5M20.5 15.5v5h-5M3.5 15.5v5h5"/></svg>',
+    shrink:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
+           'stroke-linecap="round" stroke-linejoin="round">' +
+           '<path d="M3.5 8.5h5v-5M20.5 8.5h-5v-5M15.5 20.5v-5h5M8.5 20.5v-5h-5"/></svg>'
+  };
+
+  // ══ Surface ═══════════════════════════════════════════════════════════════
 
   function build() {
     document.documentElement.setAttribute("dir", "ltr");
@@ -81,65 +109,172 @@
       '<meta charset="utf-8">' +
       '<meta name="viewport" content="width=device-width,initial-scale=1">';
 
-    var style = document.createElement("style");
-    style.textContent = [
-      "html,body{margin:0;height:100%;background:#0B0F16;overflow:hidden;direction:ltr}",
-      "*{user-select:none;-webkit-user-select:none;-webkit-user-drag:none}",
-      "#stage{position:absolute;inset:0}",
-      "#frame{position:absolute;inset:0;border:0;width:100%;height:100%}",
-      // The shield. Above the frame, below the controls.
-      "#shield{position:absolute;inset:0;background:transparent;z-index:2;cursor:pointer}",
-      "#bar{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:10px 12px;",
-      "background:rgba(11,15,22,.82);display:flex;flex-direction:column;gap:8px;",
-      "font-family:system-ui,sans-serif;opacity:0;transition:opacity 160ms ease-out}",
-      "#stage:hover #bar,#bar.on{opacity:1}",
-      "#track{height:3px;border-radius:2px;background:rgba(255,255,255,.22);cursor:pointer}",
-      "#fill{height:100%;width:0;border-radius:2px;background:#FFF}",
-      "#row{display:flex;align-items:center;gap:12px}",
-      ".btn{width:24px;height:24px;flex:none;display:flex;align-items:center;",
-      "justify-content:center;cursor:pointer;background:none;border:0;padding:0;color:#FFF}",
-      "#time{font-size:11px;color:#FFF;direction:ltr;font-variant-numeric:tabular-nums}",
-      "#rate{margin-left:auto;font-size:11px;font-weight:500;color:#FFF;background:none;",
-      "border:1px solid rgba(255,255,255,.28);border-radius:4px;padding:1px 6px;",
-      "direction:ltr;cursor:pointer}",
-      "#note{position:absolute;inset:0;z-index:4;display:none;flex-direction:column;",
-      "align-items:center;justify-content:center;gap:12px;padding:0 40px;text-align:center;",
-      "font-family:system-ui,sans-serif;direction:rtl;color:rgba(255,255,255,.86);",
-      "font-size:13px;background:#0B0F16}",
-      "#note.on{display:flex}"
-    ].join("");
-    document.head.appendChild(style);
+    var css = document.createElement("style");
+    css.textContent = STYLE;
+    document.head.appendChild(css);
 
     document.body.innerHTML =
       '<div id="stage">' +
         '<div id="frame"></div>' +
         '<div id="shield"></div>' +
+
+        // A single large target while paused. The bar is small and at the
+        // bottom; resuming should not require aiming.
+        '<button id="big" type="button" aria-label="تشغيل">' + ICON.play + '</button>' +
+
         '<div id="note"><span>تعذّر تشغيل المحاضرة. تحقّق من الاتصال ثم أعد المحاولة.</span></div>' +
-        '<div id="bar">' +
-          '<div id="track"><div id="fill"></div></div>' +
+
+        '<div id="bar" role="group" aria-label="عناصر التحكّم">' +
+          '<div id="seek" role="slider" tabindex="0" aria-label="موضع التشغيل"' +
+               ' aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">' +
+            '<div id="rail">' +
+              '<div id="buffer"></div>' +
+              '<div id="played"><span id="knob"></span></div>' +
+            '</div>' +
+            '<div id="hoverTime"></div>' +
+          '</div>' +
+
           '<div id="row">' +
-            '<button class="btn" id="play" title="تشغيل / إيقاف">' +
-              '<svg width="16" height="16" viewBox="0 0 24 24" fill="#FFF">' +
-              '<path id="playIcon" d="M8 5v14l11-7z"></path></svg></button>' +
-            '<button class="btn" id="mute" title="كتم الصوت">' +
-              '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFF" ' +
-              'stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">' +
-              '<path d="M11 5 6 9H3v6h3l5 4V5Z"></path>' +
-              '<path id="waves" d="M15.2 8.6a4.6 4.6 0 0 1 0 6.8"></path></svg></button>' +
-            '<span id="time">0:00 / 0:00</span>' +
-            '<button id="rate" title="سرعة التشغيل">1x</button>' +
+            '<button class="btn" id="play" type="button" data-tip="تشغيل ‏(مسافة)">' + ICON.play + '</button>' +
+            '<button class="btn skip" id="back" type="button" data-tip="ترجيع ١٠ ثوانٍ">' + ICON.back + '</button>' +
+            '<button class="btn skip" id="fwd" type="button" data-tip="تقديم ١٠ ثوانٍ">' + ICON.fwd + '</button>' +
+
+            // The slider is collapsed until the group is hovered or focused, so
+            // the bar stays uncluttered at rest.
+            '<div id="volGroup">' +
+              '<button class="btn" id="mute" type="button" data-tip="كتم ‏(M)">' + ICON.vol + '</button>' +
+              '<div id="volWrap">' +
+                '<input id="vol" type="range" min="0" max="100" value="100" aria-label="مستوى الصوت">' +
+              '</div>' +
+            '</div>' +
+
+            '<span id="time"><span id="at">0:00</span><span id="sep"> / </span><span id="of">0:00</span></span>' +
+
+            '<span id="spacer"></span>' +
+
+            '<button class="btn wide" id="rate" type="button" data-tip="سرعة التشغيل">1x</button>' +
+            '<button class="btn" id="full" type="button" data-tip="ملء الشاشة ‏(F)">' + ICON.expand + '</button>' +
           '</div>' +
         '</div>' +
       '</div>';
   }
 
-  // ── YouTube, driven over the API ─────────────────────────────────────────
+  var STYLE = [
+    "html,body{margin:0;height:100%;background:#0B0F16;overflow:hidden;direction:ltr}",
+    "*{user-select:none;-webkit-user-select:none;-webkit-user-drag:none;box-sizing:border-box}",
+    "#stage{position:absolute;inset:0;font-family:system-ui,'Segoe UI',sans-serif}",
+    "#stage.idle{cursor:none}",
+    "#frame{position:absolute;inset:0;border:0;width:100%;height:100%}",
 
-  var player = null;
-  var ready = false;
-  var ticker = null;
+    // Above the frame so YouTube is unreachable, below everything of ours.
+    "#shield{position:absolute;inset:0;z-index:2;background:transparent}",
 
-  function el(id) { return document.getElementById(id); }
+    // ── Centre button ──
+    "#big{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);",
+    "z-index:3;width:72px;height:72px;border-radius:50%;border:1px solid rgba(255,255,255,.24);",
+    "background:rgba(11,15,22,.55);backdrop-filter:blur(4px);color:#fff;cursor:pointer;",
+    "display:none;align-items:center;justify-content:center;padding:0;",
+    "opacity:0;transition:opacity 180ms ease,transform 180ms ease}",
+    "#big.on{display:flex;opacity:1;transform:translate(-50%,-50%) scale(1)}",
+    "#big:hover{background:rgba(11,15,22,.75);border-color:rgba(255,255,255,.4)}",
+    "#big svg{width:30px;height:30px;margin-left:3px}",   // optical centring
+    "#big:focus-visible{outline:2px solid #fff;outline-offset:3px}",
+
+    // ── Bar ──
+    "#bar{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:6px 12px 10px;",
+    "background:linear-gradient(to top,rgba(11,15,22,.92) 0%,rgba(11,15,22,.72) 55%,rgba(11,15,22,0) 100%);",
+    "opacity:0;transform:translateY(8px);pointer-events:none;",
+    "transition:opacity 200ms ease,transform 200ms ease}",
+    "#bar.on{opacity:1;transform:translateY(0);pointer-events:auto}",
+
+    // ── Seek ──
+    // The hit area is 16px tall while the rail is 4px: a 4px drag target is a
+    // fiddly one, and scrubbing is the control used most.
+    "#seek{position:relative;height:16px;display:flex;align-items:center;cursor:pointer;",
+    "touch-action:none}",
+    "#rail{position:relative;width:100%;height:4px;border-radius:3px;",
+    "background:rgba(255,255,255,.24);transition:height 120ms ease}",
+    "#seek:hover #rail,#seek.dragging #rail,#seek:focus-visible #rail{height:6px}",
+    "#buffer{position:absolute;left:0;top:0;height:100%;width:0;border-radius:3px;",
+    "background:rgba(255,255,255,.32)}",
+    "#played{position:absolute;left:0;top:0;height:100%;width:0;border-radius:3px;",
+    "background:#E74C3C}",
+    "#knob{position:absolute;right:-6px;top:50%;width:12px;height:12px;border-radius:50%;",
+    "background:#fff;transform:translateY(-50%) scale(0);transition:transform 120ms ease;",
+    "box-shadow:0 1px 4px rgba(0,0,0,.5)}",
+    "#seek:hover #knob,#seek.dragging #knob,#seek:focus-visible #knob{transform:translateY(-50%) scale(1)}",
+    "#seek:focus-visible{outline:none}",
+    "#seek:focus-visible #rail{box-shadow:0 0 0 2px rgba(255,255,255,.75)}",
+
+    // Time preview above the cursor while scrubbing.
+    "#hoverTime{position:absolute;bottom:18px;transform:translateX(-50%);padding:2px 6px;",
+    "border-radius:4px;background:rgba(11,15,22,.92);border:1px solid rgba(255,255,255,.18);",
+    "color:#fff;font-size:11px;font-variant-numeric:tabular-nums;pointer-events:none;",
+    "opacity:0;transition:opacity 120ms ease;white-space:nowrap}",
+    "#hoverTime.on{opacity:1}",
+
+    // ── Row ──
+    "#row{display:flex;align-items:center;gap:4px;margin-top:2px}",
+    "#spacer{flex:1}",
+
+    ".btn{height:34px;min-width:34px;padding:0 6px;border:0;border-radius:6px;background:none;",
+    "color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;",
+    "position:relative;transition:background 140ms ease,color 140ms ease}",
+    ".btn svg{width:19px;height:19px;display:block}",
+    ".btn:hover{background:rgba(255,255,255,.16)}",
+    ".btn:active{background:rgba(255,255,255,.24)}",
+    ".btn:focus-visible{outline:2px solid #fff;outline-offset:-2px}",
+    ".btn.wide{min-width:42px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;",
+    "letter-spacing:.01em}",
+
+    // ── Tooltips ──
+    // Own element rather than title=, which waits about a second and then
+    // draws an OS tooltip that does not match anything else here.
+    ".btn::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;",
+    "transform:translateX(-50%) translateY(4px);padding:3px 8px;border-radius:5px;",
+    "background:rgba(11,15,22,.95);border:1px solid rgba(255,255,255,.16);color:#fff;",
+    "font-size:11px;line-height:1.5;white-space:nowrap;opacity:0;pointer-events:none;",
+    "transition:opacity 120ms ease,transform 120ms ease;direction:rtl}",
+    ".btn:hover::after,.btn:focus-visible::after{opacity:1;transform:translateX(-50%) translateY(0)}",
+
+    // ── Volume ──
+    // Collapsed to zero width at rest; opens on hover or keyboard focus, so it
+    // is reachable without a pointer.
+    "#volGroup{display:flex;align-items:center}",
+    "#volWrap{width:0;overflow:hidden;transition:width 180ms ease,margin 180ms ease}",
+    "#volGroup:hover #volWrap,#volGroup:focus-within #volWrap{width:76px;margin:0 6px 0 2px}",
+    "#vol{width:76px;height:14px;-webkit-appearance:none;appearance:none;background:none;",
+    "cursor:pointer;display:block}",
+    "#vol::-webkit-slider-runnable-track{height:4px;border-radius:3px;",
+    "background:linear-gradient(to right,#fff var(--v,100%),rgba(255,255,255,.28) var(--v,100%))}",
+    "#vol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;",
+    "background:#fff;margin-top:-4px;box-shadow:0 1px 4px rgba(0,0,0,.5)}",
+    "#vol:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:4px}",
+
+    // ── Time ──
+    "#time{color:#fff;font-size:12px;font-variant-numeric:tabular-nums;padding:0 8px;",
+    "white-space:nowrap;letter-spacing:.01em}",
+    "#sep,#of{color:rgba(255,255,255,.62)}",
+
+    // ── Narrow windows ──
+    // The app window can go to 1024, and the player scales with it. Order of
+    // sacrifice: skip buttons, then the speed control. Play, seek, volume,
+    // time and fullscreen always survive.
+    "@media (max-width:560px){.skip{display:none}}",
+    "@media (max-width:420px){#rate{display:none}#time{padding:0 4px;font-size:11px}}",
+    "@media (max-width:360px){#volGroup:hover #volWrap,#volGroup:focus-within #volWrap{width:52px}}",
+
+    // ── Error ──
+    "#note{position:absolute;inset:0;z-index:5;display:none;flex-direction:column;",
+    "align-items:center;justify-content:center;gap:12px;padding:0 40px;text-align:center;",
+    "direction:rtl;color:rgba(255,255,255,.86);font-size:13px;background:#0B0F16}",
+    "#note.on{display:flex}",
+
+    // Anyone who prefers less motion gets none of the transitions.
+    "@media (prefers-reduced-motion:reduce){*{transition:none!important}}"
+  ].join("");
+
+  // ══ Playback ══════════════════════════════════════════════════════════════
 
   function start() {
     var api = document.createElement("script");
@@ -150,31 +285,44 @@
       player = new YT.Player("frame", {
         videoId: VIDEO_ID,
         playerVars: {
-          controls: 0,        // no YouTube control bar, so no logo and no share
-          disablekb: 1,       // no YouTube keyboard shortcuts
+          controls: 0,        // no YouTube bar, so no logo and no share
+          disablekb: 1,       // its shortcuts open menus; ours are below
           modestbranding: 1,
-          rel: 0,             // no grid of other channels' videos on pause
-          fs: 0,              // no fullscreen button
-          iv_load_policy: 3,  // no annotation cards
+          rel: 0,
+          fs: 0,              // its fullscreen button; ours talks to the host
+          iv_load_policy: 3,
           playsinline: 1,
           origin: window.location.origin
         },
         events: {
-          onReady: function () {
-            ready = true;
-            el("bar").classList.add("on");
-            setTimeout(function () { el("bar").classList.remove("on"); }, 2000);
-            ticker = setInterval(tick, 250);
-          },
-          onStateChange: function (e) {
-            var playing = e.data === YT.PlayerState.PLAYING;
-            el("playIcon").setAttribute(
-              "d", playing ? "M6 5h4v14H6zM14 5h4v14h-4z" : "M8 5v14l11-7z");
-          },
+          onReady: onReady,
+          onStateChange: onStateChange,
           onError: function () { el("note").classList.add("on"); }
         }
       });
     };
+  }
+
+  function onReady() {
+    ready = true;
+
+    setVolume(player.getVolume());
+    show();
+    ticker = setInterval(tick, 200);
+  }
+
+  function onStateChange(e) {
+    var playing = e.data === YT.PlayerState.PLAYING;
+
+    el("play").innerHTML = playing ? ICON.pause : ICON.play;
+    el("play").setAttribute("data-tip", playing ? "إيقاف مؤقّت ‏(مسافة)" : "تشغيل ‏(مسافة)");
+
+    // The centre button is a resume affordance, so it belongs to paused and
+    // ended — never to buffering, which would make it flicker mid-stream.
+    var paused = e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED;
+    el("big").classList.toggle("on", paused);
+
+    if (playing) idle(); else show();
   }
 
   function toggle() {
@@ -183,49 +331,277 @@
     else player.playVideo();
   }
 
+  function seekBy(seconds) {
+    if (!ready) return;
+    var to = Math.max(0, Math.min(player.getDuration() || 0, player.getCurrentTime() + seconds));
+    player.seekTo(to, true);
+    paint(to, player.getDuration());
+    show();
+  }
+
+  function setVolume(v) {
+    v = Math.max(0, Math.min(100, Math.round(v)));
+
+    if (ready) { player.setVolume(v); if (v > 0) player.unMute(); }
+    if (v > 0) lastVolume = v;
+
+    var input = el("vol");
+    input.value = v;
+    input.style.setProperty("--v", v + "%");
+
+    var muted = v === 0;
+    el("mute").innerHTML = muted ? ICON.mute : ICON.vol;
+    el("mute").setAttribute("data-tip", muted ? "إلغاء الكتم ‏(M)" : "كتم ‏(M)");
+
+    // Two arcs, so the icon shows roughly how loud it is rather than only
+    // whether it is on.
+    var w1 = document.querySelector("#mute .w1");
+    if (w1) w1.style.opacity = v >= 60 ? "1" : "0";
+  }
+
+  function toggleMute() {
+    setVolume(Number(el("vol").value) === 0 ? lastVolume : 0);
+    show();
+  }
+
   function clock(s) {
-    if (!isFinite(s)) return "0:00";
-    var m = Math.floor(s / 60), r = Math.floor(s % 60);
-    return m + ":" + (r < 10 ? "0" : "") + r;
+    if (!isFinite(s) || s < 0) s = 0;
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = Math.floor(s % 60);
+
+    // Hours only when there are hours: "1:04:20" for a long lecture, "4:20"
+    // for a short one, rather than a permanent "0:" nobody reads.
+    return h > 0
+      ? h + ":" + (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r
+      : m + ":" + (r < 10 ? "0" : "") + r;
+  }
+
+  function paint(at, of) {
+    var ratio = of ? Math.max(0, Math.min(1, at / of)) : 0;
+
+    el("played").style.width = (ratio * 100) + "%";
+    el("at").textContent = clock(at);
+    el("of").textContent = clock(of);
+    el("seek").setAttribute("aria-valuenow", Math.round(ratio * 100));
+    el("seek").setAttribute("aria-valuetext", clock(at) + " من " + clock(of));
   }
 
   function tick() {
-    if (!ready) return;
-    var at = player.getCurrentTime() || 0, of = player.getDuration() || 0;
-    el("fill").style.width = (of ? (at / of) * 100 : 0) + "%";
-    el("time").textContent = clock(at) + " / " + clock(of);
+    if (!ready || scrubbing) return;
+
+    paint(player.getCurrentTime() || 0, player.getDuration() || 0);
+    el("buffer").style.width = ((player.getVideoLoadedFraction() || 0) * 100) + "%";
+  }
+
+  // ══ Showing and hiding ════════════════════════════════════════════════════
+
+  function show() {
+    el("bar").classList.add("on");
+    el("stage").classList.remove("idle");
+
+    clearTimeout(idleTimer);
+    idle();
+  }
+
+  function idle() {
+    clearTimeout(idleTimer);
+
+    idleTimer = setTimeout(function () {
+      // Never while paused, mid-scrub, or while a control has keyboard focus —
+      // hiding the thing someone is using is the classic version of this bug.
+      if (!ready || scrubbing) return;
+      if (player.getPlayerState() !== YT.PlayerState.PLAYING) return;
+      if (el("bar").contains(document.activeElement)) return;
+
+      el("bar").classList.remove("on");
+      el("stage").classList.add("idle");
+    }, IDLE_MS);
+  }
+
+  // ══ Wiring ════════════════════════════════════════════════════════════════
+
+  function ratioFromEvent(e) {
+    var box = el("seek").getBoundingClientRect();
+    return Math.max(0, Math.min(1, (e.clientX - box.left) / box.width));
   }
 
   function wire() {
-    el("play").addEventListener("click", toggle);
+    var stage = el("stage");
+
+    stage.addEventListener("mousemove", show);
+    stage.addEventListener("mouseleave", function () { if (ready) idle(); });
+
     el("shield").addEventListener("click", toggle);
+    el("big").addEventListener("click", toggle);
+    el("play").addEventListener("click", toggle);
+    el("back").addEventListener("click", function () { seekBy(-SKIP_SECONDS); });
+    el("fwd").addEventListener("click", function () { seekBy(SKIP_SECONDS); });
+    el("mute").addEventListener("click", toggleMute);
 
-    el("mute").addEventListener("click", function () {
-      if (!ready) return;
-      if (player.isMuted()) { player.unMute(); el("waves").style.display = ""; }
-      else { player.mute(); el("waves").style.display = "none"; }
-    });
+    el("vol").addEventListener("input", function () { setVolume(Number(this.value)); });
 
-    var rates = [1, 1.25, 1.5, 0.75], i = 0;
     el("rate").addEventListener("click", function () {
       if (!ready) return;
-      i = (i + 1) % rates.length;
-      player.setPlaybackRate(rates[i]);
-      el("rate").textContent = rates[i] + "x";
+      rateIndex = (rateIndex + 1) % RATES.length;
+      player.setPlaybackRate(RATES[rateIndex]);
+      this.textContent = RATES[rateIndex] + "x";
+      show();
     });
 
-    el("track").addEventListener("click", function (e) {
+    el("full").addEventListener("click", requestFullscreen);
+
+    // ── Scrubbing ──
+    // Pointer events, captured, so a drag that leaves the bar keeps working —
+    // people overshoot, and a scrub that dies mid-gesture feels broken.
+    var seek = el("seek");
+
+    seek.addEventListener("pointerdown", function (e) {
       if (!ready) return;
-      var box = el("track").getBoundingClientRect();
-      var ratio = (e.clientX - box.left) / box.width;
-      player.seekTo(player.getDuration() * Math.max(0, Math.min(1, ratio)), true);
+
+      scrubbing = true;
+      wasPlayingBeforeScrub = player.getPlayerState() === YT.PlayerState.PLAYING;
+
+      seek.classList.add("dragging");
+      seek.setPointerCapture(e.pointerId);
+      scrubTo(e);
     });
+
+    seek.addEventListener("pointermove", function (e) {
+      if (!ready) return;
+
+      preview(e);
+      if (scrubbing) scrubTo(e);
+    });
+
+    seek.addEventListener("pointerup", function (e) {
+      if (!scrubbing) return;
+
+      scrubbing = false;
+      seek.classList.remove("dragging");
+
+      player.seekTo((player.getDuration() || 0) * ratioFromEvent(e), true);
+      if (wasPlayingBeforeScrub) player.playVideo();
+
+      show();
+    });
+
+    seek.addEventListener("pointerleave", function () {
+      el("hoverTime").classList.remove("on");
+    });
+
+    // The seek bar is focusable, so it answers to arrows on its own too.
+    seek.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight") { e.preventDefault(); seekBy(ARROW_SECONDS); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); seekBy(-ARROW_SECONDS); }
+    });
+
+    function scrubTo(e) {
+      var of = player.getDuration() || 0;
+      var to = of * ratioFromEvent(e);
+
+      // Seek live while dragging: the picture follows the thumb, which is what
+      // makes finding a moment possible at all.
+      player.seekTo(to, true);
+      paint(to, of);
+      preview(e);
+    }
+
+    function preview(e) {
+      var of = player.getDuration() || 0;
+      if (!of) return;
+
+      var tip = el("hoverTime");
+      var box = seek.getBoundingClientRect();
+
+      tip.textContent = clock(of * ratioFromEvent(e));
+      tip.style.left = Math.max(24, Math.min(box.width - 24, e.clientX - box.left)) + "px";
+      tip.classList.add("on");
+    }
   }
+
+  // ── Keyboard ──
+  // Only the handful a viewer reaches for. Everything that opens a window,
+  // saves, prints or reveals source stays blocked.
+  function keys() {
+    document.addEventListener("keydown", function (e) {
+      var k = (e.key || "").toLowerCase();
+
+      if ((e.ctrlKey || e.metaKey) && ["n", "t", "p", "s", "u", "o", "w"].indexOf(k) >= 0) {
+        e.preventDefault();
+        return;
+      }
+
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      // Let the focused control handle its own keys rather than acting twice.
+      var onControl = el("bar").contains(document.activeElement) &&
+                      document.activeElement !== document.body;
+
+      switch (k) {
+        case " ":
+        case "spacebar":
+        case "k":
+          if (onControl && document.activeElement.tagName === "BUTTON") return;
+          e.preventDefault(); toggle(); show();
+          break;
+
+        case "arrowright": if (onControl) return; e.preventDefault(); seekBy(ARROW_SECONDS); break;
+        case "arrowleft":  if (onControl) return; e.preventDefault(); seekBy(-ARROW_SECONDS); break;
+
+        case "arrowup":
+          if (onControl) return;
+          e.preventDefault(); setVolume(Number(el("vol").value) + 5); show();
+          break;
+
+        case "arrowdown":
+          if (onControl) return;
+          e.preventDefault(); setVolume(Number(el("vol").value) - 5); show();
+          break;
+
+        case "m": e.preventDefault(); toggleMute(); break;
+        case "f": e.preventDefault(); requestFullscreen(); break;
+        case "escape": if (isFullscreen) { e.preventDefault(); requestFullscreen(); } break;
+      }
+    }, true);
+  }
+
+  // ══ Fullscreen ════════════════════════════════════════════════════════════
+
+  /**
+   * Asks the app to expand, rather than calling the Fullscreen API.
+   *
+   * requestFullscreen() inside this view fills the WEB VIEW, and the web view
+   * is a fixed 920x518 box inside the lecture screen — so the page would go
+   * "fullscreen" and nothing would visibly change. The host owns the layout, so
+   * the host is asked. When it cannot be reached the button hides itself rather
+   * than sitting there doing nothing.
+   */
+  function requestFullscreen() {
+    if (!host()) return;
+
+    isFullscreen = !isFullscreen;
+    host().postMessage(JSON.stringify({ type: "fullscreen", on: isFullscreen }));
+
+    el("full").innerHTML = isFullscreen ? ICON.shrink : ICON.expand;
+    el("full").setAttribute("data-tip", isFullscreen ? "إنهاء ملء الشاشة ‏(F)" : "ملء الشاشة ‏(F)");
+    show();
+  }
+
+  function host() {
+    return (window.chrome && window.chrome.webview) ? window.chrome.webview : null;
+  }
+
+  // ══ Boot ══════════════════════════════════════════════════════════════════
 
   function boot() {
     if (!VIDEO_ID) return;
+
     build();
     wire();
+    keys();
+
+    // Mac Catalyst has no host channel, so there is nothing to expand into.
+    if (!host()) el("full").style.display = "none";
+
     start();
   }
 
@@ -237,5 +613,6 @@
 
   window.addEventListener("pagehide", function () {
     if (ticker) { clearInterval(ticker); ticker = null; }
+    clearTimeout(idleTimer);
   });
 })();

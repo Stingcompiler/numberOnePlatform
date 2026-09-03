@@ -16,8 +16,17 @@
     -->
 
     <ScrollView>
-        <Grid Padding="16" ColumnDefinitions="*,200" ColumnSpacing="12"
-              RowDefinitions="Auto">
+        <Grid Padding="16" ColumnSpacing="12" RowDefinitions="Auto">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <!--
+                    Collapsed to zero in fullscreen. The rail keeps its own
+                    IsVisible binding to Playlist.HasData; writing that property
+                    from code would override the binding and force the rail back
+                    on for a lesson that has no playlist at all.
+                -->
+                <ColumnDefinition x:Name="RailColumn" Width="200" />
+            </Grid.ColumnDefinitions>
 
             <!-- ══ Player and lesson ═════════════════════════════════════ -->
             <VerticalStackLayout Grid.Column="0" Spacing="16" VerticalOptions="Start">
@@ -57,7 +66,8 @@
                         The surround is #0B0F16 in both themes; a letterbox is
                         not theme-dependent.
                     -->
-                    <Border WidthRequest="920" HeightRequest="518"
+                    <Border x:Name="VideoFrame"
+                            WidthRequest="920" HeightRequest="518"
                             HorizontalOptions="Center"
                             Padding="0" StrokeThickness="1"
                             StrokeShape="RoundRectangle 8"
@@ -109,6 +119,14 @@
                             </VerticalStackLayout>
                         </Grid>
                     </Border>
+
+                    <!--
+                        Everything below the picture, in one container so
+                        fullscreen can hide it with a single flag. Toggling the
+                        children individually would mean writing IsVisible over
+                        bindings that already own it.
+                    -->
+                    <VerticalStackLayout x:Name="BelowVideo" Spacing="16">
 
                     <!-- Server older than the app: say so rather than showing
                          an error frame the student cannot act on. -->
@@ -179,6 +197,7 @@
                         </Border>
                     </VerticalStackLayout>
                 </VerticalStackLayout>
+                    </VerticalStackLayout>
             </VerticalStackLayout>
 
             <!-- ══ محتويات الوحدة ════════════════════════════════════════ -->
@@ -188,7 +207,8 @@
                 my-lessons/{id}/ returns the lecture alone and knows nothing of
                 its neighbours.
             -->
-            <Border Grid.Column="1" Style="{StaticResource TableCard}"
+            <Border Grid.Column="1" x:Name="UnitRail"
+                    Style="{StaticResource TableCard}"
                     VerticalOptions="Start"
                     IsVisible="{Binding Playlist.HasData}">
                 <VerticalStackLayout>
