@@ -105,6 +105,10 @@
     document.body.innerHTML =
       '<div id="stage">' +
         '<div id="frame"></div>' +
+
+        // Hides YouTube's own chrome until the video is actually running.
+        '<div id="cover"></div>' +
+
         '<div id="shield"></div>' +
 
         // A single large target while paused. The bar is small and at the
@@ -157,6 +161,20 @@
 
     // Above the frame so YouTube is unreachable, below everything of ours.
     "#shield{position:absolute;inset:0;z-index:2;background:transparent}",
+
+    // The shield stops YouTube being CLICKED; it is transparent, so it does
+    // not stop YouTube being SEEN. Before playback starts the embed paints its
+    // own title bar, channel avatar and "Watch on YouTube" link, and those were
+    // showing through — the branding this player exists to remove, sitting in
+    // plain view every time a lecture opened.
+    //
+    // The frame is cross-origin, so none of it can be restyled from here. It
+    // can only be covered. Opaque in the player's own background, it reads as a
+    // poster rather than a patch, and it is dropped for good the moment the
+    // first frame plays so nothing is hidden from the student afterwards.
+    "#cover{position:absolute;inset:0;z-index:2;background:#0B0F16;",
+    "transition:opacity 260ms ease}",
+    "#cover.off{opacity:0;pointer-events:none}",
 
     // ── Centre button ──
     "#big{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);",
@@ -296,12 +314,21 @@
     ready = true;
 
     setVolume(player.getVolume());
+
+    // Over the poster, so the lecture opens on a play button rather than a
+    // blank rectangle.
+    el("big").classList.add("on");
+
     show();
     ticker = setInterval(tick, 200);
   }
 
   function onStateChange(e) {
     var playing = e.data === YT.PlayerState.PLAYING;
+
+    // Once only. Pausing keeps the frame the student stopped on — blanking a
+    // slide someone paused to read would defeat the reason they paused.
+    if (playing) el("cover").classList.add("off");
 
     el("play").innerHTML = playing ? ICON.pause : ICON.play;
     el("play").setAttribute("data-tip", playing ? "إيقاف مؤقّت ‏(مسافة)" : "تشغيل ‏(مسافة)");
