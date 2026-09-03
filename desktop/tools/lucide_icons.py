@@ -157,11 +157,27 @@ def absolute_start(d):
     return f"M{x} {y}" + (" " + tail if tail else "")
 
 
+# Pins every icon to the full 24x24 grid.
+#
+# A Path with Aspect="Uniform" scales the geometry's OWN bounding box to fill
+# its slot, and Lucide icons do not fill the grid equally - a bell is 13 units
+# tall, a graduation cap is 19. Rendered straight, each was blown up by a
+# different factor: 138% between the largest and smallest in one row of tiles,
+# and the stroke scales with it, so weights drifted from 1.46 to 2.02 against a
+# style asking for 1.75. The shared grid is what makes a set look like a set,
+# and self-scaling threw it away.
+#
+# Two pen-up moves to opposite corners fix the bounds at 0,0-24,24 for every
+# icon, so they all take the same scale factor. A figure with no segments draws
+# nothing.
+#
+# It goes LAST: leading with it would leave a following relative command
+# measured from 24,24 rather than from the origin.
+GRID_ANCHOR = "M0 0 M24 24"
+
+
 def convert(svg):
     parts = []
-
-    for tag in re.findall(r"<(path|circle|ellipse|rect|line|polyline|polygon)\b[^>]*>", svg):
-        pass  # placeholder; real loop below
 
     for match in re.finditer(r"<(path|circle|ellipse|rect|line|polyline|polygon)\b([^>]*)>", svg):
         kind, body = match.group(1), match.group(0)
@@ -182,7 +198,9 @@ def convert(svg):
         elif kind == "polygon":
             parts.append(points(a, close=True))
 
-    return " ".join(p.strip().replace("\n", " ") for p in parts)
+    body = " ".join(p.strip().replace("\n", " ") for p in parts)
+
+    return f"{body} {GRID_ANCHOR}" if body else body
 
 
 def main():
