@@ -53,6 +53,11 @@ public partial class App : Application
             Record("UnobservedTask", e.Exception);
             e.SetObserved();
         };
+
+        // A section that failed for a reason that is not the network. It shows
+        // the student a failed panel rather than closing the app, so without
+        // this the defect behind it would leave no trace at all.
+        Core.ViewModels.SectionDiagnostics.Unexpected = ex => Record("Section", ex);
     }
 
     /// <summary>

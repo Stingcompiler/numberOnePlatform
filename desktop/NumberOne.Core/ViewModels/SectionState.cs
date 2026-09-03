@@ -96,5 +96,52 @@ public sealed partial class SectionState<T> : ObservableObject
             ErrorMessage = Services.DesktopMessages.NoConnection;
             Status = SectionStatus.Error;
         }
+        catch (Exception ex)
+        {
+            // Anything else is a defect, not a network failure — a payload that
+            // will not deserialise, a null nobody expected.
+            //
+            // It used to be left to propagate, on the reasoning that a bug
+            // should not hide behind "no connection". That reasoning was right
+            // about the message and wrong about the consequence: several of
+            // these loads are started fire-and-forget, so nothing observes the
+            // exception and it takes the process with it. The student gets a
+            // window that closes and no way to say what happened.
+            //
+            // So it is caught and shown as its own state — distinct wording, so
+            // it never reads as a connection problem — and handed to
+            // Unexpected, which the app points at its crash log. The section
+            // fails; the app does not.
+            SectionDiagnostics.Report(ex);
+
+            ErrorMessage = Services.DesktopMessages.SectionFailed;
+            Status = SectionStatus.Error;
+        }
+    }
+
+}
+
+/// <summary>
+/// Where a section sends a failure that is a defect rather than a network
+/// condition.
+///
+/// NOT a static on SectionState&lt;T&gt;: a static field on a generic type
+/// exists once per closed type, so assigning SectionState&lt;object&gt; would
+/// leave SectionState&lt;List&lt;Course&gt;&gt; and every other instantiation
+/// with their own null. One non-generic holder is the only way every section
+/// reaches the same sink.
+///
+/// Core has no logger of its own, so the app assigns the platform's crash log
+/// at startup. With nothing subscribed the student still sees a failed section
+/// — the defect simply goes unrecorded.
+/// </summary>
+public static class SectionDiagnostics
+{
+    public static Action<Exception>? Unexpected { get; set; }
+
+    internal static void Report(Exception ex)
+    {
+        try { Unexpected?.Invoke(ex); }
+        catch (Exception) { /* a reporter that throws must not replace the fault */ }
     }
 }

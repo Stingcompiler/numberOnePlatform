@@ -321,6 +321,16 @@ public static class DesktopMessages
     public const string UnexpectedResponse =
         "استجابة غير متوقعة من الخادم. يرجى المحاولة لاحقاً.";
 
+    /// <summary>
+    /// A section failed for a reason that is not the network.
+    ///
+    /// Worded so it can never be mistaken for being offline: a student who
+    /// retries a connection problem is doing the right thing, and a student who
+    /// retries a defect is not.
+    /// </summary>
+    public const string SectionFailed =
+        "تعذّر عرض هذا القسم. إن تكرر الأمر فأبلغ إدارة المدرسة.";
+
     public const string StudentsOnly =
         "هذا التطبيق مخصص للطلاب فقط. يرجى استخدام لوحة التحكم عبر المتصفح.";
 

@@ -453,11 +453,27 @@ public sealed partial class LessonViewModel : ObservableObject
         return lesson;
     }
 
+    /// <summary>
+    /// The unit rail, started without being awaited so the video does not wait
+    /// on it.
+    ///
+    /// Fire-and-forget means nothing observes a failure here, so nothing in it
+    /// may throw. SectionState no longer lets anything escape, and this catch
+    /// covers the notification that follows it — a rail that fails to load is
+    /// a missing convenience, never a reason for the lecture to go down.
+    /// </summary>
     private async Task LoadPlaylistSectionAsync(CancellationToken ct)
     {
-        await Playlist.LoadAsync(ct).ConfigureAwait(true);
+        try
+        {
+            await Playlist.LoadAsync(ct).ConfigureAwait(true);
 
-        OnPropertyChanged(nameof(LessonMeta));
+            OnPropertyChanged(nameof(LessonMeta));
+        }
+        catch (Exception ex)
+        {
+            SectionDiagnostics.Unexpected?.Invoke(ex);
+        }
     }
 
     private async Task<UnitPlaylist> LoadPlaylistAsync(CancellationToken ct)
