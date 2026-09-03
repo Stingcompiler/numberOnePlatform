@@ -121,16 +121,22 @@ public partial class ShellPage : ContentPage
 
     // ── Navigation ───────────────────────────────────────────────────────────
 
-    private void OnHomeClicked(object? sender, EventArgs e) => ShowHome();
-    private void OnCoursesClicked(object? sender, EventArgs e) => ShowCourses();
-    private void OnLecturesClicked(object? sender, EventArgs e) => ShowLectures();
-    private void OnLiveClicked(object? sender, EventArgs e) => ShowLive();
-    private void OnExamsClicked(object? sender, EventArgs e) => ShowExams();
-    private void OnResultsClicked(object? sender, EventArgs e) => ShowResults();
-    private void OnNotificationsClicked(object? sender, EventArgs e) => ShowNotifications();
-    private void OnProfileClicked(object? sender, EventArgs e) => ShowProfile();
+    // Every one of these goes through Navigate: the sidebar rows are tap
+    // handlers too, so they carry the same hazard as a table row, and a screen
+    // that fails to build must report rather than close the window.
+    private void OnHomeClicked(object? sender, EventArgs e) => Navigate(ShowHome);
+    private void OnCoursesClicked(object? sender, EventArgs e) => Navigate(ShowCourses);
+    private void OnLecturesClicked(object? sender, EventArgs e) => Navigate(ShowLectures);
+    private void OnLiveClicked(object? sender, EventArgs e) => Navigate(ShowLive);
+    private void OnExamsClicked(object? sender, EventArgs e) => Navigate(ShowExams);
+    private void OnResultsClicked(object? sender, EventArgs e) => Navigate(ShowResults);
+    private void OnNotificationsClicked(object? sender, EventArgs e) => Navigate(ShowNotifications);
+    private void OnProfileClicked(object? sender, EventArgs e) => Navigate(ShowProfile);
 
-    private void OnBackClicked(object? sender, EventArgs e) => _goBack?.Invoke();
+    private void OnBackClicked(object? sender, EventArgs e)
+    {
+        if (_goBack is { } back) Navigate(back);
+    }
 
     /// <summary>
     /// Swaps the hosted view, tearing down whatever the previous one was
@@ -189,8 +195,48 @@ public partial class ShellPage : ContentPage
     /// One dispatcher turn is enough: the gesture completes, then the screen
     /// changes. Nothing about the navigation is asynchronous otherwise, so this
     /// costs a frame and no correctness.
+    ///
+    /// It also catches. Building a screen must not be able to take the app
+    /// down: a failure here leaves the student where they were, with a message
+    /// naming the fault, instead of a window that closes with nothing to
+    /// report. The exception still reaches crash.log.
     /// </summary>
-    private void Navigate(Action go) => Dispatcher.Dispatch(go);
+    private void Navigate(Action go) => Dispatcher.Dispatch(() =>
+    {
+        try
+        {
+            go();
+        }
+        catch (Exception ex)
+        {
+            App.RecordUnhandled("Navigate", ex);
+            ShowNavigationFailure(ex);
+        }
+    });
+
+    /// <summary>
+    /// Names the fault on screen.
+    ///
+    /// Deliberately shows the exception type and message rather than a polite
+    /// "something went wrong": this is a fault nobody has diagnosed yet, and a
+    /// student who can read it back is the fastest route to fixing it. The
+    /// wording says the screen failed, not that the student did something.
+    /// </summary>
+    private async void ShowNavigationFailure(Exception ex)
+    {
+        try
+        {
+            await DisplayAlertAsync(
+                "تعذّر فتح الصفحة",
+                $"{ex.GetType().Name}: {ex.Message}\n\n" +
+                $"سُجّل التفصيل في:\n{App.CrashLogPath}",
+                "حسناً");
+        }
+        catch (Exception)
+        {
+            // A dialog that cannot open is not worth a second failure.
+        }
+    }
 
     /// <summary>
     /// Hides the sidebar and top bar so a fullscreen lecture is the only thing
