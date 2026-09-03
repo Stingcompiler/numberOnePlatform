@@ -9,10 +9,33 @@ public partial class App : Application
 {
     private readonly IServiceProvider _services;
 
+    /// <summary>Where the student's light/dark choice is remembered.</summary>
+    public const string ThemePreferenceKey = "app_theme";
+
     public App(IServiceProvider services)
     {
         InitializeComponent();
         _services = services;
+
+        ApplyStartupTheme();
+    }
+
+    /// <summary>
+    /// Light unless the student has chosen dark, pinned before the first window
+    /// exists.
+    ///
+    /// It has to happen here rather than in the shell: login and both blocked
+    /// screens are shown before a shell is ever built, and setting the theme
+    /// there would leave those three following the OS. School and lab machines
+    /// are often left on the Windows dark default, so a student who had never
+    /// touched the setting would meet a dark sign-in page while the dashboard,
+    /// the printed handouts and the design itself are all light.
+    /// </summary>
+    private static void ApplyStartupTheme()
+    {
+        var stored = Preferences.Default.Get(ThemePreferenceKey, "");
+
+        Current!.UserAppTheme = stored == "dark" ? AppTheme.Dark : AppTheme.Light;
     }
 
     protected override Window CreateWindow(IActivationState? activationState)

@@ -35,6 +35,8 @@ public partial class LessonView : ContentView
             : "هذا المحتوى محمي بحقوق النشر — التسجيل أو إعادة النشر مخالفة.")
             + " · 920 × 518";
 
+        ForcePlayerLeftToRight();
+
         // The attachment opens in the system handler, outside the app. A second
         // WebView showing the same material would not carry the player window's
         // capture protection, and would quietly become the way around it.
@@ -53,6 +55,32 @@ public partial class LessonView : ContentView
     }
 
     public LessonViewModel ViewModel => _vm;
+
+    /// <summary>
+    /// Pins the native web view to left-to-right, whatever the window is doing.
+    ///
+    /// The app window is RightToLeft, and WinUI mirrors a WebView2 that inherits
+    /// that — it flips the rendered output, so the lecture plays back as a
+    /// mirror image and any writing on the board reads backwards. On a maths
+    /// lecture that is not cosmetic: the equations are unreadable.
+    ///
+    /// FlowDirection="LeftToRight" on the MAUI control is declared in the XAML
+    /// and is the documented fix, but it is a MAUI-level property whose mapping
+    /// to WebView2 has not held across handler versions. This reaches the
+    /// platform element directly once its handler exists, so the setting cannot
+    /// be lost in that translation. The page it loads also declares dir="ltr",
+    /// which covers the document; this covers the control drawing it.
+    /// </summary>
+    private void ForcePlayerLeftToRight()
+    {
+#if WINDOWS
+        Player.HandlerChanged += (_, _) =>
+        {
+            if (Player.Handler?.PlatformView is Microsoft.UI.Xaml.FrameworkElement native)
+                native.FlowDirection = Microsoft.UI.Xaml.FlowDirection.LeftToRight;
+        };
+#endif
+    }
 
 
     public void BeginLoad()

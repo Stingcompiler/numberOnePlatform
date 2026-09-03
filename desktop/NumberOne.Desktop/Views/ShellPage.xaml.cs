@@ -48,9 +48,6 @@ public partial class ShellPage : ContentPage
     /// <summary>The routes the sidebar can mark as current.</summary>
     private enum Route { Home, Courses, Live, Exams, Results, Notifications, Profile }
 
-    /// <summary>Remembers the student's light/dark choice across launches.</summary>
-    private const string ThemePreferenceKey = "app_theme";
-
     public ShellPage(
         AuthService auth,
         StudentApi api,
@@ -385,18 +382,22 @@ public partial class ShellPage : ContentPage
 
     private void ApplyStoredTheme()
     {
-        var stored = Preferences.Default.Get(ThemePreferenceKey, "");
+        var stored = Preferences.Default.Get(App.ThemePreferenceKey, "");
 
-        // No stored choice means follow the OS, which is what the app was
-        // already doing. Only an explicit tap pins the theme.
+        // Light is the default, and it is pinned rather than inherited.
+        //
+        // Following the OS looked reasonable and was wrong here: school and lab
+        // machines are frequently left on the Windows dark default, so a student
+        // who had never touched the setting would open a dark app — while every
+        // printed handout, the web dashboard and the design itself are light.
+        // Dark is a choice this app offers, not one the machine makes for it.
         var theme = stored switch
         {
             "dark" => AppTheme.Dark,
-            "light" => AppTheme.Light,
-            _ => Application.Current?.RequestedTheme ?? AppTheme.Light,
+            _ => AppTheme.Light,
         };
 
-        if (stored.Length > 0 && Application.Current is not null)
+        if (Application.Current is not null)
             Application.Current.UserAppTheme = theme;
 
         PaintThemeToggle(theme);
@@ -407,7 +408,7 @@ public partial class ShellPage : ContentPage
         if (Application.Current is not null)
             Application.Current.UserAppTheme = theme;
 
-        Preferences.Default.Set(ThemePreferenceKey, theme == AppTheme.Dark ? "dark" : "light");
+        Preferences.Default.Set(App.ThemePreferenceKey, theme == AppTheme.Dark ? "dark" : "light");
 
         PaintThemeToggle(theme);
 
