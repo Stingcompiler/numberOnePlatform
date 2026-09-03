@@ -56,9 +56,13 @@ public static class MauiProgram
                 fonts.AddFont("Tajawal-Medium.ttf", "TajawalMedium");
                 fonts.AddFont("Tajawal-Bold.ttf", "TajawalBold");
 
-                // Kept registered: the MAUI template's own styles in
-                // Styles.xaml still name them, and dropping them here would
-                // break every control that has not been restyled.
+                // Kept registered only so a stray FontFamily="OpenSansRegular"
+                // left anywhere cannot fail to resolve. Nothing should use it:
+                // OpenSans has no Arabic glyphs, so every Arabic string set in
+                // it fell through to whatever the system chose - which is why
+                // the app was not showing Cairo despite shipping it. The
+                // template's implicit Label, Button and Entry styles were the
+                // ones doing that, to every screen at once.
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });

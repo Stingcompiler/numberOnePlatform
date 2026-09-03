@@ -233,9 +233,20 @@ public partial class App : Application
         {
             Title = UiText.BrandName,
 
-            // The whole UI is RTL. Set on the window so it cascades to every
-            // page, rather than being repeated and eventually forgotten on one.
-            FlowDirection = FlowDirection.RightToLeft,
+            // Deliberately NOT RightToLeft, though everything inside it is.
+            //
+            // A window's flow direction is what Windows mirrors the title bar
+            // by: the caption buttons move to the left edge and the title is
+            // laid out from the opposite side. MAUI's own title strip does not
+            // move with them, so the app name and the close button ended up
+            // drawn over each other, with the window icon landing in the middle
+            // of the text.
+            //
+            // The pages carry RightToLeft themselves - the NavigationPage above
+            // sets it, which is the setting that actually reaches them - so the
+            // UI reads right to left either way. Arabic in a left-to-right
+            // caption is still shaped and ordered correctly; bidi handles the
+            // text, and only the chrome around it stays where Windows puts it.
 
             Width = 1440,
             Height = 900,
@@ -381,11 +392,16 @@ public partial class App : Application
         var handle = WinRT.Interop.WindowNative.GetWindowHandle(platformWindow);
         var id = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(handle);
 
-        if (Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id) is { } appWindow &&
-            appWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter)
-        {
+        if (Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id) is not { } appWindow) return;
+
+        // Set from our own string rather than left to whatever the platform
+        // inferred. The taskbar was labelling the app "????? ?????? ???? ??" -
+        // one question mark per Arabic letter, the signature of a title that
+        // reached Windows through a single-byte code page instead of Unicode.
+        appWindow.Title = UiText.BrandName;
+
+        if (appWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter)
             presenter.Maximize();
-        }
 #endif
     }
 
