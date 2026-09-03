@@ -22,6 +22,22 @@ public partial class ExamsView : ContentView
     public void BeginLoad() => _ = _vm.LoadAsync();
 }
 
+public partial class LecturesView : ContentView
+{
+    private readonly LecturesViewModel _vm;
+
+    public LecturesView(LecturesViewModel vm)
+    {
+        InitializeComponent();
+        _vm = vm;
+        BindingContext = vm;
+    }
+
+    public LecturesViewModel ViewModel => _vm;
+
+    public void BeginLoad() => _ = _vm.LoadAsync();
+}
+
 public partial class ResultsView : ContentView
 {
     private readonly ResultsViewModel _vm;

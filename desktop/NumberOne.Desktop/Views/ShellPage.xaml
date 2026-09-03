@@ -102,6 +102,25 @@
                         </Grid.GestureRecognizers>
                     </Grid>
 
+                    <Grid x:Name="NavLectures" Style="{StaticResource NavRow}"
+                          ColumnDefinitions="Auto,*">
+                        <Border x:Name="NavLecturesBg" Grid.ColumnSpan="2" Margin="-10,0"
+                                Padding="0" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" />
+                        <BoxView x:Name="NavLecturesBar" Grid.ColumnSpan="2"
+                                 WidthRequest="2" Margin="-10,8" IsVisible="False"
+                                 HorizontalOptions="Start"
+                                 Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <shapes:Path Grid.Column="0" x:Name="NavLecturesIcon"
+                                     Style="{StaticResource IconPath}"
+                                     Data="{StaticResource IconLecture}" />
+                        <Label Grid.Column="1" x:Name="NavLecturesLabel" Text="المحاضرات"
+                               Style="{StaticResource NavLabel}" />
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLecturesClicked" />
+                        </Grid.GestureRecognizers>
+                    </Grid>
+
                     <Grid x:Name="NavLive" Style="{StaticResource NavRow}"
                           ColumnDefinitions="Auto,*">
                         <Border x:Name="NavLiveBg" Grid.ColumnSpan="2" Margin="-10,0"

@@ -42,6 +42,12 @@
     <PathGeometry x:Key="IconSignOut"
                   Figures="M15 21h-5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5 M17 16l4-4-4-4M21 12H10" />
 
+    <!-- A lecture: the play triangle in a rounded frame. Distinct from the
+         courses book at a glance, which matters because the two sit adjacent
+         in the rail. -->
+    <PathGeometry x:Key="IconLecture"
+                  Figures="M2.5 6.5a3 3 0 0 1 3-3h13a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3h-13a3 3 0 0 1-3-3v-11Z M10 9.2l5 2.8-5 2.8V9.2Z" />
+
     <!-- ── Theme toggle ─────────────────────────────────────────────────── -->
     <PathGeometry x:Key="IconSun"
                   Figures="M8 12a4 4 0 1 0 8 0 4 4 0 1 0-8 0 M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6" />

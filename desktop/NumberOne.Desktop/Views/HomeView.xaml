@@ -132,16 +132,12 @@
 
             <!-- ══ الوصول السريع ═════════════════════════════════════════ -->
             <!--
-                The six routes the sidebar carries, as tiles.
-
-                Six, not the mobile app's seven: there is no المحاضرات tile
-                because desktop has no lectures route to send it to. A lecture
-                is reached through its course — الكورسات → unit → lecture — and
-                a tile that quietly landed on the courses table would be a
-                second door to the same room wearing a different sign.
+                The seven routes the sidebar carries, as tiles.
 
                 Redundant with the sidebar by design. The sidebar is for someone
-                who knows where they are going; this is for someone looking.
+                who knows where they are going; this is for someone looking —
+                and it is the one part of the dashboard that still works when
+                every section behind it has failed.
             -->
             <VerticalStackLayout Spacing="12">
 
@@ -151,7 +147,7 @@
                     <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
                 </Grid>
 
-                <Grid ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="12">
+                <Grid ColumnDefinitions="*,*,*,*,*,*,*" ColumnSpacing="12">
 
                     <Border Grid.Column="0" Style="{StaticResource QuickTile}">
                         <VerticalStackLayout Spacing="10">
@@ -172,6 +168,22 @@
                     <Border Grid.Column="1" Style="{StaticResource QuickTile}">
                         <VerticalStackLayout Spacing="10">
                             <Border Style="{StaticResource QuickTilePlate}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryTintLight}, Dark={StaticResource SecondaryTintDark}}">
+                                <shapes:Path Style="{StaticResource IconPath}"
+                                             WidthRequest="20" HeightRequest="20"
+                                             Data="{StaticResource IconLecture}"
+                                             Stroke="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+                            </Border>
+                            <Label Text="المحاضرات" Style="{StaticResource QuickTileLabel}" />
+                        </VerticalStackLayout>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ShowLecturesCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource QuickTile}">
+                        <VerticalStackLayout Spacing="10">
+                            <Border Style="{StaticResource QuickTilePlate}"
                                     BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryTintLight}, Dark={StaticResource PrimaryTintDark}}">
                                 <shapes:Path Style="{StaticResource IconPath}"
                                              WidthRequest="20" HeightRequest="20"
@@ -185,7 +197,7 @@
                         </Border.GestureRecognizers>
                     </Border>
 
-                    <Border Grid.Column="2" Style="{StaticResource QuickTile}">
+                    <Border Grid.Column="3" Style="{StaticResource QuickTile}">
                         <VerticalStackLayout Spacing="10">
                             <Border Style="{StaticResource QuickTilePlate}"
                                     BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">
@@ -201,7 +213,7 @@
                         </Border.GestureRecognizers>
                     </Border>
 
-                    <Border Grid.Column="3" Style="{StaticResource QuickTile}">
+                    <Border Grid.Column="4" Style="{StaticResource QuickTile}">
                         <VerticalStackLayout Spacing="10">
                             <Border Style="{StaticResource QuickTilePlate}"
                                     BackgroundColor="{AppThemeBinding Light={StaticResource SuccessTintLight}, Dark={StaticResource SuccessTintDark}}">
@@ -217,7 +229,7 @@
                         </Border.GestureRecognizers>
                     </Border>
 
-                    <Border Grid.Column="4" Style="{StaticResource QuickTile}">
+                    <Border Grid.Column="5" Style="{StaticResource QuickTile}">
                         <VerticalStackLayout Spacing="10">
                             <Border Style="{StaticResource QuickTilePlate}"
                                     BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryTintLight}, Dark={StaticResource SecondaryTintDark}}">
@@ -233,7 +245,7 @@
                         </Border.GestureRecognizers>
                     </Border>
 
-                    <Border Grid.Column="5" Style="{StaticResource QuickTile}">
+                    <Border Grid.Column="6" Style="{StaticResource QuickTile}">
                         <VerticalStackLayout Spacing="10">
                             <Border Style="{StaticResource QuickTilePlate}"
                                     BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">

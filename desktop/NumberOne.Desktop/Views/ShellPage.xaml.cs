@@ -46,7 +46,7 @@ public partial class ShellPage : ContentPage
     private bool _railExpanded = true;
 
     /// <summary>The routes the sidebar can mark as current.</summary>
-    private enum Route { Home, Courses, Live, Exams, Results, Notifications, Profile }
+    private enum Route { Home, Courses, Lectures, Live, Exams, Results, Notifications, Profile }
 
     public ShellPage(
         AuthService auth,
@@ -84,6 +84,7 @@ public partial class ShellPage : ContentPage
         _home.ViewModel.ShowLiveRequested += (_, _) => ShowLive();
         _home.ViewModel.ShowNotificationsRequested += (_, _) => ShowNotifications();
         _home.ViewModel.ShowCoursesRequested += (_, _) => ShowCourses();
+        _home.ViewModel.ShowLecturesRequested += (_, _) => ShowLectures();
         _home.ViewModel.ShowResultsRequested += (_, _) => ShowResults();
         _home.ViewModel.ShowProfileRequested += (_, _) => ShowProfile();
         _home.ViewModel.CourseOpened += (_, courseId) => ShowCourseDetail(courseId);
@@ -122,6 +123,7 @@ public partial class ShellPage : ContentPage
 
     private void OnHomeClicked(object? sender, EventArgs e) => ShowHome();
     private void OnCoursesClicked(object? sender, EventArgs e) => ShowCourses();
+    private void OnLecturesClicked(object? sender, EventArgs e) => ShowLectures();
     private void OnLiveClicked(object? sender, EventArgs e) => ShowLive();
     private void OnExamsClicked(object? sender, EventArgs e) => ShowExams();
     private void OnResultsClicked(object? sender, EventArgs e) => ShowResults();
@@ -214,6 +216,22 @@ public partial class ShellPage : ContentPage
 
         Host(courses, Route.Courses, "الكورسات", search: courses.ViewModel);
         courses.BeginLoad();
+    }
+
+    private void ShowLectures()
+    {
+        var lectures = new LecturesView(new LecturesViewModel(_api, _auth));
+        lectures.ViewModel.CountChanged += (_, label) => SetCount(label);
+
+        // A lecture opened from the flat list still needs its course: the
+        // player builds its unit rail from the course tree, and back goes to
+        // the course rather than here — the rail is the better place to
+        // continue from once a lecture is open.
+        lectures.ViewModel.LectureOpened += (_, target) =>
+            ShowLesson(target.LessonId, target.CourseId);
+
+        Host(lectures, Route.Lectures, "المحاضرات", search: lectures.ViewModel);
+        lectures.BeginLoad();
     }
 
     private void ShowCourseDetail(int courseId)
@@ -335,6 +353,7 @@ public partial class ShellPage : ContentPage
     {
         Mark(Route.Home, NavHomeBg, NavHomeBar, NavHomeIcon, NavHomeLabel);
         Mark(Route.Courses, NavCoursesBg, NavCoursesBar, NavCoursesIcon, NavCoursesLabel);
+        Mark(Route.Lectures, NavLecturesBg, NavLecturesBar, NavLecturesIcon, NavLecturesLabel);
         Mark(Route.Live, NavLiveBg, NavLiveBar, NavLiveIcon, NavLiveLabel);
         Mark(Route.Exams, NavExamsBg, NavExamsBar, NavExamsIcon, NavExamsLabel);
         Mark(Route.Results, NavResultsBg, NavResultsBar, NavResultsIcon, NavResultsLabel);
@@ -395,6 +414,7 @@ public partial class ShellPage : ContentPage
 
         NavHomeLabel.IsVisible = _railExpanded;
         NavCoursesLabel.IsVisible = _railExpanded;
+        NavLecturesLabel.IsVisible = _railExpanded;
         NavLiveLabel.IsVisible = _railExpanded;
         NavExamsLabel.IsVisible = _railExpanded;
         NavResultsLabel.IsVisible = _railExpanded;

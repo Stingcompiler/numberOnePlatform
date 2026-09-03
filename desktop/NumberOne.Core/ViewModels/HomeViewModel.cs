@@ -70,6 +70,7 @@ public sealed partial class HomeViewModel : ObservableObject
     public event EventHandler? ShowLiveRequested;
     public event EventHandler? ShowNotificationsRequested;
     public event EventHandler? ShowCoursesRequested;
+    public event EventHandler? ShowLecturesRequested;
     public event EventHandler? ShowResultsRequested;
     public event EventHandler? ShowProfileRequested;
 
@@ -88,6 +89,7 @@ public sealed partial class HomeViewModel : ObservableObject
     [RelayCommand] private void ShowLive() => ShowLiveRequested?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void ShowNotifications() => ShowNotificationsRequested?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void ShowCourses() => ShowCoursesRequested?.Invoke(this, EventArgs.Empty);
+    [RelayCommand] private void ShowLectures() => ShowLecturesRequested?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void ShowResults() => ShowResultsRequested?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void ShowProfile() => ShowProfileRequested?.Invoke(this, EventArgs.Empty);
 
