@@ -231,7 +231,19 @@ public partial class App : Application
 
         var window = new Window(navigation)
         {
-            Title = UiText.BrandName,
+            // Deliberately blank, and set on the window handle instead.
+            //
+            // WinUI keeps its own copy of the title and writes it over the
+            // window text whenever that copy changes — and its copy is stored
+            // through a conversion that sizes the buffer in characters while
+            // UTF-8 Arabic takes two bytes each. A twenty character name came
+            // back as eleven, measured on the running window, whether it was
+            // set through MAUI, through WinUI's own Title, or written to the
+            // handle underneath it.
+            //
+            // Left empty, WinUI has nothing to write back, and the real name is
+            // set on the handle where it survives intact. See WindowChrome.
+            Title = string.Empty,
 
             // Deliberately NOT RightToLeft, though everything inside it is.
             //
@@ -258,8 +270,30 @@ public partial class App : Application
         {
             ProtectFromCapture(window);
             UseSystemTitleBar(window);
+            ApplyWindowChrome(window);
             Maximize(window);
+
+            // And again once startup has finished writing.
+            //
+            // The framework sets the title itself, last, so anything applied
+            // here is overwritten: first with a question mark per Arabic
+            // letter, and once the process was made UTF-8, with the name cut
+            // off after eleven characters — the same conversion sizing a
+            // buffer in characters while UTF-8 Arabic takes two bytes each.
+            // Both were read back off the running window.
+            //
+            // It writes only during startup: a title set afterwards was still
+            // intact twenty characters long and four seconds later, so the last
+            // word is there for the taking. Created is the hook because
+            // Activated never arrives for this window — a delayed pass hung off
+            // it silently did nothing, which is how that was found.
+            window.Dispatcher.DispatchDelayed(
+                TimeSpan.FromMilliseconds(1500), () => ApplyWindowChrome(window));
         };
+
+        // Kept as well, for the day it starts firing: re-applying is cheap and
+        // the clearing of the mirror bit is guarded by a check.
+        window.Activated += (_, _) => ApplyWindowChrome(window);
 
         WireNavigation();
 
@@ -370,6 +404,24 @@ public partial class App : Application
     }
 
     /// <summary>
+    /// Hands the window handle to the Win32 frame fixes.
+    ///
+    /// Both of them — the mirrored caption and the question-mark title — were
+    /// measured on the running window after being "fixed" through the managed
+    /// APIs, so they are applied where they were observed. See WindowChrome.
+    /// </summary>
+    private static void ApplyWindowChrome(Window window)
+    {
+#if WINDOWS
+        if (window.Handler?.PlatformView is not Microsoft.UI.Xaml.Window platformWindow) return;
+
+        Platforms.Windows.WindowChrome.Apply(
+            WinRT.Interop.WindowNative.GetWindowHandle(platformWindow),
+            UiText.BrandName);
+#endif
+    }
+
+    /// <summary>
     /// Opens maximised.
     ///
     /// The Width and Height on the Window are the restored size — what the
@@ -392,16 +444,11 @@ public partial class App : Application
         var handle = WinRT.Interop.WindowNative.GetWindowHandle(platformWindow);
         var id = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(handle);
 
-        if (Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id) is not { } appWindow) return;
-
-        // Set from our own string rather than left to whatever the platform
-        // inferred. The taskbar was labelling the app "????? ?????? ???? ??" -
-        // one question mark per Arabic letter, the signature of a title that
-        // reached Windows through a single-byte code page instead of Unicode.
-        appWindow.Title = UiText.BrandName;
-
-        if (appWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter)
+        if (Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id) is { } appWindow &&
+            appWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter)
+        {
             presenter.Maximize();
+        }
 #endif
     }
 
