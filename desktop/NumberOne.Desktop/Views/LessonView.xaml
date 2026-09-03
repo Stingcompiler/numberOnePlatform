@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:controls="clr-namespace:NumberOne.Desktop.Controls"
              x:Class="NumberOne.Desktop.Views.LessonView"
              x:Name="Root"
              x:DataType="vm:LessonViewModel">
@@ -65,13 +66,15 @@
 
                         <Grid>
                             <!--
-                                LeftToRight, explicitly. The window is RTL and
-                                that cascades into the WebView, which mirrors
-                                everything the page draws — the video picture
-                                included. A flipped lecture is not a cosmetic
-                                problem: any text on the board reads backwards.
+                                Not a plain WebView. SecurePlayerWebView refuses
+                                every navigation that is not this lecture and
+                                grants no new windows at all, so "Watch on
+                                YouTube", the share sheet, the context menu and
+                                a middle-click lead nowhere. See its own summary
+                                for the three layers and why the visual one is
+                                the weakest.
                             -->
-                            <WebView x:Name="Player"
+                            <controls:SecurePlayerWebView x:Name="Player"
                                      FlowDirection="LeftToRight"
                                      Source="{Binding PlayerUrl}" />
 

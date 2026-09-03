@@ -250,6 +250,36 @@ public sealed partial class LessonViewModel : ObservableObject
     public event EventHandler<ToastMessage>? Toasted;
 
     /// <summary>
+    /// Shown when the player refuses to leave the app.
+    ///
+    /// Stated plainly rather than apologetically: this is the app working as
+    /// the school intends, not a failure. A student who clicks YouTube's logo
+    /// and gets silence would otherwise reasonably conclude the app is stuck.
+    /// </summary>
+    public const string NavigationBlockedMessage =
+        "المحاضرة تُشاهَد داخل التطبيق فقط.";
+
+    /// <summary>
+    /// Called by the view when the web view cancelled a navigation or refused a
+    /// new window.
+    ///
+    /// Rate-limited to one message every few seconds: YouTube's chrome can fire
+    /// several attempts from a single click, and three identical toasts would
+    /// read as an error rather than a rule.
+    /// </summary>
+    public void ReportBlockedNavigation()
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        if (now - _lastBlockedReport < TimeSpan.FromSeconds(4)) return;
+
+        _lastBlockedReport = now;
+        Toasted?.Invoke(this, new ToastMessage(NavigationBlockedMessage, ToastKind.Warning));
+    }
+
+    private DateTimeOffset _lastBlockedReport = DateTimeOffset.MinValue;
+
+    /// <summary>
     /// The attachment opens outside the app rather than in the WebView. The
     /// player's window already carries capture protection; a second WebView
     /// showing the same material would not, and would quietly become the way

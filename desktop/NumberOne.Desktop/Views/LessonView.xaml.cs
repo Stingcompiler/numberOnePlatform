@@ -35,7 +35,7 @@ public partial class LessonView : ContentView
             : "هذا المحتوى محمي بحقوق النشر — التسجيل أو إعادة النشر مخالفة.")
             + " · 920 × 518";
 
-        ForcePlayerLeftToRight();
+        SecurePlayer();
 
         // The attachment opens in the system handler, outside the app. A second
         // WebView showing the same material would not carry the player window's
@@ -57,27 +57,31 @@ public partial class LessonView : ContentView
     public LessonViewModel ViewModel => _vm;
 
     /// <summary>
-    /// Pins the native web view to left-to-right, whatever the window is doing.
+    /// Hands the player its allowed page and locks the platform view down.
     ///
-    /// The app window is RightToLeft, and WinUI mirrors a WebView2 that inherits
-    /// that — it flips the rendered output, so the lecture plays back as a
-    /// mirror image and any writing on the board reads backwards. On a maths
-    /// lecture that is not cosmetic: the equations are unreadable.
+    /// The allowed page must be set before the source binding resolves, or the
+    /// very first navigation — the lecture itself — is refused by its own
+    /// policy. Hence the constructor rather than BeginLoad.
     ///
-    /// FlowDirection="LeftToRight" on the MAUI control is declared in the XAML
-    /// and is the documented fix, but it is a MAUI-level property whose mapping
-    /// to WebView2 has not held across handler versions. This reaches the
-    /// platform element directly once its handler exists, so the setting cannot
-    /// be lost in that translation. The page it loads also declares dir="ltr",
-    /// which covers the document; this covers the control drawing it.
+    /// The lockdown is where "no way out to YouTube" is actually enforced: the
+    /// view cancels every navigation that is not this page and grants no new
+    /// windows, so a changed YouTube layout cannot reopen a door. See
+    /// SecurePlayerWebView for the layering.
     /// </summary>
-    private void ForcePlayerLeftToRight()
+    private void SecurePlayer()
     {
+        Player.AllowedPage = new Uri(MauiProgram.ApiBaseAddress, "academic/player/");
+
+        // A refused navigation is silent by design — nothing happens, which is
+        // the point. Telling the student why keeps it from reading as a frozen
+        // control.
+        Player.NavigationBlocked += (_, _) => _vm.ReportBlockedNavigation();
+
 #if WINDOWS
         Player.HandlerChanged += (_, _) =>
         {
             if (Player.Handler?.PlatformView is Microsoft.UI.Xaml.FrameworkElement native)
-                native.FlowDirection = Microsoft.UI.Xaml.FlowDirection.LeftToRight;
+                Platforms.Windows.SecurePlayerWebViewSetup.Attach(Player, native);
         };
 #endif
     }

@@ -7,12 +7,6 @@
       "runtimeArgs": ["run", "dev"],
       "cwd": "frontend",
       "port": 5173
-    },
-    {
-      "name": "numberone-api",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["manage.py", "runserver", "8000"],
-      "port": 8000
     }
   ]
 }

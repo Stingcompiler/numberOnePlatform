@@ -11,8 +11,7 @@ Views الكاملة للهيكل الأكاديمي
 
 import re
 
-from django.http import HttpResponseBadRequest
-from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 from rest_framework import generics, status
@@ -764,9 +763,17 @@ class LessonPlayerView(View):
     #: معرّفات يوتيوب: حروف وأرقام وشرطتان. أي شيء آخر يُرفَض بدل أن يُطبَع.
     VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{6,20}$")
 
-    #: القالب في academic/templates/academic/player.html — راجع تعليقه لتفاصيل
-    #: تعطيل واجهة يوتيوب وضبط الاتجاه.
-    TEMPLATE_NAME = "academic/player.html"
+    TEMPLATE = (
+        "<!doctype html><html><head><meta charset=\"utf-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        "<style>html,body{{margin:0;height:100%;background:#0B0F16;overflow:hidden}}"
+        "iframe{{border:0;width:100%;height:100%;display:block}}</style></head>"
+        "<body oncontextmenu=\"return false\">"
+        "<iframe src=\"https://www.youtube.com/embed/{video_id}?modestbranding=1&amp;rel=0\""
+        " allow=\"accelerometer; autoplay; encrypted-media; picture-in-picture\""
+        " referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen></iframe>"
+        "</body></html>"
+    )
 
     def get(self, request):
         video_id = request.GET.get("v", "")
@@ -774,9 +781,7 @@ class LessonPlayerView(View):
         if not self.VIDEO_ID.match(video_id):
             return HttpResponseBadRequest("invalid video id")
 
-        # المعرّف مُتحقَّق منه بالتعبير أعلاه قبل أن يصل القالب، فلا سبيل
-        # لحقن شيء في الـ JS الذي يقرأه.
-        response = render(request, self.TEMPLATE_NAME, {"video_id": video_id})
+        response = HttpResponse(self.TEMPLATE.format(video_id=video_id))
 
         # الصفحة تُضمّن iframe من يوتيوب فقط؛ لا تُضمَّن هي في أي مكان آخر.
         response["X-Frame-Options"] = "SAMEORIGIN"
