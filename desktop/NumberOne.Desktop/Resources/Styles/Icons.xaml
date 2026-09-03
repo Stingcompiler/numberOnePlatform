@@ -3,112 +3,168 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
     <!--
-        The design's icon set, ported verbatim.
+        The app's icons: Lucide, under the ISC licence.
 
-        Claude Design draws every icon as an inline SVG on a 24x24 viewBox with
-        a 1.75 stroke and no fill. MAUI's Path takes the same path mini-language
-        in PathGeometry.Figures, so these are the design's own "d" attributes -
-        copied, not redrawn. Where an icon was several <path> elements, the
-        subpaths are concatenated: a path string may hold as many M-commands as
-        it likes.
+        Previously these were hand-authored path data, traced to match the
+        design's own inline SVG. That was fine for the dozen the handoff drew
+        and steadily worse for the ones it did not: a glyph nobody had drawn had
+        to be invented, and an invented glyph is off-grid, off-weight and
+        obvious beside a real one.
 
-        Consume through the IconPath style in Theme.xaml, which sets
-        Aspect="Uniform" so a 24-unit geometry renders in a 16x16 slot the way
-        a viewBox does in the browser.
+        Lucide is drawn on the same 24x24 grid with the round caps and joins the
+        IconPath style already sets, so the set is consistent by construction
+        rather than by eye.
+
+        GENERATED. Do not hand-edit an entry: regenerate with
+        desktop/tools/lucide_icons.py, which fetches the current SVGs and
+        rewrites them as path data. Lucide draws with <circle>, <rect>, <line>
+        and <polyline> as well as <path>, and a XAML Geometry takes only path
+        mini-language — so a circle becomes two half-arcs, a rounded rect four
+        lines and four arcs, and the rest straight M/L runs. The comment above
+        each entry names the Lucide icon it came from.
     -->
 
-    <!-- ── Sidebar navigation ───────────────────────────────────────────── -->
+    <!-- lucide: house -->
     <PathGeometry x:Key="IconHome"
-                  Figures="M3 9.6 12 3l9 6.6V20a1 1 0 0 1-1 1h-5v-6.5H9V21H4a1 1 0 0 1-1-1V9.6Z" />
+                  Figures="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8 M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
 
+    <!-- lucide: book-open -->
     <PathGeometry x:Key="IconCourses"
-                  Figures="M2 4.5h5.5A3.5 3.5 0 0 1 11 8v12a2.6 2.6 0 0 0-2.6-2.2H2V4.5Z M22 4.5h-5.5A3.5 3.5 0 0 0 13 8v12a2.6 2.6 0 0 1 2.6-2.2H22V4.5Z" />
+                  Figures="M12 5v16 M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" />
 
-    <PathGeometry x:Key="IconLive"
-                  Figures="M10 12a2 2 0 1 0 4 0 2 2 0 1 0-4 0 M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2" />
-
-    <PathGeometry x:Key="IconExams"
-                  Figures="M16.5 3.2 20.8 7.5 9 19.3l-4.8 1.5 1.5-4.8L16.5 3.2Z M14.3 5.4l4.3 4.3" />
-
-    <PathGeometry x:Key="IconResults"
-                  Figures="M6.4 9a5.6 5.6 0 1 0 11.2 0 5.6 5.6 0 1 0-11.2 0 M8.7 13.9 7.4 21l4.6-2.6L16.6 21l-1.3-7.1" />
-
-    <PathGeometry x:Key="IconBell"
-                  Figures="M18 8.5a6 6 0 1 0-12 0c0 6.5-2.6 8.5-2.6 8.5h17.2S18 15 18 8.5 M13.7 20.4a2 2 0 0 1-3.4 0" />
-
-    <PathGeometry x:Key="IconUser"
-                  Figures="M8.2 8a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 1 0-7.6 0 M4.5 20.5a7.5 7.5 0 0 1 15 0" />
-
-    <PathGeometry x:Key="IconSignOut"
-                  Figures="M15 21h-5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5 M17 16l4-4-4-4M21 12H10" />
-
-    <!-- A lecture: the play triangle in a rounded frame. Distinct from the
-         courses book at a glance, which matters because the two sit adjacent
-         in the rail. -->
+    <!-- lucide: square-play -->
     <PathGeometry x:Key="IconLecture"
-                  Figures="M2.5 6.5a3 3 0 0 1 3-3h13a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3h-13a3 3 0 0 1-3-3v-11Z M10 9.2l5 2.8-5 2.8V9.2Z" />
+                  Figures="M5 3H19a2 2 0 0 1 2 2V19a2 2 0 0 1 -2 2H5a2 2 0 0 1 -2 -2V5a2 2 0 0 1 2 -2Z M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z" />
 
-    <!-- ── Theme toggle ─────────────────────────────────────────────────── -->
+    <!-- lucide: radio -->
+    <PathGeometry x:Key="IconLive"
+                  Figures="M16.247 7.761a6 6 0 0 1 0 8.478 M19.075 4.933a10 10 0 0 1 0 14.134 M4.925 19.067a10 10 0 0 1 0-14.134 M7.753 16.239a6 6 0 0 1 0-8.478 M10 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+
+    <!-- lucide: pencil -->
+    <PathGeometry x:Key="IconExams"
+                  Figures="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z M15 5 l4 4" />
+
+    <!-- lucide: award -->
+    <PathGeometry x:Key="IconResults"
+                  Figures="M15.477 12.89 l1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526 M6 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0" />
+
+    <!-- lucide: bell -->
+    <PathGeometry x:Key="IconBell"
+                  Figures="M10.268 21a2 2 0 0 0 3.464 0 M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+
+    <!-- lucide: user -->
+    <PathGeometry x:Key="IconUser"
+                  Figures="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2 M8 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+
+    <!-- lucide: log-out -->
+    <PathGeometry x:Key="IconSignOut"
+                  Figures="M16 17 l5-5-5-5 M21 12H9 M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+
+    <!-- lucide: sun -->
     <PathGeometry x:Key="IconSun"
-                  Figures="M8 12a4 4 0 1 0 8 0 4 4 0 1 0-8 0 M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6" />
+                  Figures="M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0 M12 2v2 M12 20v2 M4.93 4.93 l1.41 1.41 M17.66 17.66 l1.41 1.41 M2 12h2 M20 12h2 M6.34 17.66 l-1.41 1.41 M19.07 4.93 l-1.41 1.41" />
 
+    <!-- lucide: moon -->
     <PathGeometry x:Key="IconMoon"
-                  Figures="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z" />
+                  Figures="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
 
-    <!-- ── Top bar ──────────────────────────────────────────────────────── -->
-    <!-- Chevrons are named by the direction they point, not by what they do:
-         in RTL, "back" points right. -->
-    <PathGeometry x:Key="IconChevronRight" Figures="M10 6l6 6-6 6" />
-    <PathGeometry x:Key="IconChevronLeft"  Figures="M14 6l-6 6 6 6" />
-    <PathGeometry x:Key="IconChevronDown"  Figures="M6 9.5l6 6 6-6" />
+    <!-- lucide: chevron-right -->
+    <PathGeometry x:Key="IconChevronRight"
+                  Figures="M9 18 l6-6-6-6" />
 
-    <PathGeometry x:Key="IconMenu"   Figures="M4 6h16M4 12h16M4 18h16" />
-    <PathGeometry x:Key="IconSearch" Figures="M4 11a7 7 0 1 0 14 0 7 7 0 1 0-14 0 M20 20l-3.6-3.6" />
-    <PathGeometry x:Key="IconMonitor" Figures="M2.5 5.5a2 2 0 0 1 2-2h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2v-9Z M8.5 20.5h7M12 16.5v4" />
-    <PathGeometry x:Key="IconRefresh" Figures="M3 12a9 9 0 0 1 15.5-6.2M21 12a9 9 0 0 1-15.5 6.2 M18.5 3v3h-3M5.5 21v-3h3" />
+    <!-- lucide: chevron-left -->
+    <PathGeometry x:Key="IconChevronLeft"
+                  Figures="M15 18 l-6-6 6-6" />
 
-    <!-- ── Status and messaging ─────────────────────────────────────────── -->
+    <!-- lucide: chevron-down -->
+    <PathGeometry x:Key="IconChevronDown"
+                  Figures="M6 9 l6 6 6-6" />
+
+    <!-- lucide: menu -->
+    <PathGeometry x:Key="IconMenu"
+                  Figures="M4 5h16 M4 12h16 M4 19h16" />
+
+    <!-- lucide: search -->
+    <PathGeometry x:Key="IconSearch"
+                  Figures="M21 21 l-4.34-4.34 M3 11a8 8 0 1 0 16 0a8 8 0 1 0 -16 0" />
+
+    <!-- lucide: monitor -->
+    <PathGeometry x:Key="IconMonitor"
+                  Figures="M4 3H20a2 2 0 0 1 2 2V15a2 2 0 0 1 -2 2H4a2 2 0 0 1 -2 -2V5a2 2 0 0 1 2 -2Z M8 21L16 21 M12 17L12 21" />
+
+    <!-- lucide: refresh-cw -->
+    <PathGeometry x:Key="IconRefresh"
+                  Figures="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8 M21 3v5h-5 M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16 M8 16H3v5" />
+
+    <!-- lucide: clock -->
     <PathGeometry x:Key="IconClock"
-                  Figures="M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0 M12 7.2V12l3.4 2" />
+                  Figures="M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0 M12 6v6l4 2" />
 
+    <!-- lucide: circle-alert -->
     <PathGeometry x:Key="IconAlertCircle"
-                  Figures="M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0 M12 7.5V13M12 16.4h.01" />
+                  Figures="M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0 M12 8L12 12 M12 16L12.01 16" />
 
+    <!-- lucide: triangle-alert -->
     <PathGeometry x:Key="IconAlertTriangle"
-                  Figures="M12 3.6 2.8 20.4h18.4L12 3.6Z M12 9.5v4.5M12 17h.01" />
+                  Figures="M21.73 18 l-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3 M12 9v4 M12 17h.01" />
 
-    <PathGeometry x:Key="IconCheck" Figures="M4.5 12.8l4.6 4.6L19.5 7" />
+    <!-- lucide: check -->
+    <PathGeometry x:Key="IconCheck"
+                  Figures="M20 6 9 17l-5-5" />
 
+    <!-- lucide: shield-check -->
     <PathGeometry x:Key="IconShield"
-                  Figures="M12 3.2 19.5 6v5.8c0 4.6-3.1 7.6-7.5 9-4.4-1.4-7.5-4.4-7.5-9V6L12 3.2Z M9.6 12.2l1.8 1.8 3.2-3.6" />
+                  Figures="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z M9 12 l2 2 4-4" />
 
+    <!-- lucide: eye -->
     <PathGeometry x:Key="IconEye"
-                  Figures="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12S18 17.5 12 17.5 2.5 12 2.5 12Z M9 12a3 3 0 1 0 6 0 3 3 0 1 0-6 0" />
+                  Figures="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0 M9 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
 
+    <!-- lucide: copy -->
     <PathGeometry x:Key="IconCopy"
-                  Figures="M8.5 10.5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8Z M15.5 5.5H5.5a2 2 0 0 0-2 2v10" />
+                  Figures="M10 8H20a2 2 0 0 1 2 2V20a2 2 0 0 1 -2 2H10a2 2 0 0 1 -2 -2V10a2 2 0 0 1 2 -2Z M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
 
+    <!-- lucide: phone -->
     <PathGeometry x:Key="IconPhone"
-                  Figures="M6 3h4l2 5-3 2a12 12 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2Z" />
+                  Figures="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" />
 
-    <PathGeometry x:Key="IconDownload" Figures="M12 3.5v11m0 0 4-4m-4 4-4-4M4.5 20h15" />
+    <!-- lucide: download -->
+    <PathGeometry x:Key="IconDownload"
+                  Figures="M12 15V3 M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10 l5 5 5-5" />
 
+    <!-- lucide: external-link -->
     <PathGeometry x:Key="IconExternal"
-                  Figures="M14 4h6v6 M20 4l-9 9 M18 14.5V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 19V8a1.5 1.5 0 0 1 1.5-1.5H10" />
+                  Figures="M15 3h6v6 M10 14 21 3 M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
 
+    <!-- lucide: lock -->
     <PathGeometry x:Key="IconLock"
-                  Figures="M4 12.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6.5Z M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+                  Figures="M5 11H19a2 2 0 0 1 2 2V20a2 2 0 0 1 -2 2H5a2 2 0 0 1 -2 -2V13a2 2 0 0 1 2 -2Z M7 11V7a5 5 0 0 1 10 0v4" />
 
+    <!-- lucide: smartphone -->
     <PathGeometry x:Key="IconPhoneDevice"
-                  Figures="M5 5.5a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v13a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-13Z M10.5 18.5h3" />
+                  Figures="M7 2H17a2 2 0 0 1 2 2V20a2 2 0 0 1 -2 2H7a2 2 0 0 1 -2 -2V4a2 2 0 0 1 2 -2Z M12 18h.01" />
 
-    <PathGeometry x:Key="IconWifi"      Figures="M5 12.8a10 10 0 0 1 14 0M2.5 9a15 15 0 0 1 19 0M8.5 16.4a5 5 0 0 1 7 0M12 20h.01" />
-    <PathGeometry x:Key="IconWifiOff"   Figures="M2 5.5 22 19 M5 12.8a10 10 0 0 1 4-2.4M2.5 9a15 15 0 0 1 5-3M16.5 12.9a10 10 0 0 0-2.6-1.6M21.5 9a15 15 0 0 0-6.4-3.3M9 16.4a5 5 0 0 1 6 0M12 20h.01" />
+    <!-- lucide: wifi -->
+    <PathGeometry x:Key="IconWifi"
+                  Figures="M12 20h.01 M2 8.82a15 15 0 0 1 20 0 M5 12.859a10 10 0 0 1 14 0 M8.5 16.429a5 5 0 0 1 7 0" />
 
+    <!-- lucide: wifi-off -->
+    <PathGeometry x:Key="IconWifiOff"
+                  Figures="M12 20h.01 M8.5 16.429a5 5 0 0 1 7 0 M5 12.859a10 10 0 0 1 5.17-2.69 M19 12.859a10 10 0 0 0-2.007-1.523 M2 8.82a15 15 0 0 1 4.177-2.643 M22 8.82a15 15 0 0 0-11.288-3.764 M2 2 l20 20" />
+
+    <!-- lucide: link -->
     <PathGeometry x:Key="IconLink"
-                  Figures="M9.5 14.5 14.5 9.5 M11 7.5l1.5-1.5a4 4 0 0 1 5.5 5.5L16.5 13M13 16.5 11.5 18a4 4 0 0 1-5.5-5.5L7.5 11" />
+                  Figures="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
 
-    <!-- ── Live providers. Each is two subpaths in the design; joined here. -->
+
+    <!-- ── Live providers ────────────────────────────────── -->
+    <!--
+        NOT Lucide: it carries no brand marks, and these four have to be told
+        apart at 13px in a table row — one generic "video" glyph on all of them
+        would lose the single thing that column exists to say.
+
+        These stay as the design handoff drew them.
+    -->
     <PathGeometry x:Key="IconZoom"
                   Figures="M2.5 7.5A2 2 0 0 1 4.5 5.5h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-9Z M14.5 11l5-3.5v9l-5-3.5" />
 

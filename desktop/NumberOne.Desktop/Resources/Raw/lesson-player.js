@@ -72,32 +72,21 @@
   function el(id) { return document.getElementById(id); }
 
   // ══ Icons ═════════════════════════════════════════════════════════════════
-  // One family, one stroke weight, one size. Filled shapes only for play and
-  // pause, which read faster than an outline at 16px.
+  //
+  // Lucide (ISC), the same set the rest of the app uses — see
+  // Resources/Styles/Icons.xaml. Kept as literal SVG here rather than shared
+  // with the XAML dictionary because this file is injected into a web view and
+  // cannot reach a MAUI resource.
 
   var ICON = {
-    play:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72L19 12z"/></svg>',
-    pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.5 5h3.5v14H6.5zM14 5h3.5v14H14z"/></svg>',
-    back:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
-           'stroke-linecap="round" stroke-linejoin="round">' +
-           '<path d="M11.5 5.5 4.5 12l7 6.5"/><path d="M19.5 5.5 12.5 12l7 6.5"/></svg>',
-    fwd:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
-           'stroke-linecap="round" stroke-linejoin="round">' +
-           '<path d="M12.5 5.5 19.5 12l-7 6.5"/><path d="M4.5 5.5 11.5 12l-7 6.5"/></svg>',
-    vol:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
-           'stroke-linecap="round" stroke-linejoin="round">' +
-           '<path d="M11 5 6 9H3v6h3l5 4V5Z"/>' +
-           '<path class="w2" d="M15.2 8.6a4.6 4.6 0 0 1 0 6.8"/>' +
-           '<path class="w1" d="M18 6a8.5 8.5 0 0 1 0 12"/></svg>',
-    mute:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
-           'stroke-linecap="round" stroke-linejoin="round">' +
-           '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9.5 5 5m0-5-5 5"/></svg>',
-    expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
-           'stroke-linecap="round" stroke-linejoin="round">' +
-           '<path d="M8.5 3.5H3.5v5M15.5 3.5h5v5M20.5 15.5v5h-5M3.5 15.5v5h5"/></svg>',
-    shrink:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
-           'stroke-linecap="round" stroke-linejoin="round">' +
-           '<path d="M3.5 8.5h5v-5M20.5 8.5h-5v-5M15.5 20.5v-5h5M8.5 20.5v-5h-5"/></svg>'
+    play   : '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>',
+    pause  : '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><path d="M15 3H18a1 1 0 0 1 1 1V20a1 1 0 0 1 -1 1H15a1 1 0 0 1 -1 -1V4a1 1 0 0 1 1 -1Z M6 3H9a1 1 0 0 1 1 1V20a1 1 0 0 1 -1 1H6a1 1 0 0 1 -1 -1V4a1 1 0 0 1 1 -1Z"/></svg>',
+    back   : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17 l-5-5 5-5 M18 17 l-5-5 5-5"/></svg>',
+    fwd    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17 l5-5-5-5 M13 17 l5-5-5-5"/></svg>',
+    vol    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z M16 9a5 5 0 0 1 0 6 M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>',
+    mute   : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.7.7 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.7.7 0 0 0 11 19.298z M16.5 14.5 l5-5 M16.5 9.5 l5 5"/></svg>',
+    expand : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3 M21 8V5a2 2 0 0 0-2-2h-3 M3 16v3a2 2 0 0 0 2 2h3 M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
+    shrink : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3 M21 8h-3a2 2 0 0 1-2-2V3 M3 16h3a2 2 0 0 1 2 2v3 M16 21v-3a2 2 0 0 1 2-2h3"/></svg>'
   };
 
   // ══ Surface ═══════════════════════════════════════════════════════════════

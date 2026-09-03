@@ -69,7 +69,11 @@ public partial class App : Application
             MinimumHeight = 700,
         };
 
-        window.Created += (_, _) => ProtectFromCapture(window);
+        window.Created += (_, _) =>
+        {
+            ProtectFromCapture(window);
+            Maximize(window);
+        };
 
         WireNavigation();
 
@@ -152,6 +156,37 @@ public partial class App : Application
 #if WINDOWS
         if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window platformWindow)
             protection.Protect(platformWindow);
+#endif
+    }
+
+    /// <summary>
+    /// Opens maximised.
+    ///
+    /// The Width and Height on the Window are the restored size — what the
+    /// student gets when they un-maximise — not the opening size, so they stay.
+    /// This app is a workspace: tables with six and seven columns, a 920x518
+    /// lecture surface, a sidebar and a unit rail either side of it. At the
+    /// 1024 minimum those all fit, but only just, and nobody opens a lecture
+    /// app to look at something else beside it.
+    ///
+    /// Maximised, not fullscreen: fullscreen takes the title bar and the
+    /// student's own way to close or move the window with it, and the app
+    /// already has an in-lecture expand for the one place that wants the whole
+    /// screen.
+    /// </summary>
+    private static void Maximize(Window window)
+    {
+#if WINDOWS
+        if (window.Handler?.PlatformView is not Microsoft.UI.Xaml.Window platformWindow) return;
+
+        var handle = WinRT.Interop.WindowNative.GetWindowHandle(platformWindow);
+        var id = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(handle);
+
+        if (Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id) is { } appWindow &&
+            appWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter)
+        {
+            presenter.Maximize();
+        }
 #endif
     }
 
