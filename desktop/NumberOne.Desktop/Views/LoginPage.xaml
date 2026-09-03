@@ -88,7 +88,19 @@
                                WidthRequest="96" HeightRequest="96" />
                     </Border>
 
-                    <Border Style="{StaticResource Panel}" Padding="24" WidthRequest="420">
+                    <!--
+                        While a stored session is being checked, the logo stays
+                        and the card does not appear. A student who never signed
+                        out is about to land in the app; flashing a sign-in form
+                        at them first reads as having been logged out.
+                    -->
+                    <ActivityIndicator IsVisible="{Binding IsRestoringSession}"
+                                       IsRunning="{Binding IsRestoringSession}"
+                                       HorizontalOptions="Center" Margin="0,24"
+                                       Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+
+                    <Border Style="{StaticResource Panel}" Padding="24" WidthRequest="420"
+                            IsVisible="{Binding ShowsForm}">
                         <VerticalStackLayout Spacing="16">
 
                             <VerticalStackLayout Spacing="4">
@@ -165,7 +177,8 @@
                     <!-- Which machine this is, and what signing in here will
                          bind. Said before the binding, not after it. -->
                     <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8"
-                          HorizontalOptions="Center" WidthRequest="420">
+                          HorizontalOptions="Center" WidthRequest="420"
+                          IsVisible="{Binding ShowsForm}">
                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
                                      WidthRequest="13" HeightRequest="13"
                                      Data="{StaticResource IconMonitor}" />

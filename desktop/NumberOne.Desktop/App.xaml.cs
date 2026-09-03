@@ -73,7 +73,67 @@ public partial class App : Application
 
         WireNavigation();
 
+        // A student who never signed out should land in the app, not at a form.
+        // Deliberately not awaited: CreateWindow is synchronous, and blocking
+        // it on a network call would hold the first frame behind the server.
+        _ = RestoreSessionAsync(navigation);
+
         return window;
+    }
+
+    /// <summary>
+    /// Opens straight into the app when the machine still holds a live session.
+    ///
+    /// The login page stays the navigation root either way, so sign-out and an
+    /// expired session keep working exactly as before — both pop back to it.
+    /// This only decides whether the shell is pushed on top before the student
+    /// ever sees the form.
+    /// </summary>
+    private async Task RestoreSessionAsync(NavigationPage navigation)
+    {
+        var login = _services.GetRequiredService<LoginViewModel>();
+        var auth = _services.GetRequiredService<AuthService>();
+
+        login.IsRestoringSession = true;
+
+        try
+        {
+            var restore = await auth.RestoreSessionAsync();
+
+            // Unverified counts. The tokens are there and the server could not
+            // be asked; sending the student to a login form that also cannot
+            // reach the server would strand them.
+            if (restore is not (SessionRestore.Restored or SessionRestore.Unverified))
+                return;
+
+            await MainThread.InvokeOnMainThreadAsync(() => PushShellAsync(navigation));
+        }
+        catch (Exception)
+        {
+            // Nothing here may take the launch down. Falling through leaves the
+            // student on the login page, which always works.
+        }
+        finally
+        {
+            login.IsRestoringSession = false;
+        }
+    }
+
+    /// <summary>
+    /// Pushes the signed-in shell. Shared by the restore above and the
+    /// SignedIn handler, so both wire the sign-out return the same way.
+    /// </summary>
+    private async Task PushShellAsync(NavigationPage navigation)
+    {
+        var shell = _services.GetRequiredService<ShellPage>();
+
+        shell.SignedOut += async (_, _) =>
+        {
+            if (Current?.Windows.FirstOrDefault()?.Page is NavigationPage back)
+                await back.PopToRootAsync();
+        };
+
+        await navigation.PushAsync(shell);
     }
 
     /// <summary>
@@ -105,15 +165,8 @@ public partial class App : Application
 
         login.SignedIn += async (_, _) =>
         {
-            var shell = _services.GetRequiredService<ShellPage>();
-            shell.SignedOut += async (_, _) =>
-            {
-                if (Current?.Windows.FirstOrDefault()?.Page is NavigationPage back)
-                    await back.PopToRootAsync();
-            };
-
             if (Current?.Windows.FirstOrDefault()?.Page is NavigationPage navigation)
-                await navigation.PushAsync(shell);
+                await PushShellAsync(navigation);
         };
 
         login.Blocked += async (_, state) =>
