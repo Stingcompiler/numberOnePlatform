@@ -203,6 +203,24 @@ public partial class LessonView : ContentView
     }
 
     /// <summary>
+    /// A styled resource by key, from wherever it is actually defined.
+    ///
+    /// This used to read Resources.MergedDictionaries.First(), which threw
+    /// "sequence contains no elements" every time a lecture that HAS an
+    /// exercise was opened: a view's own Resources collection is empty unless
+    /// the XAML declares a ContentView.Resources block, and none of these
+    /// screens do — every style lives in the application dictionary that
+    /// App.xaml merges. Lectures without an exercise never reached the line,
+    /// which is why it survived.
+    ///
+    /// Returns null rather than throwing if a key is ever renamed: an exercise
+    /// rendered in the default font is a blemish, and taking the lecture screen
+    /// down over it is not.
+    /// </summary>
+    private static T? Resource<T>(string key) where T : class =>
+        Application.Current?.Resources.TryGetValue(key, out var value) == true ? value as T : null;
+
+    /// <summary>
     /// Builds the exercise rows in code. The choice rows need per-choice
     /// selection state and a post-submit verdict colour, which is more legible
     /// here than in nested XAML templates reaching back up for two converters.
@@ -220,7 +238,7 @@ public partial class LessonView : ContentView
             block.Add(new Label
             {
                 Text = question.Text,
-                Style = (Style)Resources.MergedDictionaries.First()["CopyLabel"],
+                Style = Resource<Style>("CopyLabel"),
             });
 
             var choices = new VerticalStackLayout { Spacing = 6 };
