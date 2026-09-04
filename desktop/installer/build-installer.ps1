@@ -54,12 +54,17 @@ if (-not (Test-Path $exe)) { throw "no published app at $publish - run without -
 
 # Refuse a publish older than the code it claims to contain.
 #
+# Only the two projects that ship. Scanning everything under desktop/ swept in
+# the test project as well, so writing a test aged the publish and the build
+# refused for no reason - a guard that cries wolf gets skipped.
+#
 # -SkipPublish exists so the installer can be rebuilt without waiting on a
 # publish, and it quietly shipped a stale one: an app fix was made, the
 # installer was rebuilt several times while its text was worked on, and every
 # one of those wrapped the binary from before the fix. It installed cleanly and
 # ran fine, and the bug it was supposed to fix was still there.
-$newest = Get-ChildItem $root -Recurse -File -Include *.cs, *.xaml, *.csproj, *.manifest -ErrorAction SilentlyContinue |
+$shipped = @('NumberOne.Desktop', 'NumberOne.Core') | ForEach-Object { Join-Path $root $_ }
+$newest = Get-ChildItem $shipped -Recurse -File -Include *.cs, *.xaml, *.csproj, *.manifest -ErrorAction SilentlyContinue |
           Where-Object { $_.FullName -notlike '*\bin\*' -and $_.FullName -notlike '*\obj\*' } |
           Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
