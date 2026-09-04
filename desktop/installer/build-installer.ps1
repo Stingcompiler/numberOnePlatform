@@ -64,10 +64,18 @@ foreach ($required in 'lesson-player.js', 'appicon.ico') {
 }
 Write-Host "publish looks complete ($fonts fonts, player script, icon)" -ForegroundColor Green
 
+# Three locations, because where Inno Setup lands depends on how it was
+# installed. `winget install` without elevation puts it under the user's own
+# Programs folder, not Program Files - which is exactly what happened here, and
+# a script that only looked in Program Files reported it missing right after a
+# successful install.
 $iscc = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-    "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+    "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if (-not $iscc) { $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source }
 
 if (-not $iscc) {
     Write-Warning 'Inno Setup 6 is not installed, so the installer was not built.'
