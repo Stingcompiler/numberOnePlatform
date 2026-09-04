@@ -35,9 +35,18 @@ AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
 VersionInfoVersion={#AppVersion}
 
-; No elevation. See the note at the top.
+; No elevation, and no question about it.
+;
+; PrivilegesRequiredOverridesAllowed=dialog used to be set here, which put a
+; "Select Setup Install Mode" box in front of the wizard offering to install
+; for all users - in English, before any of our own messages apply, and
+; carrying a shield that leads straight to the UAC prompt this installer exists
+; to avoid. A student has no use for that choice and no rights to take it.
+;
+; Without the directive the box never appears and setup goes straight to the
+; welcome page. An administrator deploying a lab still runs it per profile, or
+; copies the published folder.
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 
 DefaultDirName={autopf}\{#AppNameLatin}
 ; The folder a student sees in the Start Menu, so it is named in Arabic. The
