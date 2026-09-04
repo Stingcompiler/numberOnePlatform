@@ -9,3 +9,7 @@ obj/
 publish/
 *.appx
 *.msix
+
+# Built installers. The payload is ~240MB published and the installer
+# itself around half that; neither belongs in the history.
+installer/out/
