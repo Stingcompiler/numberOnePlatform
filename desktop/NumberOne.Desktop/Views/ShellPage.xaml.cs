@@ -17,7 +17,6 @@ public partial class ShellPage : ContentPage
     private readonly StudentApi _api;
     private readonly IWindowProtection _protection;
     private readonly IDeviceIdentityProvider _device;
-    private readonly HomeView _home;
 
     /// <summary>
     /// The view currently hosted, when it owns a timer. The lesson player and
@@ -52,8 +51,7 @@ public partial class ShellPage : ContentPage
         AuthService auth,
         StudentApi api,
         IWindowProtection protection,
-        IDeviceIdentityProvider device,
-        HomeView home)
+        IDeviceIdentityProvider device)
     {
         InitializeComponent();
 
@@ -61,7 +59,6 @@ public partial class ShellPage : ContentPage
         _api = api;
         _protection = protection;
         _device = device;
-        _home = home;
 
         var user = auth.CurrentUser;
         SidebarStudentName.Text = user?.WatermarkName ?? "";
@@ -76,20 +73,6 @@ public partial class ShellPage : ContentPage
         OfflineLabel.Text = SessionViewModel.OfflineMessage;
 
         ApplyStoredTheme();
-
-        // The dashboard's cross-links and row actions are navigation, which
-        // belongs to the host. Wired once: HomeView is a singleton instance
-        // reused across visits, unlike the screens rebuilt in Show*.
-        _home.ViewModel.ShowExamsRequested += (_, _) => Navigate(ShowExams);
-        _home.ViewModel.ShowLiveRequested += (_, _) => Navigate(ShowLive);
-        _home.ViewModel.ShowNotificationsRequested += (_, _) => Navigate(ShowNotifications);
-        _home.ViewModel.ShowCoursesRequested += (_, _) => Navigate(ShowCourses);
-        _home.ViewModel.ShowLecturesRequested += (_, _) => Navigate(ShowLectures);
-        _home.ViewModel.ShowResultsRequested += (_, _) => Navigate(ShowResults);
-        _home.ViewModel.ShowProfileRequested += (_, _) => Navigate(ShowProfile);
-        _home.ViewModel.CourseOpened += (_, courseId) => Navigate(() => ShowCourseDetail(courseId));
-        _home.ViewModel.ExamStarted += (_, examId) => Navigate(() => ShowExamRunner(examId));
-        _home.ViewModel.Toasted += (_, message) => ShowToast(message.Text, message.Kind);
 
         // Connectivity is polled by the platform, not inferred from a failed
         // request: a single 500 is not the same as being offline, and treating
@@ -259,12 +242,39 @@ public partial class ShellPage : ContentPage
 
     private void ShowHome()
     {
-        Host(_home, Route.Home, "الرئيسية");
+        // Rebuilt on each visit, like every other screen.
+        //
+        // It used to be the one view held as a single instance and shown again,
+        // and it was the one screen whose icons vanished: navigating away hands
+        // the view out of the visual tree and disconnects its handlers, and on
+        // the way back MAUI rebuilds them without re-applying Shape.Data. A
+        // Label re-applies its Text, so the cards and their words came back
+        // while every icon on them was gone.
+        //
+        // Reusing the instance saved nothing anyway. BeginLoad already reloads
+        // every section on each visit, so the only thing kept was the object -
+        // and with it a Path whose geometry the platform had let go.
+        var home = new HomeView(new HomeViewModel(_api, _auth));
+
+        // The dashboard's cross-links and row actions are navigation, which
+        // belongs to the host rather than the view model.
+        home.ViewModel.ShowExamsRequested += (_, _) => Navigate(ShowExams);
+        home.ViewModel.ShowLiveRequested += (_, _) => Navigate(ShowLive);
+        home.ViewModel.ShowNotificationsRequested += (_, _) => Navigate(ShowNotifications);
+        home.ViewModel.ShowCoursesRequested += (_, _) => Navigate(ShowCourses);
+        home.ViewModel.ShowLecturesRequested += (_, _) => Navigate(ShowLectures);
+        home.ViewModel.ShowResultsRequested += (_, _) => Navigate(ShowResults);
+        home.ViewModel.ShowProfileRequested += (_, _) => Navigate(ShowProfile);
+        home.ViewModel.CourseOpened += (_, courseId) => Navigate(() => ShowCourseDetail(courseId));
+        home.ViewModel.ExamStarted += (_, examId) => Navigate(() => ShowExamRunner(examId));
+        home.ViewModel.Toasted += (_, message) => ShowToast(message.Text, message.Kind);
+
+        Host(home, Route.Home, "الرئيسية");
 
         // Sections start loading as the view is shown. Deliberately not awaited:
         // each renders as it lands, which is the whole point of them being
         // independent.
-        _home.BeginLoad();
+        home.BeginLoad();
     }
 
     private void ShowCourses()
