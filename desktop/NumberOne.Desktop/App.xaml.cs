@@ -127,6 +127,25 @@ public partial class App : Application
         const int ElementNotFound = unchecked((int)0x80070490);
 
         if (com.HResult == ElementNotFound) return true;
+
+        // Every Direct2D error code is 0x8899xxxx, and the ones that reach here
+        // come out of OnDraw with the drawing stack still under them.
+        //
+        // The lecture page raises D2DERR_BAD_NUMBER (0x88990011) on the way in
+        // from the المحاضرات list: the unit rail is hidden until its data
+        // arrives, and the frame where IsVisible turns true draws the card's
+        // rounded border before it has been measured, which is not a shape
+        // Direct2D can build. Opened through a course and a unit the tree is
+        // already loaded, the rail is visible from the first layout, and
+        // nothing goes wrong - which is exactly the difference a student
+        // reported.
+        //
+        // The next frame draws correctly and the page is usable, so the fault
+        // is recorded and the student is left alone. It is still a real drawing
+        // bug; it is not one worth stopping a lecture for.
+        if ((com.HResult & unchecked((int)0xFFFF0000)) == unchecked((int)0x88990000))
+            return true;
+
         if (com.HResult != Fail) return false;
 
         // E_FAIL is generic, so it only counts as the compositor's when it
