@@ -52,6 +52,24 @@ if (-not $SkipPublish) {
 $exe = Join-Path $publish 'NumberOne.Desktop.exe'
 if (-not (Test-Path $exe)) { throw "no published app at $publish - run without -SkipPublish" }
 
+# Refuse a publish older than the code it claims to contain.
+#
+# -SkipPublish exists so the installer can be rebuilt without waiting on a
+# publish, and it quietly shipped a stale one: an app fix was made, the
+# installer was rebuilt several times while its text was worked on, and every
+# one of those wrapped the binary from before the fix. It installed cleanly and
+# ran fine, and the bug it was supposed to fix was still there.
+$newest = Get-ChildItem $root -Recurse -File -Include *.cs, *.xaml, *.csproj, *.manifest -ErrorAction SilentlyContinue |
+          Where-Object { $_.FullName -notlike '*\bin\*' -and $_.FullName -notlike '*\obj\*' } |
+          Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+if ($newest -and $newest.LastWriteTime -gt (Get-Item $exe).LastWriteTime) {
+    throw ("the published app is older than the source. " +
+           "$($newest.Name) changed at $($newest.LastWriteTime.ToString('HH:mm:ss')), " +
+           "publish is from $((Get-Item $exe).LastWriteTime.ToString('HH:mm:ss')). " +
+           'Run without -SkipPublish.')
+}
+
 # A publish that silently dropped the fonts or the player script still produces
 # a runnable exe, and the failure only shows up on a student's machine as the
 # wrong typeface or a lecture that will not play. Both have happened.
