@@ -30,18 +30,34 @@ public sealed partial class ProfileViewModel : ObservableObject
 
     public string FullName => User?.FullName ?? "";
     public string Username => User?.Username ?? "";
-    public string Phone => User?.Phone ?? "";
+    public string Phone => OrDash(User?.Phone);
     public string Email => User?.Email ?? "";
 
-    public string GuardianName => Profile?.GuardianName ?? "";
-    public string GuardianPhone => Profile?.GuardianPhone ?? "";
-    public string Address => Profile?.Address ?? "";
+    public string GuardianName => OrDash(Profile?.GuardianName);
+    public string GuardianPhone => OrDash(Profile?.GuardianPhone);
+    public string Address => OrDash(Profile?.Address);
 
     public string Grade => Profile?.EnrolledGradeName ?? "";
     public string Level => Profile?.EnrolledLevelName ?? "";
 
     /// <summary>Mapped from the raw value, never from system_type_display.</summary>
     public string SystemTypeDisplay => SystemTypes.Display(Profile?.SystemType);
+
+    /// <summary>
+    /// A dash where a field was never filled in.
+    ///
+    /// Nearly everything on a student record is optional, and the profile
+    /// screen sets each value under its own label with nothing drawn around
+    /// it - so an empty string leaves a heading with a gap beneath it, which
+    /// reads as the screen having failed rather than as a blank the school
+    /// never filled. The dash says "we know, and there is nothing here".
+    ///
+    /// Only the four optional fields take it, and they are shown on the
+    /// profile and nowhere else - so it cannot reach the watermark, a
+    /// greeting, or anything that would look wrong carrying a dash.
+    /// </summary>
+    private static string OrDash(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "—" : value;
 
     /// <summary>
     /// Where المشرفة has no value the profile shows "توزيع إداري تلقائي" rather
