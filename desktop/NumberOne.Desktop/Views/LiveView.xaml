@@ -4,6 +4,7 @@
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:models="clr-namespace:NumberOne.Core.Models;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
              x:Class="NumberOne.Desktop.Views.LiveView"
              x:Name="Root"
              x:DataType="vm:LiveViewModel">
@@ -24,7 +25,7 @@
                 <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
                 <shapes:Path Grid.Column="2" Style="{StaticResource IconPathMuted}"
                              WidthRequest="13" HeightRequest="13"
-                             Data="{StaticResource IconLink}" />
+                             Data="{ui:Icon Key=IconLink}" />
                 <Label Grid.Column="3" Text="{x:Static vm:LiveViewModel.HeaderNote}"
                        Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
             </Grid>
@@ -40,7 +41,7 @@
                                       ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
                                     <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
                                                  WidthRequest="14" HeightRequest="14"
-                                                 Data="{StaticResource IconChevronDown}"
+                                                 Data="{ui:Icon Key=IconChevronDown}"
                                                  StrokeThickness="1.75" />
                                     <Label Grid.Column="1" Text="{Binding RoomName}"
                                            Style="{StaticResource HeadingLabel}" VerticalOptions="Center" />
@@ -133,7 +134,7 @@
                                                         <shapes:Path Style="{StaticResource IconPathSmall}"
                                                                      WidthRequest="12" HeightRequest="12"
                                                                      IsVisible="{Binding CanJoin}"
-                                                                     Data="{StaticResource IconExternal}"
+                                                                     Data="{ui:Icon Key=IconExternal}"
                                                                      Stroke="{Binding CanJoin, Converter={StaticResource JoinableInk}}" />
                                                     </HorizontalStackLayout>
 

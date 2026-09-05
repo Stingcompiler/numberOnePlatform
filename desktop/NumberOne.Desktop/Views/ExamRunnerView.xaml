@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
              x:Class="NumberOne.Desktop.Views.ExamRunnerView"
              x:DataType="vm:ExamRunnerViewModel">
 
@@ -57,7 +58,7 @@
                                 BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">
                             <HorizontalStackLayout Spacing="6">
                                 <shapes:Path Style="{StaticResource IconPathSmall}"
-                                             Data="{StaticResource IconClock}"
+                                             Data="{ui:Icon Key=IconClock}"
                                              Stroke="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
                                 <Label Text="{Binding RemainingLabel}"
                                        Style="{StaticResource PillLabel}"
@@ -128,7 +129,7 @@
                                 IsVisible="{Binding HasSubmitError}">
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                 <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
-                                             Data="{StaticResource IconAlertCircle}"
+                                             Data="{ui:Icon Key=IconAlertCircle}"
                                              Stroke="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
                                 <Label Grid.Column="1" Text="{Binding SubmitError}"
                                        Style="{StaticResource CopyLabel}" VerticalOptions="Center"
@@ -152,7 +153,7 @@
                             StrokeShape="RoundRectangle 32"
                             BackgroundColor="{Binding Result.IsPassed, Converter={StaticResource VerdictTint}}">
                         <shapes:Path Style="{StaticResource IconPathLarge}"
-                                     Data="{StaticResource IconResults}"
+                                     Data="{ui:Icon Key=IconResults}"
                                      Stroke="{Binding Result.IsPassed, Converter={StaticResource VerdictInk}}" />
                     </Border>
 

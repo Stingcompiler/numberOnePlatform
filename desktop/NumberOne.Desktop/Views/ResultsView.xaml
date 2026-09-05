@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
              x:Class="NumberOne.Desktop.Views.ResultsView"
              x:Name="Root"
              x:DataType="vm:ResultsViewModel">
@@ -166,7 +167,7 @@
                                                 HorizontalOptions="Center" BackgroundColor="Transparent">
                                             <shapes:Path Style="{StaticResource IconPath}"
                                                          WidthRequest="14" HeightRequest="14"
-                                                         Data="{StaticResource IconEye}" />
+                                                         Data="{ui:Icon Key=IconEye}" />
                                             <Border.GestureRecognizers>
                                                 <TapGestureRecognizer
                                                     Command="{Binding Source={x:Reference Root}, Path=BindingContext.OpenAttemptCommand}"
@@ -233,7 +234,7 @@
                             Opacity="{Binding CanGoBack, Converter={StaticResource EnabledOpacity}}">
                         <shapes:Path Style="{StaticResource IconPath}"
                                      WidthRequest="14" HeightRequest="14" StrokeThickness="2"
-                                     Data="{StaticResource IconChevronRight}" />
+                                     Data="{ui:Icon Key=IconChevronRight}" />
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding PreviousPageCommand}" />
                         </Border.GestureRecognizers>
@@ -244,7 +245,7 @@
                             Opacity="{Binding CanGoForward, Converter={StaticResource EnabledOpacity}}">
                         <shapes:Path Style="{StaticResource IconPath}"
                                      WidthRequest="14" HeightRequest="14" StrokeThickness="2"
-                                     Data="{StaticResource IconChevronLeft}" />
+                                     Data="{ui:Icon Key=IconChevronLeft}" />
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding NextPageCommand}" />
                         </Border.GestureRecognizers>

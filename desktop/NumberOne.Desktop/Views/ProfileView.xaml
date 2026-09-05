@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
              x:Class="NumberOne.Desktop.Views.ProfileView"
              x:DataType="vm:ProfileViewModel">
 
@@ -146,7 +147,7 @@
                                                 BackgroundColor="Transparent">
                                             <shapes:Path Style="{StaticResource IconPathMuted}"
                                                          WidthRequest="13" HeightRequest="13"
-                                                         Data="{StaticResource IconCopy}" />
+                                                         Data="{ui:Icon Key=IconCopy}" />
                                             <Border.GestureRecognizers>
                                                 <TapGestureRecognizer Command="{Binding CopyDeviceIdCommand}" />
                                             </Border.GestureRecognizers>

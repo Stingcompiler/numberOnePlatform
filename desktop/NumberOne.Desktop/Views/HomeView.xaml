@@ -4,6 +4,7 @@
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:models="clr-namespace:NumberOne.Core.Models;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
              x:Class="NumberOne.Desktop.Views.HomeView"
              x:Name="Root"
              x:DataType="vm:HomeViewModel">
@@ -42,7 +43,7 @@
                     <Border Grid.Column="4" Style="{StaticResource IconButtonBare}">
                         <shapes:Path Style="{StaticResource IconPathMuted}"
                                      WidthRequest="14" HeightRequest="14"
-                                     Data="{StaticResource IconRefresh}" />
+                                     Data="{ui:Icon Key=IconRefresh}" />
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding ReloadCommand}" />
                         </Border.GestureRecognizers>
@@ -155,7 +156,7 @@
                                     BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryTintLight}, Dark={StaticResource SecondaryTintDark}}">
                                 <shapes:Path Style="{StaticResource IconPath}"
                                              WidthRequest="20" HeightRequest="20"
-                                             Data="{StaticResource IconCourses}"
+                                             Data="{ui:Icon Key=IconCourses}"
                                              Stroke="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
                             </Border>
                             <Label Text="الكورسات" Style="{StaticResource QuickTileLabel}" />
@@ -171,7 +172,7 @@
                                     BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryTintLight}, Dark={StaticResource SecondaryTintDark}}">
                                 <shapes:Path Style="{StaticResource IconPath}"
                                              WidthRequest="20" HeightRequest="20"
-                                             Data="{StaticResource IconLecture}"
+                                             Data="{ui:Icon Key=IconLecture}"
                                              Stroke="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
                             </Border>
                             <Label Text="المحاضرات" Style="{StaticResource QuickTileLabel}" />
@@ -187,7 +188,7 @@
                                     BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryTintLight}, Dark={StaticResource PrimaryTintDark}}">
                                 <shapes:Path Style="{StaticResource IconPath}"
                                              WidthRequest="20" HeightRequest="20"
-                                             Data="{StaticResource IconLive}"
+                                             Data="{ui:Icon Key=IconLive}"
                                              Stroke="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                             </Border>
                             <Label Text="البث المباشر" Style="{StaticResource QuickTileLabel}" />
@@ -203,7 +204,7 @@
                                     BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">
                                 <shapes:Path Style="{StaticResource IconPath}"
                                              WidthRequest="20" HeightRequest="20"
-                                             Data="{StaticResource IconExams}"
+                                             Data="{ui:Icon Key=IconExams}"
                                              Stroke="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
                             </Border>
                             <Label Text="الاختبارات" Style="{StaticResource QuickTileLabel}" />
@@ -219,7 +220,7 @@
                                     BackgroundColor="{AppThemeBinding Light={StaticResource SuccessTintLight}, Dark={StaticResource SuccessTintDark}}">
                                 <shapes:Path Style="{StaticResource IconPath}"
                                              WidthRequest="20" HeightRequest="20"
-                                             Data="{StaticResource IconResults}"
+                                             Data="{ui:Icon Key=IconResults}"
                                              Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                             </Border>
                             <Label Text="النتائج" Style="{StaticResource QuickTileLabel}" />
@@ -235,7 +236,7 @@
                                     BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryTintLight}, Dark={StaticResource SecondaryTintDark}}">
                                 <shapes:Path Style="{StaticResource IconPath}"
                                              WidthRequest="20" HeightRequest="20"
-                                             Data="{StaticResource IconBell}"
+                                             Data="{ui:Icon Key=IconBell}"
                                              Stroke="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
                             </Border>
                             <Label Text="الإشعارات" Style="{StaticResource QuickTileLabel}" />
@@ -251,7 +252,7 @@
                                     BackgroundColor="{AppThemeBinding Light={StaticResource WarningTintLight}, Dark={StaticResource WarningTintDark}}">
                                 <shapes:Path Style="{StaticResource IconPath}"
                                              WidthRequest="20" HeightRequest="20"
-                                             Data="{StaticResource IconUser}"
+                                             Data="{ui:Icon Key=IconUser}"
                                              Stroke="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
                             </Border>
                             <Label Text="حسابي" Style="{StaticResource QuickTileLabel}" />

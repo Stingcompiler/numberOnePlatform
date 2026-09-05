@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
              xmlns:controls="clr-namespace:NumberOne.Desktop.Controls"
              x:Class="NumberOne.Desktop.Views.LessonView"
              x:Name="Root"
@@ -47,7 +48,7 @@
                 <Border Style="{StaticResource WarningPanel}" IsVisible="{Binding Lesson.HasError}">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
-                                     Data="{StaticResource IconAlertCircle}"
+                                     Data="{ui:Icon Key=IconAlertCircle}"
                                      Stroke="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
                         <Label Grid.Column="1" Text="{Binding Lesson.ErrorMessage}"
                                Style="{StaticResource CopyLabel}" VerticalOptions="Center" />
@@ -143,7 +144,7 @@
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
                                      WidthRequest="13" HeightRequest="13"
-                                     Data="{StaticResource IconShield}" />
+                                     Data="{ui:Icon Key=IconShield}" />
                         <Label Grid.Column="1" x:Name="SecurityNotice"
                                Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
                     </Grid>
@@ -254,7 +255,7 @@
                                                  WidthRequest="13" HeightRequest="13"
                                                  StrokeThickness="2"
                                                  IsVisible="{Binding IsCompleted}"
-                                                 Data="{StaticResource IconCheck}"
+                                                 Data="{ui:Icon Key=IconCheck}"
                                                  Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
 
                                     <BoxView Grid.ColumnSpan="3" Style="{StaticResource RowRule}" Margin="-12,0" />

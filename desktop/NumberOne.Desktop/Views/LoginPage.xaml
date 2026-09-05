@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
              x:Class="NumberOne.Desktop.Views.LoginPage"
              x:DataType="vm:LoginViewModel"
              FlowDirection="RightToLeft"
@@ -52,21 +53,21 @@
                         <HorizontalStackLayout Spacing="8">
                             <shapes:Path Style="{StaticResource IconPath}" StrokeThickness="2"
                                          WidthRequest="15" HeightRequest="15"
-                                         Data="{StaticResource IconCheck}"
+                                         Data="{ui:Icon Key=IconCheck}"
                                          Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                             <Label Text="{x:Static vm:UiText.BrandBulletOne}" Style="{StaticResource SecondaryLabel}" />
                         </HorizontalStackLayout>
                         <HorizontalStackLayout Spacing="8">
                             <shapes:Path Style="{StaticResource IconPath}" StrokeThickness="2"
                                          WidthRequest="15" HeightRequest="15"
-                                         Data="{StaticResource IconCheck}"
+                                         Data="{ui:Icon Key=IconCheck}"
                                          Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                             <Label Text="{x:Static vm:UiText.BrandBulletTwo}" Style="{StaticResource SecondaryLabel}" />
                         </HorizontalStackLayout>
                         <HorizontalStackLayout Spacing="8">
                             <shapes:Path Style="{StaticResource IconPath}" StrokeThickness="2"
                                          WidthRequest="15" HeightRequest="15"
-                                         Data="{StaticResource IconCheck}"
+                                         Data="{ui:Icon Key=IconCheck}"
                                          Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                             <Label Text="{x:Static vm:UiText.BrandBulletThree}" Style="{StaticResource SecondaryLabel}" />
                         </HorizontalStackLayout>
@@ -116,7 +117,7 @@
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
                                                      WidthRequest="15" HeightRequest="15"
-                                                     Data="{StaticResource IconUser}" />
+                                                     Data="{ui:Icon Key=IconUser}" />
                                         <Entry Grid.Column="1" Text="{Binding Username}"
                                                Style="{StaticResource LoginEntry}"
                                                ReturnType="Next"
@@ -132,7 +133,7 @@
                                     <Grid ColumnDefinitions="Auto,*,24" ColumnSpacing="8">
                                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
                                                      WidthRequest="15" HeightRequest="15"
-                                                     Data="{StaticResource IconLock}" />
+                                                     Data="{ui:Icon Key=IconLock}" />
                                         <Entry Grid.Column="1"
                                                Text="{Binding Password}"
                                                IsPassword="{Binding PasswordVisible, Converter={StaticResource Invert}}"
@@ -142,7 +143,7 @@
                                                VerticalOptions="Center" />
                                         <shapes:Path Grid.Column="2" Style="{StaticResource IconPathMuted}"
                                                      WidthRequest="15" HeightRequest="15"
-                                                     Data="{StaticResource IconEye}"
+                                                     Data="{ui:Icon Key=IconEye}"
                                                      ToolTipProperties.Text="{x:Static vm:UiText.ShowPassword}">
                                             <shapes:Path.GestureRecognizers>
                                                 <TapGestureRecognizer Command="{Binding TogglePasswordVisibilityCommand}" />
@@ -160,7 +161,7 @@
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                                     <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
                                                  WidthRequest="14" HeightRequest="14"
-                                                 Data="{StaticResource IconAlertCircle}"
+                                                 Data="{ui:Icon Key=IconAlertCircle}"
                                                  Stroke="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
                                     <Label Grid.Column="1" Text="{Binding ErrorMessage}"
                                            Style="{StaticResource CopyLabel}"
@@ -181,7 +182,7 @@
                           IsVisible="{Binding ShowsForm}">
                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
                                      WidthRequest="13" HeightRequest="13"
-                                     Data="{StaticResource IconMonitor}" />
+                                     Data="{ui:Icon Key=IconMonitor}" />
                         <Label Grid.Column="1" Text="{Binding DeviceFootnote}"
                                Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
                     </Grid>
