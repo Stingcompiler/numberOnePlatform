@@ -28,7 +28,22 @@
         <Setter Property="StrokeThickness" Value="1.75" />
         <Setter Property="StrokeLineCap" Value="Round" />
         <Setter Property="StrokeLineJoin" Value="Round" />
-        <Setter Property="Fill" Value="Transparent" />
+
+        <!--
+            NO Fill, deliberately.
+
+            It was Transparent, which is a brush like any other - so MAUI ran
+            its fill path for every icon, and filling is implemented as "clip to
+            the shape, then paint a rectangle". These icons are open strokes
+            with nothing enclosed, so the region being clipped to has no area,
+            and combining that into a clip the container already set gave
+            Direct2D a bad number: COMException 0x88990011 out of
+            ShapeDrawable.DrawFillPath, which left the icon undrawn.
+
+            That is what "the icons disappear" was. Unset, the fill path is
+            skipped and only the stroke is drawn - which is all a line icon
+            ever needed.
+        -->
         <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
         <Setter Property="VerticalOptions" Value="Center" />
         <Setter Property="HorizontalOptions" Value="Center" />

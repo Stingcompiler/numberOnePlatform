@@ -78,7 +78,7 @@ public partial class App : Application
     public static void ShowFault(Exception? ex)
     {
         if (ex is null) return;
-        if (IsRenderThreadFault(ex)) return;
+        if (IsPlatformFault(ex)) return;
 
         var page = Current?.Windows.FirstOrDefault()?.Page;
         if (page is null) return;
@@ -104,54 +104,37 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// True for a compositor failure the app has already survived.
+    /// True for a fault that arrived from below our own code.
     ///
-    /// WinUI renders through DirectComposition on its own thread, and when a
-    /// frame is disturbed mid-render it raises COMException through the app's
-    /// UnhandledException: DCOMPOSITION_ERROR_SURFACE_BEING_RENDERED, or
-    /// 0x80070490 for a visual the compositor can no longer find. The next
-    /// frame draws correctly and nothing is lost — these arrived while every
-    /// screen behind the dialog was rendered and usable.
+    /// The test is the stack, not the exception type. WinUI raises these
+    /// through the app's UnhandledException with NO MANAGED FRAMES AT ALL: the
+    /// failure happened inside the compositor, inside Direct2D, or in a WinRT
+    /// interface cast, and nothing of ours appears in it. The app carries on -
+    /// every one of these has been followed by a frame that drew correctly.
     ///
-    /// They are still recorded. What stops is the dialog: it was put there to
-    /// find an unidentified crash, and it did, but a modal over a student's
-    /// results page for a fault that has already resolved is now itself the
-    /// interruption. A COMException raised from our own code carries a managed
-    /// stack and does not match, so it still surfaces.
+    /// Four have been seen on this app. DCOMPOSITION_ERROR_SURFACE_BEING_
+    /// RENDERED and 0x80070490, when a frame is disturbed mid-render;
+    /// 0x88990011 (D2DERR_BAD_NUMBER) from a shape Direct2D could not build,
+    /// which is fixed at its source now that the icons no longer ask to be
+    /// filled; and InvalidCastException "No such interface supported" -
+    /// E_NOINTERFACE through the WinRT projection - which appears occasionally
+    /// after signing out and back in, and which I have neither reproduced nor
+    /// explained.
+    ///
+    /// All of them are recorded. What stops is the dialog: putting
+    /// "InvalidCastException: No such interface supported" in front of a
+    /// student, over a dashboard that is working, tells them nothing they can
+    /// act on about a fault that has already passed.
+    ///
+    /// Anything carrying a managed frame still surfaces. That is where our own
+    /// bugs live, and this must never become a way of not seeing them.
     /// </summary>
-    private static bool IsRenderThreadFault(Exception ex)
+    private static bool IsPlatformFault(Exception ex)
     {
-        if (ex is not System.Runtime.InteropServices.COMException com) return false;
+        // A fault of ours names at least one of our own methods.
+        if (!string.IsNullOrWhiteSpace(ex.StackTrace)) return false;
 
-        const int Fail = unchecked((int)0x80004005);
-        const int ElementNotFound = unchecked((int)0x80070490);
-
-        if (com.HResult == ElementNotFound) return true;
-
-        // Every Direct2D error code is 0x8899xxxx, and the ones that reach here
-        // come out of OnDraw with the drawing stack still under them.
-        //
-        // The lecture page raises D2DERR_BAD_NUMBER (0x88990011) on the way in
-        // from the المحاضرات list: the unit rail is hidden until its data
-        // arrives, and the frame where IsVisible turns true draws the card's
-        // rounded border before it has been measured, which is not a shape
-        // Direct2D can build. Opened through a course and a unit the tree is
-        // already loaded, the rail is visible from the first layout, and
-        // nothing goes wrong - which is exactly the difference a student
-        // reported.
-        //
-        // The next frame draws correctly and the page is usable, so the fault
-        // is recorded and the student is left alone. It is still a real drawing
-        // bug; it is not one worth stopping a lecture for.
-        if ((com.HResult & unchecked((int)0xFFFF0000)) == unchecked((int)0x88990000))
-            return true;
-
-        if (com.HResult != Fail) return false;
-
-        // E_FAIL is generic, so it only counts as the compositor's when it
-        // names DCOMPOSITION or arrives with no managed frames beneath it.
-        return (com.Message?.Contains("DCOMPOSITION", StringComparison.Ordinal) ?? false)
-            || string.IsNullOrWhiteSpace(com.StackTrace);
+        return ex is System.Runtime.InteropServices.COMException or InvalidCastException;
     }
 
     /// <summary>
@@ -172,7 +155,7 @@ public partial class App : Application
         // two real faults in that file were buried among them. Keeping a few of
         // each proves it happened and how often; keeping every one costs the
         // log its only purpose.
-        if (IsRenderThreadFault(ex))
+        if (IsPlatformFault(ex))
         {
             var signature = ex.GetType().Name + ":" + ex.HResult + ":" + ex.Message;
 
