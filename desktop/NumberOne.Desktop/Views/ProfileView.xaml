@@ -183,14 +183,30 @@
                         figure that rides along on /auth/me/ is the balance. The
                         two rows are omitted rather than filled with a guess.
                     -->
-                    <Border Style="{StaticResource TableCard}">
-                        <Grid HeightRequest="40" Padding="16,0" ColumnDefinitions="*,Auto">
-                            <Label Grid.Column="0" Text="المتبقي"
-                                   Style="{StaticResource CellLabelStrong}" />
-                            <Label Grid.Column="1" Text="{Binding BalanceLabel}"
-                                   Style="{StaticResource CellLabelStrong}"
-                                   TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
-                        </Grid>
+                    <!--
+                        A figure, not a one-row table.
+
+                        It sat in a TableCard as a single 40px row, which is the
+                        shape of a table with one line in it - and read as the
+                        least important thing on the screen rather than the
+                        number a student came to check. It is set the way the
+                        dashboard sets its figures, in the same Panel the two
+                        cards above it use.
+
+                        The colour now says something. Amber used to be painted
+                        on every balance, so an account with nothing to pay
+                        carried the same warning as one behind on fees; it is
+                        the ordinary ink when the account is settled.
+                    -->
+                    <Border Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="المتبقي" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding BalanceLabel}"
+                                   Style="{StaticResource StatValue}"
+                                   TextColor="{Binding HasOutstandingBalance, Converter={StaticResource BalanceInk}}" />
+                            <Label Text="{Binding BalanceCaption}"
+                                   Style="{StaticResource StatCaption}" />
+                        </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
             </VerticalStackLayout>

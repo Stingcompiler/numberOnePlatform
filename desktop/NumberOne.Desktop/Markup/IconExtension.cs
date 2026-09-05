@@ -30,18 +30,28 @@ public sealed class IconExtension : IMarkupExtension<Geometry>
     /// <summary>The key in Icons.xaml, e.g. IconHome.</summary>
     public string Key { get; set; } = "";
 
-    public Geometry ProvideValue(IServiceProvider serviceProvider)
-    {
-        if (string.IsNullOrEmpty(Key)) return new PathGeometry();
+    public Geometry ProvideValue(IServiceProvider serviceProvider) => Resolve(Key);
 
-        if (Application.Current?.Resources.TryGetValue(Key, out var value) != true || value is not string data)
+    /// <summary>
+    /// Builds a fresh geometry from a key in Icons.xaml.
+    ///
+    /// Public because a value converter needs the same step for the one screen
+    /// whose icon is chosen by its view model, and two implementations of this
+    /// would be two places to forget that the dictionary holds strings now.
+    /// Every caller gets its own geometry, which is the whole point.
+    /// </summary>
+    public static Geometry Resolve(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return new PathGeometry();
+
+        if (Application.Current?.Resources.TryGetValue(key, out var value) != true || value is not string data)
         {
             // A missing key draws nothing rather than throwing: an icon is not
             // worth a blank screen. But it is recorded, because the failure
             // looks exactly like the bug this class exists to fix - an icon
             // that is not there - and a silent one would be indistinguishable.
             App.RecordUnhandled("Icon", new KeyNotFoundException(
-                $"no path data in the resource dictionary for '{Key}'"));
+                $"no path data in the resource dictionary for '{key}'"));
 
             return new PathGeometry();
         }
@@ -53,7 +63,7 @@ public sealed class IconExtension : IMarkupExtension<Geometry>
         }
         catch (Exception ex)
         {
-            App.RecordUnhandled("Icon", new FormatException($"'{Key}' is not usable path data", ex));
+            App.RecordUnhandled("Icon", new FormatException($"'{key}' is not usable path data", ex));
             return new PathGeometry();
         }
     }

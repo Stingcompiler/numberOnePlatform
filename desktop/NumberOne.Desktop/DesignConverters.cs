@@ -237,14 +237,31 @@ public sealed class CompletedInkConverter : IValueConverter
 /// <summary>
 /// Resolves an Icons.xaml key to its geometry, so a view model can name an icon
 /// without referencing MAUI's shape types.
+///
+/// It used to hand back whatever the dictionary held, which worked while that
+/// was a PathGeometry. The dictionary holds path data as strings now - so that
+/// each Path can own its geometry rather than share one - and returning a
+/// string here would have set nothing on the blocked-account screen, quietly,
+/// on the one screen nobody opens on purpose.
 /// </summary>
 public sealed class IconKeyConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is string key &&
-           Application.Current?.Resources.TryGetValue(key, out var geometry) == true
-            ? geometry
-            : null;
+        => value is string key ? Markup.IconExtension.Resolve(key) : null;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
+/// Amber only when something is owed. A settled balance takes the ordinary ink,
+/// because a warning colour on a figure that needs no action teaches a student
+/// to ignore the colour.
+/// </summary>
+public sealed class BalanceInkConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? ThemeColors.Warning : ThemeColors.Text;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();

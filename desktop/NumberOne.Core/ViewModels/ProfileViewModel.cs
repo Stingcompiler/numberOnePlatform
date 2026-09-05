@@ -84,6 +84,25 @@ public sealed partial class ProfileViewModel : ObservableObject
     /// </summary>
     public string BalanceLabel => UiText.ToArabicIndicDigits(Balance) + " ج.س";
 
+    /// <summary>
+    /// True when there is something left to pay.
+    ///
+    /// The figure used to be painted amber whatever it said, so a student who
+    /// owed nothing was shown the same warning as one who owed a term's fees.
+    /// A settled account should read as settled.
+    ///
+    /// Parsed invariantly: the server sends a decimal string like "0.00", and
+    /// a machine set to a comma decimal separator would otherwise read 0.00 as
+    /// nothing at all and call every account settled.
+    /// </summary>
+    public bool HasOutstandingBalance =>
+        decimal.TryParse(Balance, System.Globalization.NumberStyles.Any,
+                         System.Globalization.CultureInfo.InvariantCulture, out var due) && due > 0m;
+
+    /// <summary>What the figure means, said plainly under it.</summary>
+    public string BalanceCaption =>
+        HasOutstandingBalance ? "مستحق على حسابك" : "لا توجد مستحقات على حسابك";
+
     // ── الجهاز المرتبط ───────────────────────────────────────────────────────
 
     public string DeviceType => Profile?.DeviceType ?? "";
