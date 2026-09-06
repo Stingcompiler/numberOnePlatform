@@ -1,0 +1,35 @@
+[package]
+name = "numberone-desktop"
+version = "1.0.0"
+description = "مدارس ومعاهد نمبر ون — تطبيق الطالب لسطح المكتب"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+# Named separately from the binary so the same code can be reached from a test
+# harness later without going through main().
+name = "numberone_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# No features. protocol-asset was here and nothing used it: the brief asks for
+# the narrowest surface, and an unused capability is surface. Features get added
+# with the batch that needs them.
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Only for reading the display affinity back out of the OS after asking for it.
+# One feature, not the whole Win32 surface.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
