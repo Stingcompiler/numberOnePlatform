@@ -9,8 +9,11 @@ import {
   ExamSummary,
   LessonProgress,
   LiveRoom,
+  Lesson,
   Notification,
   Paged,
+  Submission,
+  SubmissionRequest,
 } from "./models";
 
 /**
@@ -48,6 +51,35 @@ export const studentApi = {
 
   async exams(signal?: AbortSignal): Promise<ExamSummary[]> {
     return asList<ExamSummary>(await request(Endpoints.exams, { signal }));
+  },
+
+  /**
+   * One lesson, with its exercise.
+   *
+   * NOT A FREE READ: this GET is what creates the LessonProgress row on the
+   * server, and that row is what makes marking the lesson complete possible at
+   * all. Skipping it and marking complete directly fails with a 400.
+   */
+  async lesson(id: number, signal?: AbortSignal): Promise<Lesson> {
+    return request<Lesson>(Endpoints.myLesson(id), { signal });
+  },
+
+  /** Marks a lesson complete. Requires that `lesson()` has been called first. */
+  async markLessonComplete(id: number, signal?: AbortSignal): Promise<boolean> {
+    try {
+      await request(Endpoints.completeLesson(id), { method: "POST", body: {}, signal });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  /** Submits exercise answers and returns the graded result. */
+  async submitExercise(
+    body: SubmissionRequest,
+    signal?: AbortSignal,
+  ): Promise<Submission> {
+    return request<Submission>(Endpoints.submit, { body, signal });
   },
 
   /** One exam, ready to sit. correct_answer is omitted from every question. */

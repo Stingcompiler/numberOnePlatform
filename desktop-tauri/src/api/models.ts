@@ -8,16 +8,56 @@ import { arabicDigits, formatDate } from "../ui/text";
  * undefined two screens away.
  */
 
+/**
+ * A lesson. Note what is ABSENT: youtube_url.
+ *
+ * The student serializers expose only youtube_embed_url, so the raw watch URL
+ * never reaches this client and there is no field here to hold it. Do not add
+ * one — the point is that a single API response cannot be scraped for a
+ * course's video links.
+ */
 export interface Lesson {
   id: number;
   unit?: number | null;
   title: string;
   description?: string | null;
+  /** An https://www.youtube.com/embed/... URL. */
   youtube_embed_url?: string | null;
   pdf_file?: string | null;
   display_order: number;
   duration_minutes?: number | null;
   is_active: boolean;
+  /** Present on the detail endpoint only, and without is_correct. */
+  exercise?: Exercise | null;
+}
+
+/**
+ * The YouTube id, read out of the embed URL the server built.
+ *
+ * The server falls back to returning the raw URL when it cannot parse one (it
+ * only handles "youtu.be/" and "v="), so a lesson saved with a /live/ or
+ * /shorts/ link arrives here as something that is not an embed URL at all.
+ * Those forms are handled rather than assumed away.
+ *
+ * Null when nothing that looks like an id can be found — better no video than
+ * a frame pointed at a guess.
+ */
+export function videoId(embedUrl: string | null | undefined): string | null {
+  if (!embedUrl?.trim()) return null;
+
+  for (const marker of ["/embed/", "youtu.be/", "/live/", "/shorts/", "v="]) {
+    const at = embedUrl.toLowerCase().indexOf(marker);
+    if (at < 0) continue;
+
+    const id = embedUrl.slice(at + marker.length).split(/[?&/]/)[0].trim();
+    if (isVideoId(id)) return id;
+  }
+
+  return null;
+}
+
+function isVideoId(value: string): boolean {
+  return value.length >= 6 && value.length <= 20 && /^[A-Za-z0-9_-]+$/.test(value);
 }
 
 export interface Unit {
@@ -43,6 +83,78 @@ export interface Course {
   system_type?: string | null;
   units: Unit[];
   lesson_count?: number | null;
+}
+
+/**
+ * A lesson exercise. The student variant omits is_correct on every choice — the
+ * answers are not sent until after submission.
+ */
+export interface Exercise {
+  id: number;
+  title: string;
+  instructions?: string | null;
+  max_attempts?: number | null;
+  pass_percentage?: number | null;
+  total_marks: number;
+  questions: ExerciseQuestion[];
+}
+
+export interface ExerciseQuestion {
+  id: number;
+  text: string;
+  marks: number;
+  display_order: number;
+  image?: string | null;
+  choices: ExerciseChoice[];
+}
+
+export interface ExerciseChoice {
+  id: number;
+  text: string;
+  display_order: number;
+  // is_correct is deliberately not modelled: the student payload omits it.
+}
+
+/**
+ * Body of POST /academic/submit/.
+ *
+ * The wire names are exercise_id / question_id / choice_id, which do NOT match
+ * the names the read serializers use (exercise, question, selected_choice).
+ * Mirroring the read shape here produces "هذا الحقل مطلوب." and a lost attempt.
+ */
+export interface SubmissionRequest {
+  exercise_id: number;
+  answers: {
+    question_id: number;
+    /**
+     * Nullable, and the server means it: a null choice records the question as
+     * answered-but-blank rather than rejecting the submission.
+     */
+    choice_id: number | null;
+  }[];
+}
+
+/**
+ * A graded submission. This is where the correct answers finally arrive —
+ * after the attempt, never before.
+ */
+export interface Submission {
+  id: number;
+  exercise: number;
+  exercise_title?: string | null;
+  score: number;
+  percentage: number;
+  is_passed: boolean;
+  attempt_number: number;
+  submitted_at?: string | null;
+  answers: SubmissionAnswerResult[];
+}
+
+export interface SubmissionAnswerResult {
+  question_text?: string | null;
+  selected_text?: string | null;
+  is_correct: boolean;
+  correct_choice?: string | null;
 }
 
 export interface LessonProgress {

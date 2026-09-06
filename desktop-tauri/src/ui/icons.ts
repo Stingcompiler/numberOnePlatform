@@ -85,6 +85,28 @@ export const Icons = {
   Teams: "M 4 8 h 9 v 10 a 2 2 0 0 1 -2 2 H 6 a 2 2 0 0 1 -2 -2 V 8 Z M 6.5 5.2 h 4.5 M 15.5 9.5 h 4 a 0.5 0.5 0 0 1 0.5 0.5 v 6 a 2.5 2.5 0 0 1 -4.5 1.5",
   /** hand-authored */
   YouTube: "M 2.5 8 a 3 3 0 0 1 3 -3 h 13 a 3 3 0 0 1 3 3 v 8 a 3 3 0 0 1 -3 3 h -13 a 3 3 0 0 1 -3 -3 V 8 Z M 10 9.2 l 5 2.8 l -5 2.8 V 9.2 Z",
+
+  // ── The lecture player ───────────────────────────────────────────────────
+  // The same eight glyphs the MAUI player draws, from the same Lucide set —
+  // lesson-player.js carries them as literal SVG because an injected script
+  // cannot reach a MAUI resource dictionary. Here they belong with the rest.
+
+  /** lucide: play */
+  Play: "M 5 5 a 2 2 0 0 1 3.008 -1.728 l 11.997 6.998 a 2 2 0 0 1 0.003 3.458 l -12 7 A 2 2 0 0 1 5 19 z",
+  /** lucide: pause */
+  Pause: "M 15 3 H 18 a 1 1 0 0 1 1 1 V 20 a 1 1 0 0 1 -1 1 H 15 a 1 1 0 0 1 -1 -1 V 4 a 1 1 0 0 1 1 -1 Z M 6 3 H 9 a 1 1 0 0 1 1 1 V 20 a 1 1 0 0 1 -1 1 H 6 a 1 1 0 0 1 -1 -1 V 4 a 1 1 0 0 1 1 -1 Z",
+  /** lucide: chevrons-left — back along the timeline, which runs LTR */
+  Rewind: "M 11 17 l -5 -5 l 5 -5 M 18 17 l -5 -5 l 5 -5",
+  /** lucide: chevrons-right */
+  Forward: "M 6 17 l 5 -5 l -5 -5 M 13 17 l 5 -5 l -5 -5",
+  /** lucide: volume-2 */
+  Volume: "M 11 4.702 a 0.705 0.705 0 0 0 -1.203 -0.498 L 6.413 7.587 A 1.4 1.4 0 0 1 5.416 8 H 3 a 1 1 0 0 0 -1 1 v 6 a 1 1 0 0 0 1 1 h 2.416 a 1.4 1.4 0 0 1 0.997 0.413 l 3.383 3.384 A 0.705 0.705 0 0 0 11 19.298 z M 16 9 a 5 5 0 0 1 0 6 M 19.364 18.364 a 9 9 0 0 0 0 -12.728",
+  /** lucide: volume-x */
+  VolumeOff: "M 11 4.702 a 0.7 0.7 0 0 0 -1.203 -0.498 L 6.413 7.587 A 1.4 1.4 0 0 1 5.416 8 H 3 a 1 1 0 0 0 -1 1 v 6 a 1 1 0 0 0 1 1 h 2.416 a 1.4 1.4 0 0 1 0.997 0.413 l 3.383 3.384 A 0.7 0.7 0 0 0 11 19.298 z M 16.5 14.5 l 5 -5 M 16.5 9.5 l 5 5",
+  /** lucide: maximize */
+  Expand: "M 8 3 H 5 a 2 2 0 0 0 -2 2 v 3 M 21 8 V 5 a 2 2 0 0 0 -2 -2 h -3 M 3 16 v 3 a 2 2 0 0 0 2 2 h 3 M 16 21 h 3 a 2 2 0 0 0 2 -2 v -3",
+  /** lucide: minimize */
+  Shrink: "M 8 3 v 3 a 2 2 0 0 1 -2 2 H 3 M 21 8 h -3 a 2 2 0 0 1 -2 -2 V 3 M 3 16 h 3 a 2 2 0 0 1 2 2 v 3 M 16 21 v -3 a 2 2 0 0 1 2 -2 h 3",
 } as const;
 
 export type IconName = keyof typeof Icons;

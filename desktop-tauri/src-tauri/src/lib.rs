@@ -11,6 +11,7 @@
 
 mod device;
 mod external;
+mod player_policy;
 #[cfg(debug_assertions)]
 mod harness;
 mod protection;
@@ -21,6 +22,12 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
+        // The window itself never navigates. Every screen is rendered by the
+        // app, and the lecture plays in a framed page rather than by going
+        // anywhere — so anything that asks the WINDOW to move is a way out of
+        // the app, whatever provoked it: a click, a script, a redirect, a
+        // middle-click. See player_policy.rs for the layering.
+        .plugin(player_policy::plugin())
         .setup(|app| {
             let window = app
                 .get_webview_window("main")
@@ -45,6 +52,7 @@ pub fn run() {
             protection::protection_status,
             device::device_identity,
             external::open_external,
+            player_policy::player_frame_url,
             secrets::tokens_get,
             secrets::tokens_save,
             secrets::tokens_clear,

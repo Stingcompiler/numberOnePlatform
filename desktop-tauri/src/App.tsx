@@ -2,8 +2,18 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 import { onSessionExpired } from "./api/client";
-import { auth, BoundDeviceInfo, DeviceIdentity, SessionRestore } from "./auth/authService";
-import { harnessCredentials, harnessLog, reportRendered } from "./harness";
+import {
+  auth,
+  BoundDeviceInfo,
+  DeviceIdentity,
+  SessionRestore,
+} from "./auth/authService";
+import {
+  harnessCredentials,
+  harnessLog,
+  probeLesson,
+  reportRendered,
+} from "./harness";
 import { BlockedKind, BlockedScreen } from "./screens/BlockedScreen";
 import { RouteId } from "./shell/routes";
 import { SignInHarness } from "./SignInHarness";
@@ -22,19 +32,33 @@ export default function App() {
   const [restore, setRestore] = useState<SessionRestore | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [device, setDevice] = useState<DeviceIdentity | null>(null);
-  const [harnessRoute, setHarnessRoute] = useState<RouteId | undefined>(undefined);
-  const [harnessDetail, setHarnessDetail] = useState<Detail | undefined>(undefined);
+  const [harnessRoute, setHarnessRoute] = useState<RouteId | undefined>(
+    undefined,
+  );
+  const [harnessDetail, setHarnessDetail] = useState<Detail | undefined>(
+    undefined,
+  );
   const [blocked, setBlocked] = useState<Blocked | null>(null);
 
   /**
    * Resolves NUMBERONE_HARNESS_ROUTE.
    *
    * A bare route id is a root. "kind:id" opens a detail — "course:4",
-   * "exam:12", "attempt:7" — which is the only way to reach a screen that has
-   * no route of its own, and the only way to verify one at all.
+   * "exam:12", "attempt:7", "blocked:device" — which is the only way to reach a
+   * screen that has no route of its own, and so the only way to verify one at
+   * all. A lecture takes two, "lesson:12:4", because its unit rail cannot be
+   * built without knowing the course.
    */
   function land(route?: string) {
-    const [kind, rest] = route?.split(":") ?? [];
+    const [kind, first, second] = route?.split(":") ?? [];
+
+    // A measurement run rather than a screen: it reports what the server
+    // actually returns for a lecture, and then stops. Reached from both the
+    // restore path and a fresh sign-in, which is why it lives here.
+    if (kind === "probe") {
+      void probeLesson();
+      return;
+    }
 
     // The blocked screens cannot be reached without an account that is
     // genuinely bound elsewhere, so this is the only way to look at them.
@@ -42,16 +66,24 @@ export default function App() {
     // which is compiled out.
     if (kind === "blocked") {
       setBlocked({
-        kind: rest === "device" ? "device-bound-to-another-student" : "account-bound-elsewhere",
+        kind:
+          first === "device"
+            ? "device-bound-to-another-student"
+            : "account-bound-elsewhere",
         boundDevice: null,
       });
       return;
     }
 
-    const id = Number(rest);
+    const id = Number(first);
 
     if (Number.isFinite(id)) {
       const detail = toDetail(kind, id);
+
+      if (detail?.kind === "lesson" && Number.isFinite(Number(second))) {
+        detail.courseId = Number(second);
+      }
+
       if (detail) {
         setHarnessDetail(detail);
         setHarnessRoute(rootOf(detail));
@@ -64,12 +96,16 @@ export default function App() {
   }
 
   useEffect(() => {
-    invoke<DeviceIdentity>("device_identity").then(setDevice).catch(() => undefined);
+    invoke<DeviceIdentity>("device_identity")
+      .then(setDevice)
+      .catch(() => undefined);
 
     const unsubscribe = onSessionExpired(() => setSignedIn(false));
 
     void (async () => {
-      const outcome = await auth.restoreSession().catch<SessionRestore>(() => "rejected");
+      const outcome = await auth
+        .restoreSession()
+        .catch<SessionRestore>(() => "rejected");
       const restored = outcome === "restored" || outcome === "unverified";
 
       // A restored session never reaches the sign-in screen, so the harness is
@@ -79,6 +115,7 @@ export default function App() {
       const creds = restored ? await harnessCredentials() : null;
       if (creds) {
         await harnessLog(`restore=${outcome}`);
+
         land(creds.route ?? undefined);
       }
 
@@ -98,7 +135,10 @@ export default function App() {
   // It is ordinary HTML though, so `?preview=shell` in the Vite dev server
   // renders the frame in a browser where it CAN be seen. Nothing in it talks to
   // Tauri, and the whole branch is dropped from a production build.
-  if (import.meta.env.DEV && new URLSearchParams(location.search).get("preview") === "shell") {
+  if (
+    import.meta.env.DEV &&
+    new URLSearchParams(location.search).get("preview") === "shell"
+  ) {
     return <Shell deviceType="Windows" onSignOut={() => undefined} />;
   }
 
@@ -169,6 +209,9 @@ function toDetail(kind: string | undefined, id: number): Detail | undefined {
       return { kind: "exam", examId: id };
     case "attempt":
       return { kind: "attempt", attemptId: id };
+    // The course id arrives separately; the rail cannot be built without it.
+    case "lesson":
+      return { kind: "lesson", lessonId: id, courseId: 0 };
     default:
       return undefined;
   }

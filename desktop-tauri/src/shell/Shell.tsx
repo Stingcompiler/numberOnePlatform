@@ -10,6 +10,7 @@ import { ExamsScreen } from "../screens/ExamsScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { LiveScreen } from "../screens/LiveScreen";
 import { LecturesScreen } from "../screens/LecturesScreen";
+import { LessonScreen } from "../screens/LessonScreen";
 import { NotificationsScreen } from "../screens/NotificationsScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { ResultsScreen } from "../screens/ResultsScreen";
@@ -61,6 +62,17 @@ export function Shell({
   const [unread, setUnread] = useState(0);
   const [theme, setTheme] = useTheme();
 
+  /**
+   * The lecture asked for the picture to fill the screen.
+   *
+   * Not the platform's fullscreen, deliberately. The window carries capture
+   * protection, and a genuinely fullscreen surface on another monitor or in a
+   * detached window is exactly the kind of thing that slips outside it. Putting
+   * the shell's own chrome away instead keeps the protected window the only
+   * place a lecture is ever drawn.
+   */
+  const [fullscreen, setFullscreen] = useState(false);
+
   const route = routeById(current);
   const user = auth.currentUser;
 
@@ -86,6 +98,7 @@ export function Shell({
     setDetail(null);
     setSearch("");
     setCountLabel("");
+    setFullscreen(false);
   }
 
   function open(next: Detail) {
@@ -97,56 +110,70 @@ export function Shell({
   function back() {
     setDetail(null);
     setCountLabel("");
+    setFullscreen(false);
   }
 
   return (
     <ToastHost>
-    <div className="flex h-full">
-      <Sidebar
-        current={current}
-        onNavigate={navigate}
-        onSignOut={onSignOut}
-        studentName={studentName(user)}
-        studentGrade={studentGrade(user)}
-        theme={theme}
-        onTheme={setTheme}
-      />
+      <div className="flex h-full">
+        {!fullscreen && (
+          <Sidebar
+            current={current}
+            onNavigate={navigate}
+            onSignOut={onSignOut}
+            studentName={studentName(user)}
+            studentGrade={studentGrade(user)}
+            theme={theme}
+            onTheme={setTheme}
+          />
+        )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar
-          route={detail ? detailRoute(detail) : route}
-          count={countLabel}
-          search={search}
-          onSearch={setSearch}
-          unread={unread}
-          onNotifications={() => navigate("notifications")}
-          deviceType={deviceType}
-          onBack={detail ? back : undefined}
-        />
-
-        <main className="min-h-0 flex-1 overflow-auto bg-bg p-6">
-          {detail ? (
-            <DetailView
-              detail={detail}
-              onOpenLesson={(lessonId, courseId) => open({ kind: "lesson", lessonId, courseId })}
-              onLeaveExam={() => navigate("exams")}
-            />
-          ) : (
-            <RootView
-              route={current}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {!fullscreen && (
+            <TopBar
+              route={detail ? detailRoute(detail) : route}
+              count={countLabel}
               search={search}
-              onCount={setCountLabel}
-              onNavigate={navigate}
-              onOpenCourse={(courseId) => open({ kind: "course", courseId })}
-              onOpenLesson={(lessonId, courseId) => open({ kind: "lesson", lessonId, courseId })}
-              onStartExam={(examId) => open({ kind: "exam", examId })}
-              onOpenAttempt={(attemptId) => open({ kind: "attempt", attemptId })}
-              onUnreadChanged={refreshBadge}
+              onSearch={setSearch}
+              unread={unread}
+              onNotifications={() => navigate("notifications")}
+              deviceType={deviceType}
+              onBack={detail ? back : undefined}
             />
           )}
-        </main>
+
+          <main
+            className={`min-h-0 flex-1 overflow-auto bg-bg ${fullscreen ? "p-0" : "p-6"}`}
+          >
+            {detail ? (
+              <DetailView
+                detail={detail}
+                onOpenLesson={(lessonId, courseId) =>
+                  open({ kind: "lesson", lessonId, courseId })
+                }
+                onLeaveExam={() => navigate("exams")}
+                onFullscreen={setFullscreen}
+              />
+            ) : (
+              <RootView
+                route={current}
+                search={search}
+                onCount={setCountLabel}
+                onNavigate={navigate}
+                onOpenCourse={(courseId) => open({ kind: "course", courseId })}
+                onOpenLesson={(lessonId, courseId) =>
+                  open({ kind: "lesson", lessonId, courseId })
+                }
+                onStartExam={(examId) => open({ kind: "exam", examId })}
+                onOpenAttempt={(attemptId) =>
+                  open({ kind: "attempt", attemptId })
+                }
+                onUnreadChanged={refreshBadge}
+              />
+            )}
+          </main>
+        </div>
       </div>
-    </div>
     </ToastHost>
   );
 }
@@ -183,19 +210,35 @@ function RootView({
   }
 
   if (route === "courses") {
-    return <CoursesScreen search={search} onCount={onCount} onOpen={onOpenCourse} />;
+    return (
+      <CoursesScreen search={search} onCount={onCount} onOpen={onOpenCourse} />
+    );
   }
 
   if (route === "lectures") {
-    return <LecturesScreen search={search} onCount={onCount} onOpen={onOpenLesson} />;
+    return (
+      <LecturesScreen search={search} onCount={onCount} onOpen={onOpenLesson} />
+    );
   }
 
   if (route === "exams") {
-    return <ExamsScreen search={search} onCount={onCount} onStartExam={onStartExam} />;
+    return (
+      <ExamsScreen
+        search={search}
+        onCount={onCount}
+        onStartExam={onStartExam}
+      />
+    );
   }
 
   if (route === "results") {
-    return <ResultsScreen search={search} onCount={onCount} onOpenAttempt={onOpenAttempt} />;
+    return (
+      <ResultsScreen
+        search={search}
+        onCount={onCount}
+        onOpenAttempt={onOpenAttempt}
+      />
+    );
   }
 
   if (route === "live") {
@@ -203,7 +246,12 @@ function RootView({
   }
 
   if (route === "notifications") {
-    return <NotificationsScreen onCount={onCount} onReadStateChanged={onUnreadChanged} />;
+    return (
+      <NotificationsScreen
+        onCount={onCount}
+        onReadStateChanged={onUnreadChanged}
+      />
+    );
   }
 
   if (route === "profile") {
@@ -212,20 +260,32 @@ function RootView({
 
   // Every sidebar route is built. This stays as the honest answer to a route
   // id that somehow has no screen, rather than a blank main area.
-  return <NotBuiltYet title={routeById(route).title} note="هذه الشاشة غير متاحة في هذه النسخة." />;
+  return (
+    <NotBuiltYet
+      title={routeById(route).title}
+      note="هذه الشاشة غير متاحة في هذه النسخة."
+    />
+  );
 }
 
 function DetailView({
   detail,
   onOpenLesson,
   onLeaveExam,
+  onFullscreen,
 }: {
   detail: Detail;
   onOpenLesson: (lessonId: number, courseId: number) => void;
   onLeaveExam: () => void;
+  onFullscreen: (on: boolean) => void;
 }) {
   if (detail.kind === "course") {
-    return <CourseDetailScreen courseId={detail.courseId} onOpenLesson={onOpenLesson} />;
+    return (
+      <CourseDetailScreen
+        courseId={detail.courseId}
+        onOpenLesson={onOpenLesson}
+      />
+    );
   }
 
   if (detail.kind === "exam") {
@@ -241,9 +301,11 @@ function DetailView({
   // The player is batch 5: the video surface, the watermark, and the WebView2
   // lockdown are one piece of work and none of it is half-shippable.
   return (
-    <NotBuiltYet
-      title="المحاضرة"
-      note="مشغّل المحاضرة يُبنى في الدفعة الخامسة، مع الحماية وطبقة العلامة المائية."
+    <LessonScreen
+      lessonId={detail.lessonId}
+      courseId={detail.courseId}
+      onOpenLesson={onOpenLesson}
+      onFullscreen={onFullscreen}
     />
   );
 }

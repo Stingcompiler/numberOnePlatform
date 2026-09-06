@@ -14,6 +14,21 @@ export const Endpoints = {
   mySubmissions: "academic/my-submissions/",
   submit: "academic/submit/",
 
+  myLesson: (id: number) => `academic/my-lessons/${id}/`,
+  completeLesson: (id: number) => `academic/my-lessons/${id}/complete/`,
+
+  /**
+   * The wrapper page the school's server serves, RELATIVE TO THE API BASE —
+   * /api/academic/player/, not the site root.
+   *
+   * MAUI needs it because its WebView navigated TOP-LEVEL to the video: a
+   * /embed/ URL loaded that way makes YouTube answer "Error 153", since the URL
+   * is meant to sit inside an iframe on a page. This client frames the embed
+   * from its own page instead, which is the ordinary supported case — so the
+   * page is kept as the fallback, not the default. See BLOCKERS.
+   */
+  lessonPlayer: (videoId: string) => `academic/player/?v=${encodeURIComponent(videoId)}`,
+
   exams: "exams/student/list/",
   exam: (id: number) => `exams/student/${id}/`,
   submitExam: (id: number) => `exams/student/${id}/submit/`,
