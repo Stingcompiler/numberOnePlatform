@@ -22,10 +22,33 @@ tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+# Deriving the device id. Must match the C# client byte for byte.
+sha2 = "0.10"
+
+# HTTP from Rust rather than from the WebView.
+#
+# NOT a preference. The API sends no Access-Control-Allow-Origin, so a fetch
+# made by the WebView is blocked by the browser before the response is read —
+# measured against the live server, which answers the preflight 200 with no CORS
+# headers at all. MAUI never met this because HttpClient is not a browser.
+#
+# Changing the server is out of scope, and would mean opening the API to
+# arbitrary web origins to serve a desktop app. Requests go through Rust, which
+# is not subject to CORS, and the reachable hosts are pinned in capabilities.
+tauri-plugin-http = "2"
+
+# The OS credential store: Credential Manager on Windows, Keychain on macOS.
+# Chosen over an encrypted file so the key stays the platform's problem — see
+# secrets.rs for why that mattered.
+keyring = { version = "3", features = ["windows-native", "apple-native"] }
+
 # Only for reading the display affinity back out of the OS after asking for it.
 # One feature, not the whole Win32 surface.
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
+# Reading MachineGuid, in the 64-bit view explicitly.
+winreg = "0.52"
 
 [profile.release]
 codegen-units = 1
