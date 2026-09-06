@@ -45,7 +45,14 @@ keyring = { version = "3", features = ["windows-native", "apple-native"] }
 # Only for reading the display affinity back out of the OS after asking for it.
 # One feature, not the whole Win32 surface.
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.58", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+# Win32_UI_Shell is ShellExecuteW, which is how a live-session link reaches the
+# student's own browser. Going through the shell rather than spawning cmd means
+# no string ever reaches a command interpreter.
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+] }
 
 # Reading MachineGuid, in the 64-bit view explicitly.
 winreg = "0.52"

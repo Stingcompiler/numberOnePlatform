@@ -10,6 +10,7 @@
 //! macOS should be filling in the other half of these files, not rewriting.
 
 mod device;
+mod external;
 #[cfg(debug_assertions)]
 mod harness;
 mod protection;
@@ -43,6 +44,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             protection::protection_status,
             device::device_identity,
+            external::open_external,
             secrets::tokens_get,
             secrets::tokens_save,
             secrets::tokens_clear,

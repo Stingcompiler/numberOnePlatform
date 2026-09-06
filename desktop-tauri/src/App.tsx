@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 import { onSessionExpired } from "./api/client";
-import { auth, DeviceIdentity, SessionRestore } from "./auth/authService";
+import { auth, BoundDeviceInfo, DeviceIdentity, SessionRestore } from "./auth/authService";
 import { harnessCredentials, harnessLog, reportRendered } from "./harness";
+import { BlockedKind, BlockedScreen } from "./screens/BlockedScreen";
 import { RouteId } from "./shell/routes";
 import { SignInHarness } from "./SignInHarness";
 import { Detail, Shell } from "./shell/Shell";
@@ -23,6 +24,7 @@ export default function App() {
   const [device, setDevice] = useState<DeviceIdentity | null>(null);
   const [harnessRoute, setHarnessRoute] = useState<RouteId | undefined>(undefined);
   const [harnessDetail, setHarnessDetail] = useState<Detail | undefined>(undefined);
+  const [blocked, setBlocked] = useState<Blocked | null>(null);
 
   /**
    * Resolves NUMBERONE_HARNESS_ROUTE.
@@ -33,6 +35,19 @@ export default function App() {
    */
   function land(route?: string) {
     const [kind, rest] = route?.split(":") ?? [];
+
+    // The blocked screens cannot be reached without an account that is
+    // genuinely bound elsewhere, so this is the only way to look at them.
+    // Unreachable in a release build: the route comes from harness_credentials,
+    // which is compiled out.
+    if (kind === "blocked") {
+      setBlocked({
+        kind: rest === "device" ? "device-bound-to-another-student" : "account-bound-elsewhere",
+        boundDevice: null,
+      });
+      return;
+    }
+
     const id = Number(rest);
 
     if (Number.isFinite(id)) {
@@ -91,6 +106,19 @@ export default function App() {
   // for the moment it takes would be a flash of the wrong screen.
   if (restore === null) return <Booting />;
 
+  // Ahead of the shell: a student whose account is bound elsewhere has no
+  // session to show, and the screen has no sidebar for the same reason.
+  if (blocked) {
+    return (
+      <BlockedScreen
+        kind={blocked.kind}
+        deviceId={device?.id ?? ""}
+        boundDevice={blocked.boundDevice}
+        onBackToLogin={() => setBlocked(null)}
+      />
+    );
+  }
+
   if (signedIn) {
     return (
       <Shell
@@ -113,6 +141,7 @@ export default function App() {
         land(route);
         setSignedIn(true);
       }}
+      onBlocked={setBlocked}
     />
   );
 }
@@ -123,6 +152,12 @@ function Booting() {
       <p className="text-body text-ink-muted">جارٍ التحميل…</p>
     </div>
   );
+}
+
+/** Which blocked screen to show, and what its detail card can carry. */
+interface Blocked {
+  kind: BlockedKind;
+  boundDevice: BoundDeviceInfo | null;
 }
 
 /** The detail a "kind:id" harness route names, or nothing for an unknown kind. */

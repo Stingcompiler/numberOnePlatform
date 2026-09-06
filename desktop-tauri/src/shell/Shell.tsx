@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { studentApi } from "../api/studentApi";
 import { auth, User, watermarkName } from "../auth/authService";
@@ -8,11 +8,15 @@ import { CoursesScreen } from "../screens/CoursesScreen";
 import { ExamRunnerScreen } from "../screens/ExamRunnerScreen";
 import { ExamsScreen } from "../screens/ExamsScreen";
 import { HomeScreen } from "../screens/HomeScreen";
+import { LiveScreen } from "../screens/LiveScreen";
 import { LecturesScreen } from "../screens/LecturesScreen";
+import { NotificationsScreen } from "../screens/NotificationsScreen";
+import { ProfileScreen } from "../screens/ProfileScreen";
 import { ResultsScreen } from "../screens/ResultsScreen";
 import { RouteDefinition, RouteId, routeById } from "./routes";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+import { ToastHost } from "../ui/Toast";
 import { useTheme } from "./theme";
 
 /**
@@ -60,11 +64,22 @@ export function Shell({
   const route = routeById(current);
   const user = auth.currentUser;
 
-  useEffect(() => {
-    // The badge is the shell's, not a screen's: it is visible from every
-    // screen, so it cannot belong to one of them.
-    studentApi.unreadCount().then(setUnread).catch(() => undefined);
+  /**
+   * The badge is the shell's, not a screen's: it is visible from every screen,
+   * so it cannot belong to one of them.
+   *
+   * Failures leave the previous count showing rather than flashing to zero — a
+   * badge that cannot refresh is not worth an error on a screen the student may
+   * not even be looking at.
+   */
+  const refreshBadge = useCallback(() => {
+    studentApi
+      .unreadCount()
+      .then(setUnread)
+      .catch(() => undefined);
   }, []);
+
+  useEffect(refreshBadge, [refreshBadge]);
 
   function navigate(id: RouteId) {
     setCurrent(id);
@@ -85,6 +100,7 @@ export function Shell({
   }
 
   return (
+    <ToastHost>
     <div className="flex h-full">
       <Sidebar
         current={current}
@@ -125,11 +141,13 @@ export function Shell({
               onOpenLesson={(lessonId, courseId) => open({ kind: "lesson", lessonId, courseId })}
               onStartExam={(examId) => open({ kind: "exam", examId })}
               onOpenAttempt={(attemptId) => open({ kind: "attempt", attemptId })}
+              onUnreadChanged={refreshBadge}
             />
           )}
         </main>
       </div>
     </div>
+    </ToastHost>
   );
 }
 
@@ -142,6 +160,7 @@ function RootView({
   onOpenLesson,
   onStartExam,
   onOpenAttempt,
+  onUnreadChanged,
 }: {
   route: RouteId;
   search: string;
@@ -151,6 +170,7 @@ function RootView({
   onOpenLesson: (lessonId: number, courseId: number) => void;
   onStartExam: (examId: number) => void;
   onOpenAttempt: (attemptId: number) => void;
+  onUnreadChanged: () => void;
 }) {
   if (route === "home") {
     return (
@@ -176,6 +196,18 @@ function RootView({
 
   if (route === "results") {
     return <ResultsScreen search={search} onCount={onCount} onOpenAttempt={onOpenAttempt} />;
+  }
+
+  if (route === "live") {
+    return <LiveScreen onCount={onCount} />;
+  }
+
+  if (route === "notifications") {
+    return <NotificationsScreen onCount={onCount} onReadStateChanged={onUnreadChanged} />;
+  }
+
+  if (route === "profile") {
+    return <ProfileScreen />;
   }
 
   return <NotBuiltYet title={routeById(route).title} />;

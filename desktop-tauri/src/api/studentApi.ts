@@ -97,6 +97,30 @@ export const studentApi = {
     };
   },
 
+  /**
+   * Marks one notification read. Returns whether it took.
+   *
+   * Never throws: reading a notification is not worth an error panel, and the
+   * row it was raised from has nowhere to put one.
+   */
+  async markNotificationRead(id: number, signal?: AbortSignal): Promise<boolean> {
+    try {
+      await request(Endpoints.notificationRead(id), { method: "POST", body: {}, signal });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  async markAllNotificationsRead(signal?: AbortSignal): Promise<boolean> {
+    try {
+      await request(Endpoints.notificationsReadAll, { method: "POST", body: {}, signal });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   async unreadCount(signal?: AbortSignal): Promise<number> {
     const payload = await request<{ count?: number } | number>(Endpoints.notificationCount, { signal });
     if (typeof payload === "number") return payload;

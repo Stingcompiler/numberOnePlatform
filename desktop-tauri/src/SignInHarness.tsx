@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { harnessCredentials, harnessLog, reportRendered } from "./harness";
 import {
   auth,
+  BoundDeviceInfo,
   DeviceIdentity,
   LoginOutcome,
   PendingBind,
@@ -25,9 +26,20 @@ interface Props {
   device: DeviceIdentity | null;
   restore: SessionRestore;
   onSignedIn: (route?: string) => void;
+  /**
+   * A refusal that is about the DEVICE, not the credentials.
+   *
+   * Handed up rather than shown here: the two blocked screens replace the whole
+   * page, and a form that has just been told the account lives elsewhere has
+   * nothing useful left to display.
+   */
+  onBlocked: (blocked: {
+    kind: "account-bound-elsewhere" | "device-bound-to-another-student";
+    boundDevice: BoundDeviceInfo | null;
+  }) => void;
 }
 
-export function SignInHarness({ device, restore, onSignedIn }: Props) {
+export function SignInHarness({ device, restore, onSignedIn, onBlocked }: Props) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,7 +81,9 @@ export function SignInHarness({ device, restore, onSignedIn }: Props) {
       const result = await auth.signIn(username, password);
       setOutcome(result);
       setPending(result.kind === "needs-device-binding" ? result.pending : null);
+
       if (result.kind === "success") onSignedIn();
+      else if (result.kind === "failed") raiseIfBlocked(result);
     } finally {
       setBusy(false);
     }
@@ -81,9 +95,24 @@ export function SignInHarness({ device, restore, onSignedIn }: Props) {
     try {
       const result = await auth.confirmBind(pending);
       setOutcome(result);
+
       if (result.kind === "success") onSignedIn();
+      else if (result.kind === "failed") raiseIfBlocked(result);
     } finally {
       setBusy(false);
+    }
+  }
+
+  /**
+   * The shared-PC case surfaces only here: it cannot be detected in advance,
+   * and arrives as a refusal on the confirming call.
+   */
+  function raiseIfBlocked(result: Extract<LoginOutcome, { kind: "failed" }>) {
+    if (
+      result.reason === "account-bound-elsewhere" ||
+      result.reason === "device-bound-to-another-student"
+    ) {
+      onBlocked({ kind: result.reason, boundDevice: result.boundDevice ?? null });
     }
   }
 

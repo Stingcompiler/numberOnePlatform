@@ -14,11 +14,13 @@ import {
   sessionTimeLabel,
 } from "../api/models";
 import { studentApi } from "../api/studentApi";
+import { openExternal } from "../platform/external";
 import { auth, watermarkName } from "../auth/authService";
 import { RouteId } from "../shell/routes";
 import { Icon } from "../ui/Icon";
 import { IconName } from "../ui/icons";
 import { Panel, SectionHeading, Skeleton } from "../ui/primitives";
+import { useToast } from "../ui/Toast";
 import { arabicDigits, count, formatDate, percentLabel } from "../ui/text";
 import { Section, useSection } from "../ui/useSection";
 
@@ -376,7 +378,14 @@ function LiveBanner({
   roomName?: string;
   onAll: () => void;
 }) {
+  const toast = useToast();
   const isLive = session.status === LiveStatuses.Live;
+
+  async function join() {
+    const failure = await openExternal(session.stream_url);
+    if (failure) toast(failure, "error");
+    else toast(`جارٍ فتح ${providerLabel(session)} في المتصفح…`);
+  }
 
   // "قاعة الرياضيات ٢ · Zoom · ١٦:٠٠".
   const meta = [roomName, providerLabel(session), sessionTimeLabel(session)]
@@ -405,16 +414,16 @@ function LiveBanner({
       </span>
 
       {/* The join control is live only while the session is. The stream opens
-          in the system browser — there is no in-app player for live. */}
+          in the system browser — there is no in-app player for live, and an
+          anchor would not do it: the runtime intercepts target="_blank". */}
       {canJoin(session) && (
-        <a
-          href={session.stream_url!}
-          target="_blank"
-          rel="noreferrer"
+        <button
+          type="button"
+          onClick={() => void join()}
           className="rounded-control bg-primary px-4 py-[6px] text-body font-bold text-white hover:bg-primary-hover"
         >
           انضم الآن
-        </a>
+        </button>
       )}
     </Panel>
   );
