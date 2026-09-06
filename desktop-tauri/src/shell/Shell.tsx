@@ -210,7 +210,9 @@ function RootView({
     return <ProfileScreen />;
   }
 
-  return <NotBuiltYet title={routeById(route).title} />;
+  // Every sidebar route is built. This stays as the honest answer to a route
+  // id that somehow has no screen, rather than a blank main area.
+  return <NotBuiltYet title={routeById(route).title} note="هذه الشاشة غير متاحة في هذه النسخة." />;
 }
 
 function DetailView({
@@ -236,7 +238,14 @@ function DetailView({
     return <AttemptDetailScreen attemptId={detail.attemptId} />;
   }
 
-  return <NotBuiltYet title="المحاضرة" />;
+  // The player is batch 5: the video surface, the watermark, and the WebView2
+  // lockdown are one piece of work and none of it is half-shippable.
+  return (
+    <NotBuiltYet
+      title="المحاضرة"
+      note="مشغّل المحاضرة يُبنى في الدفعة الخامسة، مع الحماية وطبقة العلامة المائية."
+    />
+  );
 }
 
 function detailRoute(detail: Detail): RouteDefinition {
@@ -259,12 +268,12 @@ function detailRoute(detail: Detail): RouteDefinition {
  * screen whose data failed to load, and that ambiguity has already cost this
  * project a debugging session.
  */
-function NotBuiltYet({ title }: { title: string }) {
+function NotBuiltYet({ title, note }: { title: string; note: string }) {
   return (
     <div className="grid h-full place-items-center">
       <div className="flex max-w-sm flex-col items-center gap-2 rounded-panel border border-dashed border-border p-8 text-center">
         <p className="font-ui text-heading font-bold text-ink">{title}</p>
-        <p className="text-body text-ink-muted">هذه الشاشة تُبنى في مجموعة لاحقة من الدفعة ٤.</p>
+        <p className="font-copy text-body text-ink-muted">{note}</p>
       </div>
     </div>
   );
