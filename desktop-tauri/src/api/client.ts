@@ -50,6 +50,18 @@ export function onSessionExpired(listener: SessionListener): () => void {
   return () => sessionExpiredListeners.delete(listener);
 }
 
+/**
+ * Raises the expiry as if the server had refused the refresh.
+ *
+ * The only way to reach that screen otherwise is to wait for a real refresh
+ * token to be rejected, which is not something a verification run can arrange —
+ * and a dialog nobody has ever seen is a dialog nobody knows is broken. Used by
+ * the harness; there is no other caller.
+ */
+export function raiseSessionExpired(): void {
+  sessionExpiredListeners.forEach((listener) => listener());
+}
+
 type RefreshOutcome = "succeeded" | "expired" | "unreachable";
 
 /** The single in-flight refresh, shared by every caller that needs one. */

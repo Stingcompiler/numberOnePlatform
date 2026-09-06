@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
-import { onSessionExpired } from "./api/client";
 import {
   auth,
   BoundDeviceInfo,
@@ -60,6 +59,18 @@ export default function App() {
       return;
     }
 
+    // The two chrome states that cannot be reached by clicking: one needs the
+    // machine's network to drop, the other needs a refresh token to be refused.
+    // Both are raised as the REAL signal rather than through a test-only path,
+    // so what gets verified is the code that actually runs.
+    if (kind === "chrome") {
+      window.setTimeout(() => {
+        if (first === "offline") window.dispatchEvent(new Event("offline"));
+        if (first === "expired") void import("./api/client").then((m) => m.raiseSessionExpired());
+      }, 2500);
+      return;
+    }
+
     // The blocked screens cannot be reached without an account that is
     // genuinely bound elsewhere, so this is the only way to look at them.
     // Unreachable in a release build: the route comes from harness_credentials,
@@ -100,8 +111,6 @@ export default function App() {
       .then(setDevice)
       .catch(() => undefined);
 
-    const unsubscribe = onSessionExpired(() => setSignedIn(false));
-
     void (async () => {
       const outcome = await auth
         .restoreSession()
@@ -124,8 +133,6 @@ export default function App() {
 
       if (creds) reportRendered();
     })();
-
-    return unsubscribe;
   }, []);
 
   // A layout review aid, development only.

@@ -41,9 +41,11 @@ export function ToastHost({ children }: { children: ReactNode }) {
     <Ctx.Provider value={value}>
       {children}
 
-      {/* Bottom centre, above everything, and never in the way of a control:
-          the pointer passes straight through the stack. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex flex-col items-center gap-2">
+      {/* Bottom-leading, above everything, and never in the way of a control:
+          the pointer passes straight through the stack. Leading rather than
+          centred because centred sits over the exercise's submit control and
+          the player's own bar — the two places a toast is most likely to fire. */}
+      <div className="pointer-events-none fixed inset-x-5 bottom-5 z-40 flex flex-col items-start gap-2">
         {toasts.map((toast) => (
           <div
             key={toast.id}

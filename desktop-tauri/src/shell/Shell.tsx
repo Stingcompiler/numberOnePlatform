@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { onSessionExpired } from "../api/client";
 import { studentApi } from "../api/studentApi";
 import { auth, User, watermarkName } from "../auth/authService";
 import { AttemptDetailScreen } from "../screens/AttemptDetailScreen";
@@ -15,6 +16,8 @@ import { NotificationsScreen } from "../screens/NotificationsScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { ResultsScreen } from "../screens/ResultsScreen";
 import { RouteDefinition, RouteId, routeById } from "./routes";
+import { OfflineBar } from "./OfflineBar";
+import { SessionExpired } from "./SessionExpired";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { ToastHost } from "../ui/Toast";
@@ -73,6 +76,19 @@ export function Shell({
    */
   const [fullscreen, setFullscreen] = useState(false);
 
+  /**
+   * The refresh token was refused — a genuine expiry, not a dropped
+   * connection. Owned here rather than by App so the student keeps looking at
+   * the screen they were on, with the dialog over it, instead of watching the
+   * app become a login form with no explanation.
+   */
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => onSessionExpired(() => setExpired(true)), []);
+
+  /** Bumped to remount the current screen; see `reload`. */
+  const [reloadKey, setReloadKey] = useState(0);
+
   const route = routeById(current);
   const user = auth.currentUser;
 
@@ -91,7 +107,19 @@ export function Shell({
       .catch(() => undefined);
   }, []);
 
-  useEffect(refreshBadge, [refreshBadge]);
+  /**
+   * Polled, because there is no push channel on desktop: the mobile app uses
+   * Expo and /notifications/register-token/ stores Expo tokens only.
+   *
+   * A minute is frequent enough for a school notification and slow enough that
+   * a classroom of clients is not hammering a 512MB instance.
+   */
+  useEffect(() => {
+    refreshBadge();
+
+    const id = window.setInterval(refreshBadge, 60_000);
+    return () => window.clearInterval(id);
+  }, [refreshBadge]);
 
   function navigate(id: RouteId) {
     setCurrent(id);
@@ -105,6 +133,15 @@ export function Shell({
     setDetail(next);
     setSearch("");
     setCountLabel("");
+  }
+
+  /**
+   * Re-runs the current screen. There is nothing to dial on a reconnect, only
+   * work to retry — and remounting is what makes every section on the screen
+   * fetch again without each of them needing to expose a handle.
+   */
+  function reload() {
+    setReloadKey((n) => n + 1);
   }
 
   function back() {
@@ -142,38 +179,55 @@ export function Shell({
             />
           )}
 
+          {!fullscreen && <OfflineBar onReconnect={reload} />}
+
           <main
             className={`min-h-0 flex-1 overflow-auto bg-bg ${fullscreen ? "p-0" : "p-6"}`}
           >
-            {detail ? (
-              <DetailView
-                detail={detail}
-                onOpenLesson={(lessonId, courseId) =>
-                  open({ kind: "lesson", lessonId, courseId })
-                }
-                onLeaveExam={() => navigate("exams")}
-                onFullscreen={setFullscreen}
-              />
-            ) : (
-              <RootView
-                route={current}
-                search={search}
-                onCount={setCountLabel}
-                onNavigate={navigate}
-                onOpenCourse={(courseId) => open({ kind: "course", courseId })}
-                onOpenLesson={(lessonId, courseId) =>
-                  open({ kind: "lesson", lessonId, courseId })
-                }
-                onStartExam={(examId) => open({ kind: "exam", examId })}
-                onOpenAttempt={(attemptId) =>
-                  open({ kind: "attempt", attemptId })
-                }
-                onUnreadChanged={refreshBadge}
-              />
-            )}
+            {/* The key is what makes a reconnect refetch: remounting restarts
+                every section on the screen at once. */}
+            <div key={reloadKey} className="contents">
+              {detail ? (
+                <DetailView
+                  detail={detail}
+                  onOpenLesson={(lessonId, courseId) =>
+                    open({ kind: "lesson", lessonId, courseId })
+                  }
+                  onLeaveExam={() => navigate("exams")}
+                  onFullscreen={setFullscreen}
+                />
+              ) : (
+                <RootView
+                  route={current}
+                  search={search}
+                  onCount={setCountLabel}
+                  onNavigate={navigate}
+                  onOpenCourse={(courseId) =>
+                    open({ kind: "course", courseId })
+                  }
+                  onOpenLesson={(lessonId, courseId) =>
+                    open({ kind: "lesson", lessonId, courseId })
+                  }
+                  onStartExam={(examId) => open({ kind: "exam", examId })}
+                  onOpenAttempt={(attemptId) =>
+                    open({ kind: "attempt", attemptId })
+                  }
+                  onUnreadChanged={refreshBadge}
+                />
+              )}
+            </div>
           </main>
         </div>
       </div>
+
+      {expired && (
+        <SessionExpired
+          onDismiss={() => {
+            setExpired(false);
+            onSignOut();
+          }}
+        />
+      )}
     </ToastHost>
   );
 }
