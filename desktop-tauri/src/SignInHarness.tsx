@@ -24,7 +24,7 @@ import {
 interface Props {
   device: DeviceIdentity | null;
   restore: SessionRestore;
-  onSignedIn: () => void;
+  onSignedIn: (route?: string) => void;
 }
 
 export function SignInHarness({ device, restore, onSignedIn }: Props) {
@@ -42,9 +42,11 @@ export function SignInHarness({ device, restore, onSignedIn }: Props) {
 
   /** Runs the flow end to end when credentials are in the environment. */
   async function selfTest() {
-    const creds = await invoke<{ username: string; password: string } | null>(
-      "harness_credentials",
-    ).catch(() => null);
+    const creds = await invoke<{
+      username: string;
+      password: string;
+      route: string | null;
+    } | null>("harness_credentials").catch(() => null);
 
     if (!creds) return;
 
@@ -56,7 +58,19 @@ export function SignInHarness({ device, restore, onSignedIn }: Props) {
 
     if (result.kind === "success") {
       await say(`user=${result.user.username}`);
-      onSignedIn();
+      onSignedIn(creds.route ?? undefined);
+
+      // What the WebView actually drew.
+      //
+      // The window is excluded from screen capture and WebView2 hides its DOM
+      // from automation, so a screen cannot be looked at from outside. It can
+      // report itself from inside, which is the difference between "the table
+      // renders" as a claim and as a measurement.
+      window.setTimeout(() => {
+        void invoke("harness_log", {
+          line: "--- rendered ---" + String.fromCharCode(10) + document.body.innerText.trim(),
+        });
+      }, 4000);
     } else if (result.kind === "failed") {
       await say(`message=${result.message}`);
     }

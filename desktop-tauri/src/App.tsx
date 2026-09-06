@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { onSessionExpired } from "./api/client";
 import { auth, DeviceIdentity, SessionRestore } from "./auth/authService";
+import { RouteId } from "./shell/routes";
 import { SignInHarness } from "./SignInHarness";
 import { Shell } from "./shell/Shell";
 
@@ -19,6 +20,8 @@ export default function App() {
   const [restore, setRestore] = useState<SessionRestore | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [device, setDevice] = useState<DeviceIdentity | null>(null);
+  const [harnessRoute, setHarnessRoute] = useState<RouteId | undefined>(undefined);
+  const [harnessCourse, setHarnessCourse] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     invoke<DeviceIdentity>("device_identity").then(setDevice).catch(() => undefined);
@@ -52,6 +55,8 @@ export default function App() {
   if (signedIn) {
     return (
       <Shell
+        initialRoute={harnessRoute}
+        initialCourseId={harnessCourse}
         deviceType={device?.device_type ?? ""}
         onSignOut={async () => {
           await auth.signOut();
@@ -61,7 +66,19 @@ export default function App() {
     );
   }
 
-  return <SignInHarness device={device} restore={restore} onSignedIn={() => setSignedIn(true)} />;
+  return (
+    <SignInHarness
+      device={device}
+      restore={restore}
+      onSignedIn={(route) => {
+        // "course:4" lands on that course's detail; anything else is a root.
+        const detail = route?.startsWith("course:") ? Number(route.slice(7)) : undefined;
+        setHarnessCourse(Number.isFinite(detail) ? detail : undefined);
+        setHarnessRoute(detail ? "courses" : (route as RouteId | undefined));
+        setSignedIn(true);
+      }}
+    />
+  );
 }
 
 function Booting() {

@@ -23,6 +23,8 @@ use serde::Serialize;
 pub struct HarnessCredentials {
     pub username: String,
     pub password: String,
+    /// Which screen to land on, so a batch can be checked without clicking.
+    pub route: Option<String>,
 }
 
 fn log_path() -> PathBuf {
@@ -36,7 +38,11 @@ pub fn harness_credentials() -> Option<HarnessCredentials> {
     let username = std::env::var("NUMBERONE_HARNESS_USER").ok()?;
     let password = std::env::var("NUMBERONE_HARNESS_PASS").ok()?;
 
-    Some(HarnessCredentials { username, password })
+    Some(HarnessCredentials {
+        username,
+        password,
+        route: std::env::var("NUMBERONE_HARNESS_ROUTE").ok(),
+    })
 }
 
 /// Appends one line. Failure is ignored: a harness that cannot write its log
