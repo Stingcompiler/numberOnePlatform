@@ -15,7 +15,7 @@ import {
 } from "./harness";
 import { BlockedKind, BlockedScreen } from "./screens/BlockedScreen";
 import { RouteId } from "./shell/routes";
-import { SignInHarness } from "./SignInHarness";
+import { LoginScreen } from "./screens/LoginScreen";
 import { Detail, Shell } from "./shell/Shell";
 
 /**
@@ -66,7 +66,8 @@ export default function App() {
     if (kind === "chrome") {
       window.setTimeout(() => {
         if (first === "offline") window.dispatchEvent(new Event("offline"));
-        if (first === "expired") void import("./api/client").then((m) => m.raiseSessionExpired());
+        if (first === "expired")
+          void import("./api/client").then((m) => m.raiseSessionExpired());
       }, 2500);
       return;
     }
@@ -121,17 +122,33 @@ export default function App() {
       // honoured here too — otherwise the second run of any verification lands
       // on the default route and reports nothing. Read BEFORE the shell is
       // shown: it takes its route once, when it mounts.
-      const creds = restored ? await harnessCredentials() : null;
-      if (creds) {
-        await harnessLog(`restore=${outcome}`);
-
-        land(creds.route ?? undefined);
-      }
+      const creds = await harnessCredentials();
+      if (creds) await harnessLog(`restore=${outcome}`);
 
       setRestore(outcome);
       setSignedIn(restored);
 
-      if (creds) reportRendered();
+      if (!creds) return;
+
+      // The harness drives the REAL screen rather than replacing it.
+      //
+      // The sign-in used to live in a stand-in screen, which meant the thing
+      // being verified was never the thing that ships. Now it signs in through
+      // the same authService call the form submits, and the form is what is on
+      // screen throughout — so a verification run exercises the shipped path.
+      if (!restored) {
+        const result = await auth.signIn(creds.username, creds.password);
+        await harnessLog(
+          `signIn=${result.kind}` +
+            ("reason" in result ? ` reason=${result.reason}` : ""),
+        );
+
+        if (result.kind !== "success") return;
+        setSignedIn(true);
+      }
+
+      land(creds.route ?? undefined);
+      reportRendered();
     })();
   }, []);
 
@@ -148,10 +165,6 @@ export default function App() {
   ) {
     return <Shell deviceType="Windows" onSignOut={() => undefined} />;
   }
-
-  // Nothing is drawn until the store has been read: showing the sign-in form
-  // for the moment it takes would be a flash of the wrong screen.
-  if (restore === null) return <Booting />;
 
   // Ahead of the shell: a student whose account is bound elsewhere has no
   // session to show, and the screen has no sidebar for the same reason.
@@ -180,24 +193,16 @@ export default function App() {
     );
   }
 
+  // `restore === null` reaches the screen rather than being intercepted here:
+  // the login page owns that moment, showing the mark and a line while the
+  // stored session is checked, so nothing flashes and nothing is drawn twice.
   return (
-    <SignInHarness
+    <LoginScreen
       device={device}
       restore={restore}
-      onSignedIn={(route) => {
-        land(route);
-        setSignedIn(true);
-      }}
+      onSignedIn={() => setSignedIn(true)}
       onBlocked={setBlocked}
     />
-  );
-}
-
-function Booting() {
-  return (
-    <div className="grid h-full place-items-center">
-      <p className="text-body text-ink-muted">جارٍ التحميل…</p>
-    </div>
   );
 }
 
