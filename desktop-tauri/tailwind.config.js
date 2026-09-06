@@ -26,6 +26,13 @@ export default {
         "accent-hover": "var(--accent-hover)",
         success: "var(--success)",
         warning: "var(--warning)",
+        // Named tints rather than an opacity modifier: these colours are CSS
+        // variables, and Tailwind cannot split a var() into channels to apply
+        // one to.
+        "primary-tint": "var(--primary-tint)",
+        "accent-tint": "var(--accent-tint)",
+        "success-tint": "var(--success-tint)",
+        "warning-tint": "var(--warning-tint)",
       },
       fontFamily: {
         // Bundled, never fetched: these run on school machines behind filters,

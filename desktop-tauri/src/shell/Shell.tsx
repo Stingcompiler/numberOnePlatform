@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 
 import { studentApi } from "../api/studentApi";
-import { auth, User } from "../auth/authService";
+import { auth, User, watermarkName } from "../auth/authService";
 import { CourseDetailScreen } from "../screens/CourseDetailScreen";
 import { CoursesScreen } from "../screens/CoursesScreen";
-import { RouteId, routeById } from "./routes";
+import { HomeScreen } from "../screens/HomeScreen";
+import { LecturesScreen } from "../screens/LecturesScreen";
+import { RouteDefinition, RouteId, routeById } from "./routes";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { useTheme } from "./theme";
@@ -32,7 +34,10 @@ interface ShellProps {
   initialCourseId?: number;
 }
 
-type Detail = { kind: "course"; courseId: number } | { kind: "lesson"; lessonId: number; courseId: number };
+type Detail =
+  | { kind: "course"; courseId: number }
+  | { kind: "lesson"; lessonId: number; courseId: number }
+  | { kind: "exam"; examId: number };
 
 export function Shell({
   onSignOut,
@@ -108,7 +113,10 @@ export function Shell({
               route={current}
               search={search}
               onCount={setCountLabel}
+              onNavigate={navigate}
               onOpenCourse={(courseId) => open({ kind: "course", courseId })}
+              onOpenLesson={(lessonId, courseId) => open({ kind: "lesson", lessonId, courseId })}
+              onStartExam={(examId) => open({ kind: "exam", examId })}
             />
           )}
         </main>
@@ -121,15 +129,35 @@ function RootView({
   route,
   search,
   onCount,
+  onNavigate,
   onOpenCourse,
+  onOpenLesson,
+  onStartExam,
 }: {
   route: RouteId;
   search: string;
   onCount: (label: string) => void;
+  onNavigate: (route: RouteId) => void;
   onOpenCourse: (courseId: number) => void;
+  onOpenLesson: (lessonId: number, courseId: number) => void;
+  onStartExam: (examId: number) => void;
 }) {
+  if (route === "home") {
+    return (
+      <HomeScreen
+        onNavigate={onNavigate}
+        onOpenCourse={onOpenCourse}
+        onStartExam={onStartExam}
+      />
+    );
+  }
+
   if (route === "courses") {
     return <CoursesScreen search={search} onCount={onCount} onOpen={onOpenCourse} />;
+  }
+
+  if (route === "lectures") {
+    return <LecturesScreen search={search} onCount={onCount} onOpen={onOpenLesson} />;
   }
 
   return <NotBuiltYet title={routeById(route).title} />;
@@ -146,15 +174,18 @@ function DetailView({
     return <CourseDetailScreen courseId={detail.courseId} onOpenLesson={onOpenLesson} />;
   }
 
-  return <NotBuiltYet title="المحاضرة" />;
+  return <NotBuiltYet title={detail.kind === "exam" ? "خوض الاختبار" : "المحاضرة"} />;
 }
 
-function detailRoute(detail: Detail) {
-  return {
-    id: "courses" as RouteId,
-    title: detail.kind === "course" ? "الكورس" : "المحاضرة",
-    icon: "Courses" as const,
-  };
+function detailRoute(detail: Detail): RouteDefinition {
+  switch (detail.kind) {
+    case "course":
+      return { id: "courses", title: "الكورس", icon: "Courses" };
+    case "lesson":
+      return { id: "courses", title: "المحاضرة", icon: "Lecture" };
+    case "exam":
+      return { id: "exams", title: "خوض الاختبار", icon: "Exams" };
+  }
 }
 
 /**
@@ -176,16 +207,10 @@ function NotBuiltYet({ title }: { title: string }) {
 }
 
 function studentName(user: User | null): string {
-  if (!user) return "";
-  const profile = user.student_profile as { full_name?: string } | null | undefined;
-  return profile?.full_name ?? String(user.username ?? "");
+  return watermarkName(user);
 }
 
 function studentGrade(user: User | null): string {
-  if (!user) return "";
-  const profile = user.student_profile as
-    | { enrolled_grade_name?: string; system_type?: string }
-    | null
-    | undefined;
+  const profile = user?.student_profile;
   return profile?.enrolled_grade_name ?? profile?.system_type ?? "";
 }

@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { onSessionExpired } from "./api/client";
 import { auth, DeviceIdentity, SessionRestore } from "./auth/authService";
+import { harnessCredentials, harnessLog, reportRendered } from "./harness";
 import { RouteId } from "./shell/routes";
 import { SignInHarness } from "./SignInHarness";
 import { Shell } from "./shell/Shell";
@@ -23,6 +24,13 @@ export default function App() {
   const [harnessRoute, setHarnessRoute] = useState<RouteId | undefined>(undefined);
   const [harnessCourse, setHarnessCourse] = useState<number | undefined>(undefined);
 
+  /** "course:4" lands on that course's detail; anything else is a root. */
+  function land(route?: string) {
+    const detail = route?.startsWith("course:") ? Number(route.slice(7)) : undefined;
+    setHarnessCourse(Number.isFinite(detail) ? detail : undefined);
+    setHarnessRoute(detail ? "courses" : (route as RouteId | undefined));
+  }
+
   useEffect(() => {
     invoke<DeviceIdentity>("device_identity").then(setDevice).catch(() => undefined);
 
@@ -30,8 +38,22 @@ export default function App() {
 
     void (async () => {
       const outcome = await auth.restoreSession().catch<SessionRestore>(() => "rejected");
+      const restored = outcome === "restored" || outcome === "unverified";
+
+      // A restored session never reaches the sign-in screen, so the harness is
+      // honoured here too — otherwise the second run of any verification lands
+      // on the default route and reports nothing. Read BEFORE the shell is
+      // shown: it takes its route once, when it mounts.
+      const creds = restored ? await harnessCredentials() : null;
+      if (creds) {
+        await harnessLog(`restore=${outcome}`);
+        land(creds.route ?? undefined);
+      }
+
       setRestore(outcome);
-      setSignedIn(outcome === "restored" || outcome === "unverified");
+      setSignedIn(restored);
+
+      if (creds) reportRendered();
     })();
 
     return unsubscribe;
@@ -71,10 +93,7 @@ export default function App() {
       device={device}
       restore={restore}
       onSignedIn={(route) => {
-        // "course:4" lands on that course's detail; anything else is a root.
-        const detail = route?.startsWith("course:") ? Number(route.slice(7)) : undefined;
-        setHarnessCourse(Number.isFinite(detail) ? detail : undefined);
-        setHarnessRoute(detail ? "courses" : (route as RouteId | undefined));
+        land(route);
         setSignedIn(true);
       }}
     />

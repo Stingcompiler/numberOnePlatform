@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 
+import { harnessCredentials, harnessLog, reportRendered } from "./harness";
 import {
   auth,
   DeviceIdentity,
@@ -42,40 +42,25 @@ export function SignInHarness({ device, restore, onSignedIn }: Props) {
 
   /** Runs the flow end to end when credentials are in the environment. */
   async function selfTest() {
-    const creds = await invoke<{
-      username: string;
-      password: string;
-      route: string | null;
-    } | null>("harness_credentials").catch(() => null);
-
+    const creds = await harnessCredentials();
     if (!creds) return;
 
-    const say = (line: string) => invoke("harness_log", { line }).catch(() => undefined);
-    await say(`restore=${restore}`);
+    await harnessLog(`restore=${restore}`);
 
     const result = await auth.signIn(creds.username, creds.password);
-    await say(`signIn=${result.kind}` + ("reason" in result ? ` reason=${result.reason}` : ""));
+    await harnessLog(
+      `signIn=${result.kind}` + ("reason" in result ? ` reason=${result.reason}` : ""),
+    );
 
     if (result.kind === "success") {
-      await say(`user=${result.user.username}`);
+      await harnessLog(`user=${result.user.username}`);
       onSignedIn(creds.route ?? undefined);
-
-      // What the WebView actually drew.
-      //
-      // The window is excluded from screen capture and WebView2 hides its DOM
-      // from automation, so a screen cannot be looked at from outside. It can
-      // report itself from inside, which is the difference between "the table
-      // renders" as a claim and as a measurement.
-      window.setTimeout(() => {
-        void invoke("harness_log", {
-          line: "--- rendered ---" + String.fromCharCode(10) + document.body.innerText.trim(),
-        });
-      }, 4000);
+      reportRendered();
     } else if (result.kind === "failed") {
-      await say(`message=${result.message}`);
+      await harnessLog(`message=${result.message}`);
     }
 
-    await say("done");
+    await harnessLog("done");
   }
 
   async function submit() {

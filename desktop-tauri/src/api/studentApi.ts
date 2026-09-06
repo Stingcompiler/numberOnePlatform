@@ -1,6 +1,6 @@
 import { request } from "./client";
 import { Endpoints } from "./endpoints";
-import { Course, LessonProgress } from "./models";
+import { Course, ExamSummary, LessonProgress, LiveRoom, Notification, Paged } from "./models";
 
 /**
  * The student endpoints, unchanged from MAUI.
@@ -33,6 +33,35 @@ export const studentApi = {
 
   async progress(signal?: AbortSignal): Promise<LessonProgress[]> {
     return asList<LessonProgress>(await request(Endpoints.myProgress, { signal }));
+  },
+
+  async exams(signal?: AbortSignal): Promise<ExamSummary[]> {
+    return asList<ExamSummary>(await request(Endpoints.exams, { signal }));
+  },
+
+  async liveRooms(signal?: AbortSignal): Promise<LiveRoom[]> {
+    return asList<LiveRoom>(await request(Endpoints.liveSessions, { signal }));
+  },
+
+  /**
+   * One page of the feed. Paginated on the server, so this returns the page
+   * rather than flattening it — the dashboard shows the first five and the
+   * notifications screen pages through the rest.
+   */
+  async notifications(page = 1, signal?: AbortSignal): Promise<Paged<Notification>> {
+    const path = page <= 1 ? Endpoints.notifications : `${Endpoints.notifications}?page=${page}`;
+    const payload = await request<Paged<Notification> | Notification[]>(path, { signal });
+
+    if (Array.isArray(payload)) {
+      return { count: payload.length, next: null, previous: null, results: payload };
+    }
+
+    return {
+      count: payload?.count ?? 0,
+      next: payload?.next ?? null,
+      previous: payload?.previous ?? null,
+      results: asList<Notification>(payload),
+    };
   },
 
   async unreadCount(signal?: AbortSignal): Promise<number> {

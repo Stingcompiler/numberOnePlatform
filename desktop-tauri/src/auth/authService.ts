@@ -31,20 +31,76 @@ import { tokens } from "./tokens";
  * rather than on issue, so the unused pair simply expires.
  */
 
+/**
+ * The nested profile that rides along with every auth response — mirrors
+ * accounts/serializers.py StudentProfileMiniSerializer.
+ */
 export interface StudentProfile {
+  id?: number;
+
+  guardian_name?: string | null;
+  guardian_phone?: string | null;
+  address?: string | null;
+
+  /** Raw value: "online" or "flash". Map through systemTypeLabel. */
+  system_type?: string | null;
+  /**
+   * The server's own label ("أونلاين" / "فلاش"). Present so the type matches
+   * the payload, and deliberately never displayed — the wording the app uses
+   * is mapped from the raw value, as the mobile app does, so a student on both
+   * clients does not meet two different words for one enrolment.
+   */
+  system_type_display?: string | null;
+
   device_id?: string | null;
   device_type?: string | null;
   device_bound_at?: string | null;
-  is_device_bound?: boolean;
+
+  registered_at?: string | null;
+  notes?: string | null;
+
+  /**
+   * Remaining balance, as a decimal string. This is the only piece of the
+   * student's financial file the client can read: finance's own
+   * StudentFinancialFileView is IsAdminOrManager.
+   */
+  balance?: string | null;
+
+  enrolled_grade?: number | null;
+  enrolled_grade_name?: string | null;
+  enrolled_level_name?: string | null;
+
+  supervisor?: number | null;
+  supervisor_name?: string | null;
+
   [key: string]: unknown;
 }
 
+/** The `user` object returned by /auth/login/, /auth/refresh/ and /auth/me/. */
 export interface User {
-  id: number;
+  /**
+   * A UUID string, not a number: CustomUser.id is a UUIDField. StudentProfile.id
+   * is a plain integer — the two are not interchangeable, and any endpoint
+   * taking a student id wants the profile one.
+   */
+  id: string;
   username: string;
+  phone?: string | null;
+  full_name?: string | null;
+  email?: string | null;
+  avatar?: string | null;
   role?: string | null;
+  role_display?: string | null;
+  is_active?: boolean;
+  date_joined?: string | null;
   student_profile?: StudentProfile | null;
   [key: string]: unknown;
+}
+
+/** Name as the lesson watermark needs it: the full name, else the username. */
+export function watermarkName(user: User | null): string {
+  if (!user) return "";
+  return user.full_name?.trim() || String(user.username ?? "");
 }
 
 export interface DeviceIdentity {
