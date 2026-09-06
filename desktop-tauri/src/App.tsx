@@ -6,7 +6,7 @@ import { auth, DeviceIdentity, SessionRestore } from "./auth/authService";
 import { harnessCredentials, harnessLog, reportRendered } from "./harness";
 import { RouteId } from "./shell/routes";
 import { SignInHarness } from "./SignInHarness";
-import { Shell } from "./shell/Shell";
+import { Detail, Shell } from "./shell/Shell";
 
 /**
  * Decides between the sign-in screen and the signed-in shell, once.
@@ -22,13 +22,30 @@ export default function App() {
   const [signedIn, setSignedIn] = useState(false);
   const [device, setDevice] = useState<DeviceIdentity | null>(null);
   const [harnessRoute, setHarnessRoute] = useState<RouteId | undefined>(undefined);
-  const [harnessCourse, setHarnessCourse] = useState<number | undefined>(undefined);
+  const [harnessDetail, setHarnessDetail] = useState<Detail | undefined>(undefined);
 
-  /** "course:4" lands on that course's detail; anything else is a root. */
+  /**
+   * Resolves NUMBERONE_HARNESS_ROUTE.
+   *
+   * A bare route id is a root. "kind:id" opens a detail — "course:4",
+   * "exam:12", "attempt:7" — which is the only way to reach a screen that has
+   * no route of its own, and the only way to verify one at all.
+   */
   function land(route?: string) {
-    const detail = route?.startsWith("course:") ? Number(route.slice(7)) : undefined;
-    setHarnessCourse(Number.isFinite(detail) ? detail : undefined);
-    setHarnessRoute(detail ? "courses" : (route as RouteId | undefined));
+    const [kind, rest] = route?.split(":") ?? [];
+    const id = Number(rest);
+
+    if (Number.isFinite(id)) {
+      const detail = toDetail(kind, id);
+      if (detail) {
+        setHarnessDetail(detail);
+        setHarnessRoute(rootOf(detail));
+        return;
+      }
+    }
+
+    setHarnessDetail(undefined);
+    setHarnessRoute(route as RouteId | undefined);
   }
 
   useEffect(() => {
@@ -78,7 +95,7 @@ export default function App() {
     return (
       <Shell
         initialRoute={harnessRoute}
-        initialCourseId={harnessCourse}
+        initialDetail={harnessDetail}
         deviceType={device?.device_type ?? ""}
         onSignOut={async () => {
           await auth.signOut();
@@ -106,4 +123,30 @@ function Booting() {
       <p className="text-body text-ink-muted">جارٍ التحميل…</p>
     </div>
   );
+}
+
+/** The detail a "kind:id" harness route names, or nothing for an unknown kind. */
+function toDetail(kind: string | undefined, id: number): Detail | undefined {
+  switch (kind) {
+    case "course":
+      return { kind: "course", courseId: id };
+    case "exam":
+      return { kind: "exam", examId: id };
+    case "attempt":
+      return { kind: "attempt", attemptId: id };
+    default:
+      return undefined;
+  }
+}
+
+/** The root a detail belongs under, so leaving it lands somewhere real. */
+function rootOf(detail: Detail): RouteId {
+  switch (detail.kind) {
+    case "attempt":
+      return "results";
+    case "exam":
+      return "exams";
+    default:
+      return "courses";
+  }
 }

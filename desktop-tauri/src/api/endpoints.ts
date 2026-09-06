@@ -15,6 +15,10 @@ export const Endpoints = {
   submit: "academic/submit/",
 
   exams: "exams/student/list/",
+  exam: (id: number) => `exams/student/${id}/`,
+  submitExam: (id: number) => `exams/student/${id}/submit/`,
+  attempt: (id: number) => `exams/student/attempts/${id}/`,
+
   liveSessions: "live/my-sessions/",
 
   notifications: "notifications/",

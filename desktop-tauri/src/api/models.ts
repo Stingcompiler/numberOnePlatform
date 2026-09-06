@@ -65,17 +65,233 @@ export function unitCount(course: Course): number {
 
 export interface ExamAttemptSummary {
   id: number;
+  score: number;
   percentage: number;
+  is_passed: boolean;
   submitted_at?: string | null;
 }
 
+/**
+ * A row of /exams/student/list/. Hand-built by StudentExamListView rather than
+ * a serializer, so the field set is that view's dictionary, not Exam's.
+ *
+ * IMPORTANT: exam access follows a different rule than course access. That view
+ * gives an "online" student every active course in their enrolled_grade, while
+ * MyCoursesView reads StudentCourseAccess. So `course_id` may name a course
+ * that never appears in my-courses — always display `course_name` from here
+ * rather than resolving the id against the courses list.
+ */
 export interface ExamSummary {
   id: number;
   title: string;
-  course_name: string;
   duration_minutes: number;
+  passing_score?: number;
+  course_id?: number;
+  course_name: string;
+  total_marks: number;
   question_count: number;
+  /** Every past attempt. Empty means the exam is still available. */
   attempts: ExamAttemptSummary[];
+}
+
+export function hasBeenAttempted(exam: ExamSummary): boolean {
+  return exam.attempts.length > 0;
+}
+
+/**
+ * Best result so far, which is what the completed tab shows. There is no
+ * server-side attempt limit, so a student may have several.
+ */
+export function bestAttempt(exam: ExamSummary): ExamAttemptSummary | null {
+  return [...exam.attempts].sort((a, b) => b.percentage - a.percentage)[0] ?? null;
+}
+
+/** "٤٢ / ٥٠" — tabular, Arabic-Indic. */
+export function scoreLabel(score: number, outOf: number): string {
+  return `${arabicDigits(mark(score))} / ${arabicDigits(mark(outOf))}`;
+}
+
+/** A mark with no trailing ".00": marks are whole far more often than not. */
+export function mark(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+export const QuestionTypes = {
+  TrueFalse: "true_false",
+  MultipleChoice: "multiple_choice",
+  FillBlank: "fill_blank",
+  Matching: "matching",
+} as const;
+
+export interface ExamOption {
+  id: number;
+  text: string;
+  display_order: number;
+}
+
+export interface ExamQuestion {
+  id: number;
+  /** See QuestionTypes. */
+  question_type: string;
+  title?: string | null;
+  text: string;
+  marks: number;
+  display_order: number;
+  options: ExamOption[];
+  image_url?: string | null;
+  /** Matching only: the left column, in order. */
+  matching_left?: string[] | null;
+  /** Matching only: the right column, shuffled server-side. */
+  matching_right?: string[] | null;
+}
+
+/**
+ * An exam ready to sit — StudentExamDetailSerializer. correct_answer is omitted
+ * from every question.
+ *
+ * `duration_minutes` is ADVISORY. There is no server-side attempt:
+ * ExamAttempt.started_at is written at submit time alongside submitted_at, so
+ * nothing enforces the clock, limits attempts, or survives the app closing. The
+ * countdown is the client's own.
+ */
+export interface ExamDetail {
+  id: number;
+  course: number;
+  course_name: string;
+  title: string;
+  duration_minutes: number;
+  passing_score: number;
+  total_marks: number;
+  question_count: number;
+  questions: ExamQuestion[];
+}
+
+/**
+ * One answer. The shape of `answer` depends on the question type, and the
+ * server grades by reading specific keys out of it
+ * (exams/serializers.py StudentExamAttemptCreateSerializer):
+ *
+ *   true_false      {"value": true}
+ *   multiple_choice {"option_id": 12}
+ *   fill_blank      {"text": "..."}     compared case-insensitively, trimmed
+ *   matching        {"pairs": [{"a": "...", "b": "..."}]}
+ *
+ * A key the grader does not recognise scores zero SILENTLY, so `examAnswers`
+ * builds these rather than callers hand-rolling them.
+ */
+export interface ExamAnswer {
+  question_id: number;
+  answer: Record<string, unknown>;
+}
+
+export interface ExamSubmission {
+  answers: ExamAnswer[];
+}
+
+/** Builds the per-type answer payloads the grader actually reads. */
+export const examAnswers = {
+  trueFalse: (questionId: number, value: boolean): ExamAnswer => ({
+    question_id: questionId,
+    answer: { value },
+  }),
+
+  multipleChoice: (questionId: number, optionId: number): ExamAnswer => ({
+    question_id: questionId,
+    answer: { option_id: optionId },
+  }),
+
+  fillBlank: (questionId: number, text: string): ExamAnswer => ({
+    question_id: questionId,
+    answer: { text },
+  }),
+
+  matching: (questionId: number, pairs: { left: string; right: string }[]): ExamAnswer => ({
+    question_id: questionId,
+    answer: { pairs: pairs.map((p) => ({ a: p.left, b: p.right })) },
+  }),
+
+  /**
+   * An unanswered question. The server treats a missing question as an empty
+   * answer and scores it zero, so sending this is equivalent — but explicit,
+   * which keeps the submitted count matching what the student saw.
+   */
+  blank: (questionId: number): ExamAnswer => ({ question_id: questionId, answer: {} }),
+};
+
+/** Response of a submit, and of /exams/student/attempts/<id>/. */
+export interface ExamSubmitResult {
+  detail?: string | null;
+  attempt?: ExamAttemptDetail | null;
+}
+
+/**
+ * A finished attempt with its answer sheet. correct_answer is included here —
+ * after the fact, which is the only time it is safe.
+ */
+export interface ExamAttemptDetail {
+  id: number;
+  score: number;
+  percentage: number;
+  is_passed: boolean;
+  started_at?: string | null;
+  submitted_at?: string | null;
+  exam_title?: string | null;
+  total_marks: number;
+  answers: ExamAttemptAnswer[];
+}
+
+export interface ExamAttemptAnswer {
+  id: number;
+  question_title?: string | null;
+  question_text?: string | null;
+  question_type?: string | null;
+  question_marks: number;
+  correct_answer?: Record<string, unknown> | null;
+  student_answer?: Record<string, unknown> | null;
+  is_correct: boolean;
+  earned_marks: number;
+  options: ExamOption[];
+}
+
+/**
+ * Renders a stored answer as something a student can read.
+ *
+ * The payload shape differs per question type and the server stores it in a
+ * JSONField, so this reads defensively and falls back to a dash rather than
+ * showing raw JSON on a results screen.
+ */
+export function describeAnswer(
+  questionType: string | null | undefined,
+  payload: Record<string, unknown> | null | undefined,
+  options: ExamOption[],
+): string {
+  if (!payload || Object.keys(payload).length === 0) return "—";
+
+  switch (questionType) {
+    case QuestionTypes.TrueFalse: {
+      const value = payload.value;
+      if (typeof value !== "boolean") return "—";
+      return value ? "صواب" : "خطأ";
+    }
+
+    case QuestionTypes.MultipleChoice: {
+      const id = typeof payload.option_id === "number" ? payload.option_id : null;
+      return options.find((o) => o.id === id)?.text ?? "—";
+    }
+
+    case QuestionTypes.FillBlank: {
+      const text = payload.text;
+      return typeof text === "string" && text.trim() ? text : "—";
+    }
+
+    case QuestionTypes.Matching:
+      // Rendering every pair would overflow the row; the verdict already says
+      // whether the whole set matched.
+      return "مطابقة";
+
+    default:
+      return "—";
+  }
 }
 
 export interface LiveSession {

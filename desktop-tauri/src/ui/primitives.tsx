@@ -163,3 +163,165 @@ export function Row({ children, onClick }: { children: ReactNode; onClick?: () =
 export function Cell({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <td className={`px-4 py-3 align-middle text-body text-ink ${className}`}>{children}</td>;
 }
+
+/**
+ * A filter tab. Selected carries the accent on all three of border, tint and
+ * ink — one of the three alone reads as a hover state rather than a choice.
+ */
+export function Tab({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={[
+        "rounded-control border px-3 py-1 text-secondary transition-colors",
+        active
+          ? "border-accent bg-accent-tint text-accent"
+          : "border-border text-ink-secondary hover:bg-hover",
+      ].join(" ")}
+    >
+      {label}
+    </button>
+  );
+}
+
+/**
+ * A failure inside a card, with the retry for that card only.
+ *
+ * Never a toast: a message that fades leaves a student looking at an empty
+ * table with nothing to press.
+ */
+export function StatePanel({
+  message,
+  actionLabel = "إعادة المحاولة",
+  onAction,
+}: {
+  message: string;
+  actionLabel?: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 p-card">
+      <p className="flex items-center gap-2 text-center text-body text-ink">
+        <Icon name="AlertCircle" className="shrink-0 text-warning" />
+        {message}
+      </p>
+      <button
+        type="button"
+        onClick={onAction}
+        className="flex items-center gap-2 rounded-control border border-border px-3 py-[6px] text-body text-ink hover:bg-hover"
+      >
+        <Icon name="Refresh" size={14} />
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
+
+/** A label, a figure, and the caption that says what the figure is over. */
+export function Stat({
+  label,
+  value,
+  caption,
+  captionClass = "text-ink-muted",
+}: {
+  label: string;
+  value: string;
+  caption?: string;
+  captionClass?: string;
+}) {
+  return (
+    <Panel className="flex flex-col gap-1 p-card">
+      <span className="text-label text-ink-muted">{label}</span>
+      <span className="truncate font-ui text-title font-extrabold text-ink">{value}</span>
+      <span className={`truncate text-label ${captionClass}`}>{caption ?? " "}</span>
+    </Panel>
+  );
+}
+
+/**
+ * ناجح / راسب, as a dot and a word.
+ *
+ * Both, not colour alone: a red word and a green word are the same word to a
+ * student who cannot tell them apart.
+ */
+export function Verdict({ passed }: { passed: boolean }) {
+  return (
+    <span className={`flex items-center gap-[6px] ${passed ? "text-success" : "text-primary"}`}>
+      <span aria-hidden="true" className="h-[6px] w-[6px] shrink-0 rounded-full bg-current" />
+      <span className="text-secondary">{passed ? "ناجح" : "راسب"}</span>
+    </span>
+  );
+}
+
+/**
+ * A modal confirm.
+ *
+ * MAUI routes irreversible actions through DisplayAlert, which on Windows is a
+ * ContentDialog inside the window rather than an OS message box — so this is
+ * the same thing, not a substitute for it. Escape and the backdrop both cancel;
+ * only the explicit control confirms.
+ */
+export function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  cancelLabel = "إلغاء",
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onClick={onCancel}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onCancel();
+      }}
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6"
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="flex w-full max-w-sm flex-col gap-3 rounded-panel border border-border bg-surface p-card shadow-lg"
+      >
+        <h2 className="font-ui text-heading font-bold text-ink">{title}</h2>
+        <p className="font-copy text-body text-ink-secondary">{message}</p>
+
+        <div className="mt-1 flex justify-start gap-2">
+          <button
+            type="button"
+            autoFocus
+            onClick={onConfirm}
+            className="rounded-control bg-primary px-4 py-[6px] text-body font-bold text-white hover:bg-primary-hover"
+          >
+            {confirmLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-control border border-border px-4 py-[6px] text-body text-ink hover:bg-hover"
+          >
+            {cancelLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

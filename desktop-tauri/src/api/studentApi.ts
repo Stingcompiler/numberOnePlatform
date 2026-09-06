@@ -1,6 +1,17 @@
 import { request } from "./client";
 import { Endpoints } from "./endpoints";
-import { Course, ExamSummary, LessonProgress, LiveRoom, Notification, Paged } from "./models";
+import {
+  Course,
+  ExamAttemptDetail,
+  ExamDetail,
+  ExamSubmission,
+  ExamSubmitResult,
+  ExamSummary,
+  LessonProgress,
+  LiveRoom,
+  Notification,
+  Paged,
+} from "./models";
 
 /**
  * The student endpoints, unchanged from MAUI.
@@ -37,6 +48,28 @@ export const studentApi = {
 
   async exams(signal?: AbortSignal): Promise<ExamSummary[]> {
     return asList<ExamSummary>(await request(Endpoints.exams, { signal }));
+  },
+
+  /** One exam, ready to sit. correct_answer is omitted from every question. */
+  async exam(id: number, signal?: AbortSignal): Promise<ExamDetail> {
+    return request<ExamDetail>(Endpoints.exam(id), { signal });
+  },
+
+  /**
+   * Sits the paper. Every submit creates a new attempt — there is no
+   * server-side attempt to resume and no limit on how many a student may make.
+   */
+  async submitExam(
+    id: number,
+    submission: ExamSubmission,
+    signal?: AbortSignal,
+  ): Promise<ExamSubmitResult> {
+    return request<ExamSubmitResult>(Endpoints.submitExam(id), { body: submission, signal });
+  },
+
+  /** A finished attempt with its answer sheet — correct answers included. */
+  async attempt(id: number, signal?: AbortSignal): Promise<ExamAttemptDetail> {
+    return request<ExamAttemptDetail>(Endpoints.attempt(id), { signal });
   },
 
   async liveRooms(signal?: AbortSignal): Promise<LiveRoom[]> {

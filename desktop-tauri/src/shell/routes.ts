@@ -34,8 +34,13 @@ export const Routes: readonly RouteDefinition[] = [
   { id: "courses", title: "الكورسات", icon: "Courses", searchPlaceholder: "ابحث في الكورسات" },
   { id: "lectures", title: "المحاضرات", icon: "Lecture", searchPlaceholder: "ابحث في المحاضرات" },
   { id: "live", title: "البث المباشر", icon: "Live" },
-  { id: "exams", title: "الإختبارات والإمتحانات", icon: "Exams" },
-  { id: "results", title: "النتائج", icon: "Results" },
+  {
+    id: "exams",
+    title: "الإختبارات والإمتحانات",
+    icon: "Exams",
+    searchPlaceholder: "ابحث في الاختبارات",
+  },
+  { id: "results", title: "النتائج", icon: "Results", searchPlaceholder: "ابحث في النتائج" },
   { id: "notifications", title: "الإشعارات", icon: "Bell" },
   { id: "profile", title: "حسابي", icon: "User" },
 ] as const;

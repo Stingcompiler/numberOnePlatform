@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 
 import { studentApi } from "../api/studentApi";
 import { auth, User, watermarkName } from "../auth/authService";
+import { AttemptDetailScreen } from "../screens/AttemptDetailScreen";
 import { CourseDetailScreen } from "../screens/CourseDetailScreen";
 import { CoursesScreen } from "../screens/CoursesScreen";
+import { ExamRunnerScreen } from "../screens/ExamRunnerScreen";
+import { ExamsScreen } from "../screens/ExamsScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { LecturesScreen } from "../screens/LecturesScreen";
+import { ResultsScreen } from "../screens/ResultsScreen";
 import { RouteDefinition, RouteId, routeById } from "./routes";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
@@ -30,25 +34,24 @@ interface ShellProps {
   deviceType: string;
   /** Where to land. Used by the harness to reach a screen without clicking. */
   initialRoute?: RouteId;
-  /** A course detail to open straight away, for the same reason. */
-  initialCourseId?: number;
+  /** A detail to open straight away, for the same reason. */
+  initialDetail?: Detail;
 }
 
-type Detail =
+export type Detail =
   | { kind: "course"; courseId: number }
   | { kind: "lesson"; lessonId: number; courseId: number }
-  | { kind: "exam"; examId: number };
+  | { kind: "exam"; examId: number }
+  | { kind: "attempt"; attemptId: number };
 
 export function Shell({
   onSignOut,
   deviceType,
   initialRoute = "home",
-  initialCourseId,
+  initialDetail,
 }: ShellProps) {
   const [current, setCurrent] = useState<RouteId>(initialRoute);
-  const [detail, setDetail] = useState<Detail | null>(
-    initialCourseId ? { kind: "course", courseId: initialCourseId } : null,
-  );
+  const [detail, setDetail] = useState<Detail | null>(initialDetail ?? null);
   const [search, setSearch] = useState("");
   const [countLabel, setCountLabel] = useState("");
   const [unread, setUnread] = useState(0);
@@ -107,7 +110,11 @@ export function Shell({
 
         <main className="min-h-0 flex-1 overflow-auto bg-bg p-6">
           {detail ? (
-            <DetailView detail={detail} onOpenLesson={(lessonId, courseId) => open({ kind: "lesson", lessonId, courseId })} />
+            <DetailView
+              detail={detail}
+              onOpenLesson={(lessonId, courseId) => open({ kind: "lesson", lessonId, courseId })}
+              onLeaveExam={() => navigate("exams")}
+            />
           ) : (
             <RootView
               route={current}
@@ -117,6 +124,7 @@ export function Shell({
               onOpenCourse={(courseId) => open({ kind: "course", courseId })}
               onOpenLesson={(lessonId, courseId) => open({ kind: "lesson", lessonId, courseId })}
               onStartExam={(examId) => open({ kind: "exam", examId })}
+              onOpenAttempt={(attemptId) => open({ kind: "attempt", attemptId })}
             />
           )}
         </main>
@@ -133,6 +141,7 @@ function RootView({
   onOpenCourse,
   onOpenLesson,
   onStartExam,
+  onOpenAttempt,
 }: {
   route: RouteId;
   search: string;
@@ -141,6 +150,7 @@ function RootView({
   onOpenCourse: (courseId: number) => void;
   onOpenLesson: (lessonId: number, courseId: number) => void;
   onStartExam: (examId: number) => void;
+  onOpenAttempt: (attemptId: number) => void;
 }) {
   if (route === "home") {
     return (
@@ -160,21 +170,41 @@ function RootView({
     return <LecturesScreen search={search} onCount={onCount} onOpen={onOpenLesson} />;
   }
 
+  if (route === "exams") {
+    return <ExamsScreen search={search} onCount={onCount} onStartExam={onStartExam} />;
+  }
+
+  if (route === "results") {
+    return <ResultsScreen search={search} onCount={onCount} onOpenAttempt={onOpenAttempt} />;
+  }
+
   return <NotBuiltYet title={routeById(route).title} />;
 }
 
 function DetailView({
   detail,
   onOpenLesson,
+  onLeaveExam,
 }: {
   detail: Detail;
   onOpenLesson: (lessonId: number, courseId: number) => void;
+  onLeaveExam: () => void;
 }) {
   if (detail.kind === "course") {
     return <CourseDetailScreen courseId={detail.courseId} onOpenLesson={onOpenLesson} />;
   }
 
-  return <NotBuiltYet title={detail.kind === "exam" ? "خوض الاختبار" : "المحاضرة"} />;
+  if (detail.kind === "exam") {
+    // A finished paper returns to the exams list, where the attempt now shows
+    // under المكتملة — not back to the runner it just left.
+    return <ExamRunnerScreen examId={detail.examId} onFinish={onLeaveExam} />;
+  }
+
+  if (detail.kind === "attempt") {
+    return <AttemptDetailScreen attemptId={detail.attemptId} />;
+  }
+
+  return <NotBuiltYet title="المحاضرة" />;
 }
 
 function detailRoute(detail: Detail): RouteDefinition {
@@ -185,6 +215,8 @@ function detailRoute(detail: Detail): RouteDefinition {
       return { id: "courses", title: "المحاضرة", icon: "Lecture" };
     case "exam":
       return { id: "exams", title: "خوض الاختبار", icon: "Exams" };
+    case "attempt":
+      return { id: "results", title: "تفاصيل المحاولة", icon: "Results" };
   }
 }
 
