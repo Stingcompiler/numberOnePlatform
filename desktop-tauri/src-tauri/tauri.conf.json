@@ -48,7 +48,8 @@
         "installMode": "currentUser",
         "languages": ["Arabic"],
         "displayLanguageSelector": false,
-        "compression": "lzma"
+        "compression": "lzma",
+        "installerHooks": "installer-hooks.nsh"
       }
     }
   }

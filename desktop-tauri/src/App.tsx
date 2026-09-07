@@ -14,6 +14,7 @@ import {
   reportRendered,
 } from "./harness";
 import { BlockedKind, BlockedScreen } from "./screens/BlockedScreen";
+import { VirtualMachineScreen } from "./screens/VirtualMachineScreen";
 import { RouteId } from "./shell/routes";
 import { LoginScreen } from "./screens/LoginScreen";
 import { Detail, Shell } from "./shell/Shell";
@@ -38,6 +39,14 @@ export default function App() {
     undefined,
   );
   const [blocked, setBlocked] = useState<Blocked | null>(null);
+
+  /**
+   * Detected in Rust at startup, before anything is drawn. `undefined` means
+   * the answer has not arrived yet; `null` means real hardware.
+   */
+  const [virtualized, setVirtualized] = useState<string | null | undefined>(
+    undefined,
+  );
 
   /**
    * Resolves NUMBERONE_HARNESS_ROUTE.
@@ -108,6 +117,12 @@ export default function App() {
   }
 
   useEffect(() => {
+    invoke<string | null>("virtualization_finding")
+      .then((finding) => setVirtualized(finding ?? null))
+      // A refusal that cannot be read is not a pass. If the command is
+      // unreachable the app is not the app we built, so it does not start.
+      .catch(() => setVirtualized("تعذّر التحقّق من نوع الجهاز"));
+
     invoke<DeviceIdentity>("device_identity")
       .then(setDevice)
       .catch(() => undefined);
@@ -165,6 +180,16 @@ export default function App() {
   ) {
     return <Shell deviceType="Windows" onSignOut={() => undefined} />;
   }
+
+  // Ahead of EVERYTHING — before the session is even considered.
+  //
+  // On a guest, capture protection reports success while the host records the
+  // window, so the app would promise something it cannot deliver. Nothing is
+  // shown until this answers, because a lecture flashing up and then being
+  // withdrawn is worse than a moment's wait.
+  if (virtualized === undefined) return null;
+  if (virtualized !== null)
+    return <VirtualMachineScreen finding={virtualized} />;
 
   // Ahead of the shell: a student whose account is bound elsewhere has no
   // session to show, and the screen has no sidebar for the same reason.

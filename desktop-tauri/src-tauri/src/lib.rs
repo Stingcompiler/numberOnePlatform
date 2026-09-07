@@ -16,6 +16,7 @@ mod player_policy;
 mod harness;
 mod protection;
 mod secrets;
+mod virtualization;
 
 use tauri::Manager;
 
@@ -38,6 +39,18 @@ pub fn run() {
             // hoped. A failure here is not fatal to startup — a student left
             // staring at a window that never opened learns less than one whose
             // app tells them protection is off.
+            // Refused BEFORE anything is drawn.
+            //
+            // On a guest, SetWindowDisplayAffinity succeeds and reads back
+            // 0x11 while the HOST records the whole window — so the app would
+            // print "recording is disabled" and be wrong. A lecture must not
+            // play where that promise cannot be kept.
+            let finding = virtualization::detect();
+            if let Some(ref detail) = finding {
+                eprintln!("[virtualization] refusing to run: {detail}");
+            }
+            app.manage(virtualization::VirtualizationState(finding));
+
             let status = protection::apply(&window);
 
             if !status.verified {
@@ -50,6 +63,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             protection::protection_status,
+            virtualization::virtualization_finding,
             device::device_identity,
             external::open_external,
             player_policy::player_frame_url,
