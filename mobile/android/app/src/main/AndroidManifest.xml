@@ -1,6 +1,28 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.INTERNET"/>
   <uses-permission android:name="android.permission.VIBRATE"/>
+
+  <!--
+    أذونات تعلنها مكتبات تابعة، وتُحذف عند الدمج لأن التطبيق لا يسلك مساراتها
+    على أندرويد. حذفها من هذا الملف وحده لا يكفي: دامجُ المانيفست يعيد إدراج
+    ما تعلنه المكتبة، فاللازم هو tools:node="remove".
+
+    READ_MEDIA_IMAGES و READ_EXTERNAL_STORAGE (حتى SDK 32) يعلنهما
+    expo-screen-capture لأجل addScreenshotListener — أي كشفُ لقطة الشاشة بعد
+    وقوعها. و useScreenSecurity.js يستدعيه داخل if (Platform.OS === 'ios')
+    فقط. أمّا حمايةُ أندرويد الحقيقية فهي preventScreenCaptureAsync أي
+    FLAG_SECURE، وهي تمنع اللقطة أصلاً ولا تحتاج إذناً.
+
+    و READ/WRITE_EXTERNAL_STORAGE يعلنهما expo-file-system كذلك، والتطبيق لا
+    يقرأ ولا يكتب ملفاً: المرفق يُفتح بـ Linking.openURL.
+
+    وGoogle Play يصنّف READ_MEDIA_IMAGES تحت «سياسة أذونات الصور والفيديوهات»،
+    وهي تشترط أن يكون الوصول جوهر وظيفة التطبيق. كشفُ لقطات الشاشة ليس منها،
+    فلا تبرير يصحّ هنا — والصواب حذفه.
+  -->
+  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove"/>
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
   <queries>
     <intent>
       <action android:name="android.intent.action.VIEW"/>
