@@ -49,7 +49,11 @@
         "languages": ["Arabic"],
         "displayLanguageSelector": false,
         "compression": "lzma",
-        "installerHooks": "installer-hooks.nsh"
+        "installerHooks": "installer-hooks.nsh",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "sidebarImage": "../installer/wizard-sidebar.bmp",
+        "headerImage": "../installer/wizard-header.bmp"
       }
     }
   }
