@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "نمبر ون",
-    "slug": "number-one-student",
+    "slug": "n1",
     "icon": "./src/assets/onelogo.png",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -43,12 +43,13 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3b8c38e3-235d-4575-a9e5-4791ba744eb8"
+        "projectId": "af168215-d896-4887-8712-39f69203de77"
       }
     },
     "runtimeVersion": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/3b8c38e3-235d-4575-a9e5-4791ba744eb8"
-    }
+      "url": "https://u.expo.dev/af168215-d896-4887-8712-39f69203de77"
+    },
+    "owner": "singspp"
   }
 }
