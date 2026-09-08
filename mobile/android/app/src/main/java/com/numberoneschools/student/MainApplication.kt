@@ -1,4 +1,4 @@
-package com.numberone.app
+package com.numberoneschools.student
 
 import android.app.Application
 import android.content.res.Configuration
