@@ -11,7 +11,7 @@
       "bundleIdentifier": "com.numberoneschools.student"
     },
     "android": {
-      "package": "com.numberoneschools.student",
+      "package": "com.numberone.app",
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/onelogo.png",
         "backgroundColor": "#000000"
