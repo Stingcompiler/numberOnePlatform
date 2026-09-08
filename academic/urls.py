@@ -13,8 +13,9 @@ from .views import (
     LessonListCreateView, LessonDetailView,
     ExerciseCreateView, ExerciseDetailView,
     QuestionListCreateView, ChoiceListCreateView,
+    QuestionDetailView, ChoiceDetailView,
     StudentCourseAccessListCreateView, StudentCourseAccessDetailView,
-    MyCoursesView, MyCourseDetailView, MyLessonDetailView,
+    MyCoursesView, MyCourseDetailView, MyLessonDetailView, LessonPlayerView,
     MarkLessonCompleteView, SubmitExerciseView,
     MySubmissionsView, AllSubmissionsView, MyProgressView,
     PublicLevelListView, PublicGradeListView,
@@ -44,6 +45,8 @@ urlpatterns = [
     path("exercises/<int:pk>/",                 ExerciseDetailView.as_view(),       name="exercise-detail"),
     path("exercises/<int:exercise_id>/questions/", QuestionListCreateView.as_view(), name="question-list"),
     path("questions/<int:question_id>/choices/",   ChoiceListCreateView.as_view(),  name="choice-list"),
+    path("questions/<int:pk>/",                 QuestionDetailView.as_view(),       name="question-detail"),
+    path("choices/<int:pk>/",                   ChoiceDetailView.as_view(),         name="choice-detail"),
 
     # ── وصول الكورسات ─────────────────────────────────────────────────────────
     path("access/",                             StudentCourseAccessListCreateView.as_view(), name="access-list"),
@@ -56,6 +59,9 @@ urlpatterns = [
     path("my-lessons/<int:lesson_id>/complete/",   MarkLessonCompleteView.as_view(), name="lesson-complete"),
     path("my-submissions/",                        MySubmissionsView.as_view(),      name="my-submissions"),
     path("my-progress/",                           MyProgressView.as_view(),         name="my-progress"),
+
+    # صفحة المشغّل — تُخدَّم من نطاق المدرسة ليصحّ الأصل والمُحيل عند يوتيوب.
+    path("player/",                                LessonPlayerView.as_view(),       name="lesson-player"),
 
     # ── التسليم والنتائج ──────────────────────────────────────────────────────
     path("submit/",                             SubmitExerciseView.as_view(),       name="exercise-submit"),

@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "backups",
     "notifications",
     "live",              # نظام البث المباشر (Live Rooms & Sessions)
+    "store",             # متجر التطبيقات (تنزيل تطبيقات المنصة)
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -267,6 +268,21 @@ STORAGES = {
 # ─────────────────────────────────────────────────────────────────────────────
 # ملفات الوسائط (صور مرفوعة)
 # ─────────────────────────────────────────────────────────────────────────────
+def _ensure_dir(path):
+    """
+    ينشئ المجلد إن أمكن، ويتجاهل الفشل بصمت.
+
+    أقراص Render تُركَّب وقت التشغيل لا وقت البناء، فمسار مثل
+    /var/data/media غير موجود أثناء `collectstatic` و`migrate` والجذر
+    للقراءة فقط — وكان ذلك يُسقط استيراد الإعدادات ويُفشل النشر كله.
+    وقت التشغيل يكون القرص مركّباً فيُنشأ المجلد؛ وإن تعذّر حتى حينها،
+    فإن FileSystemStorage في Django ينشئ ما يلزم عند أول حفظ.
+    """
+    try:
+        os.makedirs(path, exist_ok=True)
+    except OSError:
+        pass
+
 # ─────────────────────────────────────────────────────────────────────────────
 # حساب مراجعة متجر Google Play
 # ─────────────────────────────────────────────────────────────────────────────
@@ -279,21 +295,18 @@ REVIEW_ACCOUNT_USERNAME = config("REVIEW_ACCOUNT_USERNAME", default="")
 MEDIA_URL  = "/media/"
 _default_media_root = BASE_DIR / "media"
 MEDIA_ROOT = Path(config("MEDIA_ROOT", default=str(_default_media_root)))
-
-# إنشاء مجلد الوسائط إن أمكن — دون إسقاط الإقلاع إن تعذّر.
-# على Render لا يُركَّب القرص الدائم أثناء مرحلة البناء (يُركَّب وقت التشغيل فقط)،
-# فيكون /var/data للقراءة فقط حينها. استدعاء makedirs بلا حماية كان يُفشل
-# البناء بـ OSError: [Errno 30] Read-only file system.
-# وقت التشغيل يكون القرص مُركَّباً فيُنشأ المجلد طبيعياً، كما أن
-# FileSystemStorage ينشئ المجلدات الفرعية تلقائياً عند أول رفع.
-try:
-    os.makedirs(MEDIA_ROOT, exist_ok=True)
-except OSError:
-    pass
+_ensure_dir(MEDIA_ROOT)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # مجلد تخزين النسخ الاحتياطية
 # ─────────────────────────────────────────────────────────────────────────────
-BACKUP_STORAGE_DIR = BASE_DIR / "backups_storage"
+# يجب أن يقع على قرص دائم في الإنتاج، وإلا اختفت النسخ مع كل نشر.
+# على Render القرص مركّب على MEDIA_ROOT، لذا يُضبط المتغيّر إلى مجلد مخفي
+# داخله ("‎.backups") — و config/urls.py يمنع خدمة هذا المجلد عبر /media/
+# حتى لا تُنزَّل نسخة قاعدة البيانات من الإنترنت بلا مصادقة.
+BACKUP_STORAGE_DIR = Path(
+    config("BACKUP_STORAGE_DIR", default=str(BASE_DIR / "backups_storage"))
+)
+_ensure_dir(BACKUP_STORAGE_DIR)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

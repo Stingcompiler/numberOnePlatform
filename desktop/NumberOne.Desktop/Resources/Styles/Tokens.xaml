@@ -1,0 +1,141 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!--
+        Design tokens, both themes. Colour comes only from here - no hardcoded
+        hex in a page. Light is the default and carries the identity; dark is
+        charcoal-slate, never pure black.
+
+        Every colour is defined twice, Light and Dark, and consumed through an
+        inline {AppThemeBinding Light={StaticResource XLight}, Dark=...}. That is
+        the pattern the MAUI template uses and the only one that survives a live
+        theme switch: AppThemeColor resource entries are rejected by the XAML
+        source generator, and a single-key alias resolved in code would not
+        re-resolve when the student flips the toggle.
+
+        Named styles in Styles.xaml wrap the common cases so pages rarely spell
+        the binding out.
+
+        Note #C0392B is the brand crimson in light and #E74C3C in dark: the
+        darker crimson goes muddy on a charcoal ground.
+    -->
+
+    <!-- ── Surfaces ─────────────────────────────────────────────────────── -->
+    <Color x:Key="BgLight">#F8FAFF</Color>
+    <Color x:Key="BgDark">#0D1117</Color>
+    <Color x:Key="SurfaceLight">#FFFFFF</Color>
+    <Color x:Key="SurfaceDark">#131A27</Color>
+    <Color x:Key="SurfaceElevatedLight">#FFFFFF</Color>
+    <Color x:Key="SurfaceElevatedDark">#1A2235</Color>
+    <Color x:Key="SidebarLight">#FFFFFF</Color>
+    <Color x:Key="SidebarDark">#131A27</Color>
+
+    <!-- ── Lines ────────────────────────────────────────────────────────── -->
+    <Color x:Key="BorderLight">#E2E8F0</Color>
+    <Color x:Key="BorderDark">#243044</Color>
+    <Color x:Key="BorderStrongLight">#CBD5E1</Color>
+    <Color x:Key="BorderStrongDark">#2E3D55</Color>
+
+    <!-- ── Text ─────────────────────────────────────────────────────────── -->
+    <Color x:Key="TextLight">#0F172A</Color>
+    <Color x:Key="TextDark">#E6EDF7</Color>
+    <Color x:Key="TextSecondaryLight">#475569</Color>
+    <Color x:Key="TextSecondaryDark">#9BA9C2</Color>
+    <!-- Both muted values were raised to clear 4.5:1. Do not lower them:
+         light #64748B is 4.76:1 on white, dark #7E8DA8 is 5.15:1 on surface. -->
+    <Color x:Key="TextMutedLight">#64748B</Color>
+    <Color x:Key="TextMutedDark">#7E8DA8</Color>
+
+    <!-- ── Interaction ──────────────────────────────────────────────────── -->
+    <Color x:Key="HoverLight">#F1F5F9</Color>
+    <Color x:Key="HoverDark">#1A2235</Color>
+    <Color x:Key="ActiveLight">#141A56DB</Color>
+    <Color x:Key="ActiveDark">#244C8DFF</Color>
+
+    <!-- ── Brand ────────────────────────────────────────────────────────── -->
+    <Color x:Key="PrimaryLight">#C0392B</Color>
+    <Color x:Key="PrimaryDark">#E74C3C</Color>
+    <Color x:Key="PrimaryHoverLight">#A93226</Color>
+    <Color x:Key="PrimaryHoverDark">#EC6152</Color>
+    <Color x:Key="PrimaryTintLight">#14C0392B</Color>
+    <Color x:Key="PrimaryTintDark">#24E74C3C</Color>
+
+    <Color x:Key="SecondaryLight">#1A56DB</Color>
+    <Color x:Key="SecondaryDark">#4C8DFF</Color>
+    <Color x:Key="SecondaryHoverLight">#1544B0</Color>
+    <Color x:Key="SecondaryHoverDark">#69A0FF</Color>
+    <Color x:Key="SecondaryTintLight">#141A56DB</Color>
+    <Color x:Key="SecondaryTintDark">#244C8DFF</Color>
+
+    <!-- ── Status ───────────────────────────────────────────────────────── -->
+    <Color x:Key="SuccessLight">#059669</Color>
+    <Color x:Key="SuccessDark">#22C55E</Color>
+    <Color x:Key="WarningLight">#D97706</Color>
+    <Color x:Key="WarningDark">#F59E0B</Color>
+    <Color x:Key="WarningTintLight">#14D97706</Color>
+    <Color x:Key="WarningTintDark">#24F59E0B</Color>
+    <Color x:Key="DangerLight">#C0392B</Color>
+    <Color x:Key="DangerDark">#E74C3C</Color>
+
+    <!-- ── Disabled ─────────────────────────────────────────────────────── -->
+    <Color x:Key="DisabledBgLight">#F1F5F9</Color>
+    <Color x:Key="DisabledBgDark">#1A2235</Color>
+    <Color x:Key="DisabledTextLight">#94A3B8</Color>
+    <Color x:Key="DisabledTextDark">#7E8DA8</Color>
+
+    <!-- Skeleton fill. Its own token rather than a reuse of Hover: a skeleton
+         must read as absent content, and Hover reads as an interaction. -->
+    <Color x:Key="SkeletonLight">#EEF2F8</Color>
+    <Color x:Key="SkeletonDark">#1A2235</Color>
+
+    <!-- Scrim behind dialogs, and the video letterbox surround. The surround is
+         the same value in both themes - a letterbox is not theme-dependent. -->
+    <Color x:Key="Scrim">#730F172A</Color>
+    <Color x:Key="VideoSurround">#0B0F16</Color>
+
+    <!-- ── Geometry. Desktop is not a scaled-up phone. ───────────────────── -->
+    <x:Double x:Key="RadiusPanel">8</x:Double>
+    <x:Double x:Key="RadiusControl">6</x:Double>
+    <x:Double x:Key="ControlHeight">32</x:Double>
+    <x:Double x:Key="ControlHeightSmall">28</x:Double>
+    <x:Double x:Key="ControlHeightLarge">40</x:Double>
+    <x:Double x:Key="SidebarWidth">240</x:Double>
+    <x:Double x:Key="SidebarRailWidth">56</x:Double>
+    <x:Double x:Key="NavRowHeight">36</x:Double>
+    <x:Double x:Key="TopBarHeight">48</x:Double>
+    <x:Double x:Key="SectionSpacing">24</x:Double>
+    <x:Double x:Key="CardPadding">16</x:Double>
+
+    <!-- ── Type ramp. Strict: 20 / 15 / 13 / 12 / 11 only. ───────────────── -->
+    <x:Double x:Key="FontTitle">20</x:Double>
+    <x:Double x:Key="FontHeading">15</x:Double>
+    <x:Double x:Key="FontBody">13</x:Double>
+    <x:Double x:Key="FontSecondary">12</x:Double>
+    <x:Double x:Key="FontLabel">11</x:Double>
+
+    <!--
+        The design's two faces, bundled in Resources/Fonts under the OFL.
+
+        Cairo carries the UI - labels, table cells, buttons, nav. Tajawal
+        carries running copy: descriptions, notification bodies, exam questions,
+        the blocked-screen explanations. The split is the design's, and it is
+        what keeps a paragraph from reading like a control.
+
+        One alias per weight, because MAUI resolves a font by family name and
+        can only ask for bold on top of it - 500 is unreachable through
+        FontAttributes. Registered in MauiProgram.ConfigureFonts.
+
+        Cairo's 400/500/700 are static instances cut from Google's variable
+        Cairo, which ships with no statics of its own; see the header of
+        desktop/tools/instance_cairo.py.
+    -->
+    <x:String x:Key="FontUi">Cairo</x:String>
+    <x:String x:Key="FontUiMedium">CairoMedium</x:String>
+    <x:String x:Key="FontUiBold">CairoBold</x:String>
+
+    <x:String x:Key="FontCopy">Tajawal</x:String>
+    <x:String x:Key="FontCopyMedium">TajawalMedium</x:String>
+    <x:String x:Key="FontCopyBold">TajawalBold</x:String>
+
+</ResourceDictionary>

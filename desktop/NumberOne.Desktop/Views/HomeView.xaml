@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:models="clr-namespace:NumberOne.Core.Models;assembly=NumberOne.Core"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             x:Class="NumberOne.Desktop.Views.HomeView"
+             x:Name="Root"
+             x:DataType="vm:HomeViewModel">
+
+    <!--
+        الرئيسية — five sections, each resolving on its own.
+
+        The layout is the design's: a stat row across the top, the live banner
+        under it, then a 1.35 / 1 split with the work on the leading side and
+        the feed on the trailing one. Nothing here waits on anything else; a
+        slow notifications feed must never hold up the stat row.
+    -->
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="24">
+
+            <!-- ══ Header and stats ══════════════════════════════════════ -->
+            <VerticalStackLayout Spacing="12">
+
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="12">
+                    <Label Grid.Column="0" Text="{Binding StudentTitle}"
+                           Style="{StaticResource HeadingLabel}" VerticalOptions="Center" />
+
+                    <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+
+                    <!-- The only part of the financial file a student can read. -->
+                    <Label Grid.Column="2" Text="الرصيد المتبقي"
+                           Style="{StaticResource CellLabelSecondary}"
+                           IsVisible="{Binding HasBalance}" />
+                    <Label Grid.Column="3" Text="{Binding BalanceLabel}"
+                           Style="{StaticResource CellLabel}"
+                           IsVisible="{Binding HasBalance}"
+                           FontFamily="{StaticResource FontUiMedium}"
+                           TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
+
+                    <Border Grid.Column="4" Style="{StaticResource IconButtonBare}">
+                        <shapes:Path Style="{StaticResource IconPathMuted}"
+                                     WidthRequest="14" HeightRequest="14"
+                                     Data="{StaticResource IconRefresh}" />
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ReloadCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                </Grid>
+
+                <!--
+                    Four cards. Each caption is derived from something the API
+                    actually returns; see HomeViewModel for the two the design
+                    mocks up that nothing backs.
+                -->
+                <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="16">
+
+                    <Border Grid.Column="0" Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="الكورسات" Style="{StaticResource StatLabel}" />
+                            <Label Text="{Binding CourseCountLabel}" Style="{StaticResource StatValue}" />
+                            <Label Text="{Binding ActiveThisWeekCaption}" Style="{StaticResource StatCaption}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="1" Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="المحاضرات المكتملة" Style="{StaticResource StatLabel}" />
+                            <Label Text="{Binding CompletedLessonLabel}" Style="{StaticResource StatValue}" />
+                            <!-- Success only when there is a gain to report. -->
+                            <Label Text="{Binding CompletedThisWeekCaption}"
+                                   Style="{StaticResource StatCaption}"
+                                   TextColor="{Binding HasWeeklyGain, Converter={StaticResource GainInk}}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="الاختبارات المتاحة" Style="{StaticResource StatLabel}" />
+                            <Label Text="{Binding PendingExamLabel}" Style="{StaticResource StatValue}" />
+                            <Label Text="{Binding PendingExamCaption}" Style="{StaticResource StatCaption}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="3" Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="متوسط الدرجات" Style="{StaticResource StatLabel}" />
+                            <Label Text="{Binding AverageLabel}" Style="{StaticResource StatValue}" />
+                            <Label Text="{Binding AverageCaption}" Style="{StaticResource StatCaption}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
+
+            <!-- ══ Live banner ═══════════════════════════════════════════ -->
+            <!--
+                One line, not a card grid: at most one session matters at a
+                time. It is absent entirely when there is nothing scheduled,
+                rather than sitting there empty.
+            -->
+            <Border Style="{StaticResource Panel}" Padding="16,12"
+                    IsVisible="{Binding HasLiveBanner}">
+                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="12">
+
+                    <Ellipse Grid.Column="0" WidthRequest="6" HeightRequest="6"
+                             VerticalOptions="Center"
+                             Fill="{Binding IsLiveNow, Converter={StaticResource LiveDot}}" />
+
+                    <Label Grid.Column="1" Text="{Binding BannerTitle}"
+                           Style="{StaticResource CellLabelStrong}" />
+
+                    <Label Grid.Column="2" Text="{Binding BannerMeta}"
+                           Style="{StaticResource CellLabelSecondary}" />
+
+                    <Label Grid.Column="3" Text="كل الجلسات" Style="{StaticResource LinkLabel}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ShowLiveCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
+
+                    <Label Grid.Column="4" Text="{Binding BannerStatus}"
+                           Style="{StaticResource CellLabelSecondary}"
+                           TextColor="{Binding IsLiveNow, Converter={StaticResource LiveInk}}" />
+
+                    <Button Grid.Column="5" Text="انضم الآن"
+                            Command="{Binding JoinLiveCommand}"
+                            IsVisible="{Binding CanJoinBanner}"
+                            Style="{StaticResource PrimaryButton}" />
+                </Grid>
+            </Border>
+
+            <!-- ══ Work, and the feed ════════════════════════════════════ -->
+            <Grid ColumnDefinitions="1.35*,*" ColumnSpacing="24">
+
+                <!-- ── Leading column ───────────────────────────────────── -->
+                <VerticalStackLayout Grid.Column="0" Spacing="12">
+
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Label Grid.Column="0" Text="الاختبارات المتاحة"
+                               Style="{StaticResource HeadingLabel}" />
+                        <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                        <Label Grid.Column="2" Text="عرض الكل" Style="{StaticResource LinkLabel}">
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ShowExamsCommand}" />
+                            </Label.GestureRecognizers>
+                        </Label>
+                    </Grid>
+
+                    <Border Style="{StaticResource TableCard}">
+                        <VerticalStackLayout>
+
+                            <!-- Column heads. The design's third column is a
+                                 closing date; exams.Exam has no date field of
+                                 any kind, so it carries the duration instead. -->
+                            <Grid Style="{StaticResource TableHeaderRow}"
+                                  ColumnDefinitions="2.4*,*,*,84"
+                                  IsVisible="{Binding HasUpcomingExams}">
+                                <Label Grid.Column="0" Text="الاختبار" Style="{StaticResource TableHeaderLabel}" />
+                                <Label Grid.Column="1" Text="الكورس" Style="{StaticResource TableHeaderLabel}" />
+                                <Label Grid.Column="2" Text="المدة" Style="{StaticResource TableHeaderLabel}" />
+                                <Label Grid.Column="3" Text="إجراء" Style="{StaticResource TableHeaderLabel}"
+                                       HorizontalTextAlignment="Center" />
+                                <BoxView Grid.ColumnSpan="4" Style="{StaticResource RowRule}" Margin="-16,0" />
+                            </Grid>
+
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding UpcomingExams}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ExamSummary">
+                                        <Grid Style="{StaticResource TableRow}"
+                                              ColumnDefinitions="2.4*,*,*,84"
+                                              MinimumHeightRequest="48" Padding="16,8">
+                                            <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                                <Label Text="{Binding Title}" Style="{StaticResource CellLabel}" />
+                                                <Label Text="{Binding QuestionCountLabel}" Style="{StaticResource MutedLabel}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="1" Text="{Binding CourseName}"
+                                                   Style="{StaticResource CellLabelSecondary}" />
+
+                                            <Label Grid.Column="2" Text="{Binding DurationLabel}"
+                                                   Style="{StaticResource CellLabelSecondary}" />
+
+                                            <Button Grid.Column="3" Text="ابدأ"
+                                                    Style="{StaticResource NeutralButtonSmall}"
+                                                    HorizontalOptions="Center"
+                                                    Command="{Binding Source={x:Reference Root}, Path=BindingContext.StartExamCommand}"
+                                                    CommandParameter="{Binding .}" />
+
+                                            <BoxView Grid.ColumnSpan="4" Style="{StaticResource RowRule}" Margin="-16,0" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+
+                            <!-- Loading, empty and error all live inside the card. -->
+                            <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                                 IsVisible="{Binding Exams.IsLoading}">
+                                <Border Style="{StaticResource SkeletonLine}" WidthRequest="220" />
+                                <Border Style="{StaticResource SkeletonLine}" WidthRequest="180" />
+                                <Border Style="{StaticResource SkeletonLine}" WidthRequest="200" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                                 IsVisible="{Binding Exams.HasError}">
+                                <Label Text="تعذّر تحميل الاختبارات المتاحة."
+                                       Style="{StaticResource CellLabelSecondary}"
+                                       HorizontalTextAlignment="Center" />
+                                <Button Text="إعادة المحاولة" Style="{StaticResource SecondaryButton}"
+                                        HorizontalOptions="Center"
+                                        Command="{Binding Exams.LoadCommand}" />
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- ── تابع من حيث توقفت ─────────────────────────────── -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,4,0,0">
+                        <Label Grid.Column="0" Text="تابع من حيث توقفت"
+                               Style="{StaticResource HeadingLabel}" />
+                        <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                    </Grid>
+
+                    <!--
+                        Two to a row. A course drops out of this grid the moment
+                        it is finished rather than sitting at 100% — there is
+                        nothing left to continue.
+                    -->
+                    <FlexLayout BindableLayout.ItemsSource="{Binding ContinueLearning}"
+                                Wrap="Wrap" JustifyContent="Start" AlignContent="Start">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CourseProgress">
+                                <Border Style="{StaticResource Panel}" Padding="16,12"
+                                        Margin="0,0,12,12" WidthRequest="300">
+                                    <VerticalStackLayout Spacing="8">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                            <Label Grid.Column="0" Text="{Binding Course.Name}"
+                                                   Style="{StaticResource CellLabelStrong}" />
+                                            <Label Grid.Column="1" Text="{Binding TeacherName}"
+                                                   Style="{StaticResource MutedLabel}" VerticalOptions="End" />
+                                            <Label Grid.Column="2" Text="{Binding PercentLabel}"
+                                                   Style="{StaticResource CellLabelNumeric}"
+                                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                        </Grid>
+
+                                        <!-- 4px track, radius 2. The Border clips
+                                             the bar, which MAUI cannot round. -->
+                                        <Border Style="{StaticResource ProgressTrack}">
+                                            <ProgressBar HeightRequest="4" BackgroundColor="Transparent"
+                                                         Progress="{Binding Fraction}"
+                                                         ProgressColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}" />
+                                        </Border>
+                                    </VerticalStackLayout>
+
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={x:Reference Root}, Path=BindingContext.OpenCourseCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+
+                    <Border Style="{StaticResource TableCard}"
+                            IsVisible="{Binding Courses.HasError}">
+                        <VerticalStackLayout Style="{StaticResource StatePanel}">
+                            <Label Text="تعذّر تحميل كورساتك."
+                                   Style="{StaticResource CellLabelSecondary}" />
+                            <Button Text="إعادة المحاولة" Style="{StaticResource SecondaryButton}"
+                                    HorizontalOptions="Center"
+                                    Command="{Binding Courses.LoadCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- ── Trailing column: the feed ────────────────────────── -->
+                <VerticalStackLayout Grid.Column="1" Spacing="12">
+
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Label Grid.Column="0" Text="آخر الإشعارات"
+                               Style="{StaticResource HeadingLabel}" />
+                        <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                        <Label Grid.Column="2" Text="عرض الكل" Style="{StaticResource LinkLabel}">
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ShowNotificationsCommand}" />
+                            </Label.GestureRecognizers>
+                        </Label>
+                    </Grid>
+
+                    <Border Style="{StaticResource TableCard}">
+                        <VerticalStackLayout>
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding RecentNotifications}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:Notification">
+                                        <Grid Style="{StaticResource TableRow}"
+                                              ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"
+                                              Padding="16,10">
+                                            <!-- Unread carries the dot and the
+                                                 weight; read carries neither. -->
+                                            <Ellipse Grid.Column="0" WidthRequest="6" HeightRequest="6"
+                                                     VerticalOptions="Start" Margin="0,6,0,0"
+                                                     IsVisible="{Binding IsRead, Converter={StaticResource Invert}}"
+                                                     Fill="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label Text="{Binding Title}" Style="{StaticResource CellLabel}"
+                                                       FontFamily="{Binding IsRead, Converter={StaticResource UnreadWeight}}" />
+                                                <Label Text="{Binding Message}" Style="{StaticResource CopyLabel}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="2" Text="{Binding TimeLabel}"
+                                                   Style="{StaticResource MutedLabel}" VerticalOptions="Start" />
+
+                                            <BoxView Grid.ColumnSpan="3" Style="{StaticResource RowRule}" Margin="-16,0" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                                 IsVisible="{Binding Notifications.IsLoading}">
+                                <Border Style="{StaticResource SkeletonLine}" WidthRequest="200" />
+                                <Border Style="{StaticResource SkeletonLine}" WidthRequest="160" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                                 IsVisible="{Binding Notifications.IsEmpty}">
+                                <Label Text="لا توجد إشعارات." Style="{StaticResource CellLabelSecondary}" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                                 IsVisible="{Binding Notifications.HasError}">
+                                <Label Text="تعذّر تحميل الإشعارات."
+                                       Style="{StaticResource CellLabelSecondary}"
+                                       HorizontalTextAlignment="Center" />
+                                <Button Text="إعادة المحاولة" Style="{StaticResource SecondaryButton}"
+                                        HorizontalOptions="Center"
+                                        Command="{Binding Notifications.LoadCommand}" />
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentView>

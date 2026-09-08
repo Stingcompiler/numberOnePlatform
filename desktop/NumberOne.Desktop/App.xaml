@@ -1,0 +1,46 @@
+﻿<?xml version = "1.0" encoding = "UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:NumberOne.Desktop"
+             x:Class="NumberOne.Desktop.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Tokens.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Theme.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Icons.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Components.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <local:InvertedBoolConverter x:Key="Invert" />
+            <local:PercentToFractionConverter x:Key="PercentToFraction" />
+            <local:SystemTypeTintConverter x:Key="SystemTypeTint" />
+            <local:SystemTypeInkConverter x:Key="SystemTypeInk" />
+            <local:VerdictWordConverter x:Key="VerdictWord" />
+            <local:VerdictInkConverter x:Key="VerdictInk" />
+            <local:VerdictTintConverter x:Key="VerdictTint" />
+            <local:NotificationTypeWordConverter x:Key="NotificationTypeWord" />
+            <local:CorrectWordConverter x:Key="CorrectWord" />
+            <local:GainInkConverter x:Key="GainInk" />
+            <local:LiveDotConverter x:Key="LiveDot" />
+            <local:LiveInkConverter x:Key="LiveInk" />
+            <local:UnreadWeightConverter x:Key="UnreadWeight" />
+            <local:LiveStatusTintConverter x:Key="LiveStatusTint" />
+            <local:LiveStatusInkConverter x:Key="LiveStatusInk" />
+            <local:JoinableInkConverter x:Key="JoinableInk" />
+            <local:JoinableBorderConverter x:Key="JoinableBorder" />
+            <local:ProviderIconConverter x:Key="ProviderIcon" />
+            <local:SelectedTabTintConverter x:Key="SelectedTabTint" />
+            <local:SelectedTabInkConverter x:Key="SelectedTabInk" />
+            <local:SelectedTabBorderConverter x:Key="SelectedTabBorder" />
+            <local:CompletedInkConverter x:Key="CompletedInk" />
+            <local:IconKeyConverter x:Key="IconKey" />
+            <local:EnabledOpacityConverter x:Key="EnabledOpacity" />
+            <local:ZeroToTrueConverter x:Key="ZeroToTrue" />
+            <local:ExpandChevronConverter x:Key="ExpandChevron" />
+            <local:FractionToWidthConverter x:Key="FractionToWidth" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

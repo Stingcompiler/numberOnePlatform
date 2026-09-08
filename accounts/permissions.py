@@ -162,13 +162,18 @@ class LectureWritePermission(BasePermission):
     """
     صلاحية الكتابة على المحاضرات:
     - القراءة (GET/HEAD/OPTIONS): مدير، أستاذ، مشرف الكورسات
-    - الإنشاء/التعديل (POST/PATCH/PUT): مدير + مشرف الكورسات
+    - الإنشاء/التعديل (POST/PATCH/PUT): مدير + أستاذ + مشرف الكورسات
     - الحذف (DELETE): مدير فقط (admin/manager)
+
+    الأستاذ يُنشئ المحاضرات ويعدّلها ولا يحذفها؛ الحذف يبقى بيد الإدارة.
+    كان مستبعَداً من الكتابة سابقاً بينما تعرض له الواجهة صفحة المحاضرات،
+    فكان يصطدم بـ 403 صامت.
     """
 
     WRITE_ROLES = (
         CustomUser.Roles.ADMIN,
         CustomUser.Roles.MANAGER,
+        CustomUser.Roles.TEACHER,
         CustomUser.Roles.LECTURE_SUPERVISOR,
     )
 
@@ -193,3 +198,16 @@ class LectureWritePermission(BasePermission):
             return request.user.role in self.DELETE_ROLES
         # POST / PUT / PATCH
         return request.user.role in self.WRITE_ROLES
+
+
+class LectureSubContentPermission(LectureWritePermission):
+    """
+    أسئلة التمارين وخياراتها.
+
+    حذف سؤال من تمرين هو تحرير للتمرين لا حذف لمحتوى منشور، فمن يملك
+    كتابة المحاضرات يملك حذفه — وإلا تعذّر على الأستاذ سحب سؤال أضافه
+    بالخطأ. حذف المحاضرة أو التمرين نفسه يبقى بيد الإدارة عبر
+    LectureWritePermission.
+    """
+
+    DELETE_ROLES = LectureWritePermission.WRITE_ROLES

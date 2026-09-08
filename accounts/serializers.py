@@ -7,6 +7,7 @@ accounts/serializers.py
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -136,11 +137,15 @@ class LoginSerializer(serializers.Serializer):
     username  = serializers.CharField(max_length=150)
     password  = serializers.CharField(write_only=True)
     device_id = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    # اختياري — يرسله عميل الديسكتوب. عملاء الموبايل الحاليون لا يرسلونه،
+    # فيُستنتَج النوع من سابقة device_id داخل bind_device.
+    device_type = serializers.CharField(max_length=100, required=False, allow_blank=True)
 
     def validate(self, attrs):
-        username  = attrs.get("username")
-        password  = attrs.get("password")
-        device_id = attrs.get("device_id", "")
+        username    = attrs.get("username")
+        password    = attrs.get("password")
+        device_id   = attrs.get("device_id", "")
+        device_type = attrs.get("device_type", "")
 
         user = authenticate(
             request=self.context.get("request"),
@@ -181,7 +186,7 @@ class LoginSerializer(serializers.Serializer):
                     code="no_profile",
                 )
             try:
-                profile.bind_device(device_id)
+                profile.bind_device(device_id, device_type or None)
             except PermissionError as exc:
                 raise serializers.ValidationError(str(exc), code="device_mismatch")
 
@@ -293,6 +298,7 @@ class StudentCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(_("اسم المستخدم مسجّل مسبقاً."))
         return value
 
+    @transaction.atomic  # الحساب والملف الشخصي معاً أو لا شيء
     def create(self, validated_data):
         from academic.models import Grade
 
@@ -362,6 +368,7 @@ class TeacherCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(_("اسم المستخدم مسجّل مسبقاً."))
         return value
 
+    @transaction.atomic  # الحساب والملف الشخصي معاً أو لا شيء
     def create(self, validated_data):
         user_data = {
             "username":  validated_data.pop("username"),
@@ -474,6 +481,12 @@ class NewStudentRegistrationSerializer(serializers.ModelSerializer):
     student_status_display = serializers.CharField(source="get_student_status_display", read_only=True)
     supervisor_name        = serializers.CharField(source="supervisor.name", read_only=True, default=None)
 
+    #: المستندات الإلزامية الناقصة، لتعرضها صفحة المراجعة بدل إخفائها.
+    missing_documents      = serializers.SerializerMethodField(read_only=True)
+
+    def get_missing_documents(self, obj):
+        return obj.missing_documents()
+
     class Meta:
         model = NewStudentRegistration
         fields = [
@@ -488,9 +501,10 @@ class NewStudentRegistrationSerializer(serializers.ModelSerializer):
             "has_siblings", "siblings_info",
             # Additional
             "residence", "date_of_birth", "student_phone",
-            # Files — سبعة مستندات في النموذج.
-            # كان student_id_image غائباً عن هذه القائمة، فلم يصل للواجهة إطلاقاً
-            # رغم أن الطالب يرفعه إجبارياً ويُخزَّن في قاعدة البيانات.
+            # Files — السبعة كلها.
+            # student_id_image أُضيف للموديل وللنموذج العام (وهو مطلوب فيه)
+            # ولم يُضَف هنا، وهذا السيريالايزر يخدم الإنشاء والقراءة معاً —
+            # فكان الملف يصل من المتصفح ويُهمَل بصمت ولا يُحفَظ إطلاقاً.
             "academic_result_image", "birth_certificate_image",
             "personal_photo", "student_id_image", "father_id_image",
             "mother_id_image", "payment_receipt_image",
@@ -501,11 +515,13 @@ class NewStudentRegistrationSerializer(serializers.ModelSerializer):
             "supervisor", "supervisor_name",
             # Status
             "status", "status_display", "admin_notes", "submitted_at",
+            "missing_documents",
         ]
         read_only_fields = [
             "id", "submitted_at", "status_display",
             "level_display", "grade_display", "gender_display",
             "student_status_display", "supervisor_name",
+            "missing_documents",
         ]
 
 
@@ -588,6 +604,7 @@ class LectureSupervisorCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(_("اسم المستخدم مسجّل مسبقاً."))
         return value
 
+    @transaction.atomic  # الحساب والملف الشخصي معاً أو لا شيء
     def create(self, validated_data):
         courses = validated_data.pop("assigned_courses", [])
         user_data = {

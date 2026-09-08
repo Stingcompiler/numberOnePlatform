@@ -9,29 +9,36 @@ Views الكاملة للهيكل الأكاديمي
 ================================================================================
 """
 
+import re
+
 from django.db.models import Q
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.utils.translation import gettext_lazy as _
+from django.views import View
 from rest_framework import generics, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import (
-    IsAdminOrManager, IsAdminOrReadOnly, IsStudent,
-    LectureWritePermission, IsLectureSupervisor, IsStaffReadAdminWrite,
-)
 from accounts.models import CustomUser
+from accounts.permissions import (
+    IsAdminOrManager, IsAdminOrReadOnly, IsStudent, IsLectureSupervisor,
+    IsStaffReadAdminWrite, LectureWritePermission, LectureSubContentPermission,
+)
 from .models import (
     Level, Grade, Course, Unit, Lesson,
     Exercise, Question, Choice,
     Submission, StudentCourseAccess, LessonProgress,
 )
+from .access import accessible_course_ids, can_access_course
 from .serializers import (
     LevelSerializer,
     GradeSerializer, GradeListSerializer,
     CourseSerializer, CourseListSerializer,
     UnitSerializer,
     LessonSerializer, LessonListSerializer,
+    StudentCourseSerializer, StudentLessonSerializer,
     ExerciseSerializer, ExerciseStudentSerializer,
     StudentCourseAccessSerializer,
     SubmissionCreateSerializer, SubmissionSerializer,
@@ -45,25 +52,17 @@ from rest_framework import serializers as drf_serializers
 
 def _restrict_courses_to_student(qs, student):
     """
-    يُقيّد queryset الكورسات لما يحق للطالب رؤيته فقط — يطابق منطق الأعمال القائم:
-
-    • طالب "أونلاين": كورسات مرحلته المسجّلة فقط ونظام online
-      (نفس منطق StudentExamDetailView — لا يغيّر ما يراه الطالب الشرعي).
-    • طالب "فلاش": الكورسات التي يملك لها StudentCourseAccess نشِطاً
-      (نفس منطق MyCoursesView).
+    يُقيّد queryset الكورسات لما يحق للطالب رؤيته فقط.
 
     يمنع تجاوز جدار الدفع: قراءة كورسات مراحل أخرى أو نظام آخر عبر
     نقطة /academic/courses/ الإدارية.
+
+    القاعدة نفسها المستعملة لفتح المحتوى (academic.access) ولا تُكرَّر هنا:
+    كانت هذه الدالة تقصر طالب الأونلاين على مرحلته وحدها، فيفتح الطالب
+    المُمنوح كورساً يدوياً محتواه ولا يراه في القائمة. تفويضُ القاعدة يمنع
+    افتراق الاثنتين، ولا يوسّع وصولاً — ما يظهر هنا هو ما يُفتح هناك.
     """
-    if student.system_type == "online":
-        return qs.filter(
-            system_type="online",
-            grade_id=student.enrolled_grade_id,
-        )
-    access_ids = StudentCourseAccess.objects.filter(
-        student=student, is_active=True
-    ).values_list("course_id", flat=True)
-    return qs.filter(id__in=list(access_ids))
+    return qs.filter(id__in=accessible_course_ids(student))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -202,6 +201,27 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
             return [IsAuthenticated()]
         return [IsAdminOrReadOnly()]
 
+    def get_serializer_class(self):
+        """
+        الطالب يقرأ بنسخة الطالب: CourseSerializer يُضمّن youtube_url الخام في
+        كل محاضرة، وهذه الواجهة مفتوحة لكل مصادَق عليه — فكان طلب واحد يعيد
+        روابط كل محاضرات الكورس لأي طالب يصل إليها، وهو ما تمنعه واجهات
+        my-courses أصلاً.
+
+        الوصول لا يتغيّر: من كان يقرأ يبقى يقرأ. يسقط youtube_url وحده، وتطبيق
+        الموبايل يقرأ ‎youtube_url || youtube_embed_url‎ فيسقط تلقائياً على
+        embed_url دون تعديل.
+        """
+        user = getattr(self.request, "user", None)
+
+        if (
+            self.request.method in ("GET", "HEAD", "OPTIONS")
+            and getattr(user, "role", None) == CustomUser.Roles.STUDENT
+        ):
+            return StudentCourseSerializer
+
+        return CourseSerializer
+
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
         return self.update(request, *args, **kwargs)
@@ -241,18 +261,72 @@ class UnitDetailView(generics.RetrieveUpdateDestroyAPIView):
 # 5. Lesson — المحاضرات
 # ─────────────────────────────────────────────────────────────────────────────
 
-class LessonListCreateView(generics.ListCreateAPIView):
+class LectureScopeMixin:
+    """
+    يحصر مشرف الكورسات في الكورسات المخصصة له.
+
+    assigned_courses تصف "الكورسات التي يملك هذا المشرف صلاحية إدارة
+    محاضراتها"، والواجهة تخبره بذلك، لكن الحصر لم يكن مطبَّقاً: كان أي
+    مشرف يقرأ ويعدّل محاضرات أي كورس في النظام.
+
+    كل view يعلن course_lookup: مسار العلاقة من موديله إلى الكورس. يشمل
+    الحصر التمارين والأسئلة والخيارات أيضاً، وإلا صار تعديل تمرين محاضرةٍ
+    التفافاً على حصر المحاضرة نفسها.
+
+    بقية الأدوار (مدير / مانجر / أستاذ) غير محصورة هنا.
+    """
+
+    #: مسار الفلترة من موديل الـ view إلى معرّف الكورس
+    course_lookup = "unit__course_id__in"
+
+    @staticmethod
+    def assigned_course_ids(user):
+        """
+        معرّفات الكورسات المخصصة للمشرف، أو None إذا كان الدور غير محصور.
+        قائمة فارغة تعني مشرفاً بلا تخصيص: لا يرى شيئاً ولا يكتب شيئاً.
+        """
+        if not (user and user.is_authenticated):
+            return []
+        if user.role != CustomUser.Roles.LECTURE_SUPERVISOR:
+            return None
+        profile = getattr(user, "lecture_supervisor_profile", None)
+        if profile is None:
+            return []
+        return profile.get_assigned_course_ids()
+
+    def scope_to_assigned(self, qs):
+        ids = self.assigned_course_ids(self.request.user)
+        if ids is None:
+            return qs
+        return qs.filter(**{self.course_lookup: ids})
+
+    def require_in_scope(self, model, course_lookup, message, **lookup):
+        """
+        يرفض الكتابة على كائن خارج نطاق المشرف.
+
+        course_lookup هو مسار العلاقة من `model` إلى الكورس — يختلف عن
+        course_lookup الخاص بالـ view لأن الكائن المفحوص هو الأب لا الابن.
+        لا أثر لهذه الدالة على الأدوار غير المحصورة.
+        """
+        ids = self.assigned_course_ids(self.request.user)
+        if ids is None:
+            return
+        if not model.objects.filter(**lookup, **{course_lookup: ids}).exists():
+            raise PermissionDenied(message)
+
+
+class LessonListCreateView(LectureScopeMixin, generics.ListCreateAPIView):
     """
     GET  /api/academic/lessons/?unit=<id> — قائمة المحاضرات
-      • الإدارة + الأساتذة + مشرفو المحاضرات: يرون نتائج (مفلترة)
+      • الإدارة + الأساتذة: كل المحاضرات
+      • مشرف الكورسات: محاضرات كورساته المخصصة فقط
     POST /api/academic/lessons/            — إنشاء محاضرة
-      • الإدارة + مشرفو المحاضرات (للكورسات المخصصة فقط)
+      • الإدارة + الأساتذة + مشرفو الكورسات (كل ضمن نطاقه)
     """
 
     permission_classes = [LectureWritePermission]
 
     def get_queryset(self):
-        from accounts.models import CustomUser
         qs = Lesson.objects.select_related("unit__course").prefetch_related(
             "exercise__questions__choices"
         )
@@ -260,11 +334,15 @@ class LessonListCreateView(generics.ListCreateAPIView):
         if unit_id:
             qs = qs.filter(unit_id=unit_id)
 
-        # مشرف الكورسات: يرى جميع المحاضرات (بدون فلتر)
-        return qs.order_by("display_order")
+        return self.scope_to_assigned(qs).order_by("display_order")
 
     def create(self, request, *args, **kwargs):
-        """\u0645شرف الكورسات يستطيع إضافة محاضرات لأي كورس في النظام."""
+        """يرفض إضافة محاضرة لكورس خارج نطاق المشرف."""
+        self.require_in_scope(
+            Unit, "course_id__in",
+            _("لا تملك صلاحية إضافة محاضرات لهذا الكورس."),
+            pk=request.data.get("unit"),
+        )
         return super().create(request, *args, **kwargs)
 
     def get_serializer_class(self):
@@ -273,22 +351,24 @@ class LessonListCreateView(generics.ListCreateAPIView):
         return LessonSerializer
 
 
-class LessonDetailView(generics.RetrieveUpdateDestroyAPIView):
+class LessonDetailView(LectureScopeMixin, generics.RetrieveUpdateDestroyAPIView):
     """
     GET   /api/academic/lessons/<id>/  — عرض محاضرة
     PATCH /api/academic/lessons/<id>/  — تعديل محاضرة
     DELETE /api/academic/lessons/<id>/ — حذف (الإدارة فقط)
+
+    مشرف الكورسات محصور في كورساته المخصصة؛ ما خرج عنها يرجع 404 لا 403
+    حتى لا يكشف وجود محاضرات خارج نطاقه.
     """
 
-    queryset = Lesson.objects.select_related("unit__course").prefetch_related(
-        "exercise__questions__choices"
-    )
     serializer_class   = LessonSerializer
     permission_classes = [LectureWritePermission]
 
-    def get_object(self):
-        """مشرف الكورسات يستطيع الوصول لأي محاضرة في النظام."""
-        return super().get_object()
+    def get_queryset(self):
+        qs = Lesson.objects.select_related("unit__course").prefetch_related(
+            "exercise__questions__choices"
+        )
+        return self.scope_to_assigned(qs)
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
@@ -299,53 +379,130 @@ class LessonDetailView(generics.RetrieveUpdateDestroyAPIView):
 # 6. Exercise — التمارين
 # ─────────────────────────────────────────────────────────────────────────────
 
-class ExerciseCreateView(generics.CreateAPIView):
-    """POST /api/academic/exercises/ — إنشاء تمرين لمحاضرة"""
+class ExerciseCreateView(LectureScopeMixin, generics.CreateAPIView):
+    """
+    POST /api/academic/exercises/ — إنشاء تمرين لمحاضرة
+
+    التمرين جزء من المحاضرة، فيتبع صلاحياتها: الإدارة والأستاذ ومشرف
+    الكورسات ينشئون، والمشرف محصور في كورساته المخصصة.
+    """
 
     serializer_class   = ExerciseSerializer
-    permission_classes = [IsAdminOrManager]
+    permission_classes = [LectureWritePermission]
+
+    def create(self, request, *args, **kwargs):
+        self.require_in_scope(
+            Lesson, "unit__course_id__in",
+            _("لا تملك صلاحية إضافة تمارين لهذه المحاضرة."),
+            pk=request.data.get("lesson"),
+        )
+        return super().create(request, *args, **kwargs)
 
 
-class ExerciseDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """GET / PATCH / DELETE /api/academic/exercises/<id>/"""
+class ExerciseDetailView(LectureScopeMixin, generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET / PATCH / DELETE /api/academic/exercises/<id>/
 
-    queryset = Exercise.objects.prefetch_related("questions__choices")
+    الحذف للإدارة وحدها (LectureWritePermission.DELETE_ROLES).
+    """
+
     serializer_class   = ExerciseSerializer
-    permission_classes = [IsAdminOrManager]
+    permission_classes = [LectureWritePermission]
+    course_lookup      = "lesson__unit__course_id__in"
+
+    def get_queryset(self):
+        return self.scope_to_assigned(
+            Exercise.objects.prefetch_related("questions__choices")
+        )
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
         return self.update(request, *args, **kwargs)
 
 
-class QuestionListCreateView(generics.ListCreateAPIView):
+class QuestionListCreateView(LectureScopeMixin, generics.ListCreateAPIView):
     """GET /api/academic/exercises/<exercise_id>/questions/ | POST"""
 
     serializer_class   = QuestionSerializer
-    permission_classes = [IsAdminOrManager]
+    permission_classes = [LectureWritePermission]
+    course_lookup      = "exercise__lesson__unit__course_id__in"
 
     def get_queryset(self):
-        return Question.objects.filter(
+        qs = Question.objects.filter(
             exercise_id=self.kwargs["exercise_id"]
-        ).prefetch_related("choices").order_by("display_order")
+        ).prefetch_related("choices")
+        return self.scope_to_assigned(qs).order_by("display_order")
+
+    def create(self, request, *args, **kwargs):
+        self.require_in_scope(
+            Exercise, "lesson__unit__course_id__in",
+            _("لا تملك صلاحية إضافة أسئلة لهذا التمرين."),
+            pk=self.kwargs["exercise_id"],
+        )
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(exercise_id=self.kwargs["exercise_id"])
 
 
-class ChoiceListCreateView(generics.ListCreateAPIView):
+class ChoiceListCreateView(LectureScopeMixin, generics.ListCreateAPIView):
     """GET /api/academic/questions/<question_id>/choices/ | POST"""
 
     serializer_class   = ChoiceSerializer
-    permission_classes = [IsAdminOrManager]
+    permission_classes = [LectureWritePermission]
+    course_lookup      = "question__exercise__lesson__unit__course_id__in"
 
     def get_queryset(self):
-        return Choice.objects.filter(
-            question_id=self.kwargs["question_id"]
-        ).order_by("display_order")
+        qs = Choice.objects.filter(question_id=self.kwargs["question_id"])
+        return self.scope_to_assigned(qs).order_by("display_order")
+
+    def create(self, request, *args, **kwargs):
+        self.require_in_scope(
+            Question, "exercise__lesson__unit__course_id__in",
+            _("لا تملك صلاحية إضافة خيارات لهذا السؤال."),
+            pk=self.kwargs["question_id"],
+        )
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(question_id=self.kwargs["question_id"])
+
+
+class QuestionDetailView(LectureScopeMixin, generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET / PATCH / DELETE /api/academic/questions/<id>/
+
+    لم يكن هذا المسار موجوداً: كانت الأسئلة تُنشأ ولا تُعدَّل ولا تُحذف،
+    بينما لوحة التحكم تنادي DELETE عليه فتحصل على 404.
+    """
+
+    serializer_class   = QuestionSerializer
+    permission_classes = [LectureSubContentPermission]
+    course_lookup      = "exercise__lesson__unit__course_id__in"
+
+    def get_queryset(self):
+        return self.scope_to_assigned(
+            Question.objects.prefetch_related("choices")
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
+
+
+class ChoiceDetailView(LectureScopeMixin, generics.RetrieveUpdateDestroyAPIView):
+    """GET / PATCH / DELETE /api/academic/choices/<id>/"""
+
+    serializer_class   = ChoiceSerializer
+    permission_classes = [LectureSubContentPermission]
+    course_lookup      = "question__exercise__lesson__unit__course_id__in"
+
+    def get_queryset(self):
+        return self.scope_to_assigned(Choice.objects.all())
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -386,9 +543,40 @@ class StudentCourseAccessListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(granted_by=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        """
+        منح الوصول يُعيد تفعيل صفٍّ معطّل بدل أن يفشل.
+
+        القيد ‎unique_together(student, course)‎ يعني أن تعطيل وصول ثم محاولة
+        منحه مجدداً كانت تُرفض بخطأ "موجود مسبقاً": فالمدير يعطّل الكورس، ثم
+        لا يستطيع إعادته، ولا يرى سبباً مفهوماً. الصفّ المعطّل يُعاد تفعيله
+        ويُسجَّل مانحه الجديد.
+        """
+        student_id = request.data.get("student")
+        course_id  = request.data.get("course")
+
+        existing = StudentCourseAccess.objects.filter(
+            student_id=student_id, course_id=course_id,
+        ).first() if student_id and course_id else None
+
+        if existing is None:
+            return super().create(request, *args, **kwargs)
+
+        existing.is_active  = True
+        existing.granted_by = request.user
+        existing.save(update_fields=["is_active", "granted_by"])
+
+        return Response(self.get_serializer(existing).data, status=status.HTTP_200_OK)
+
 
 class StudentCourseAccessDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """PATCH /api/academic/access/<id>/ — تفعيل/تعطيل الوصول"""
+    """
+    GET / PATCH / DELETE /api/academic/access/<id>/
+
+    PATCH يعطّل الوصول ويُبقي السجل، وDELETE يمحوه من سجل الطالب نهائياً.
+    الاثنان متاحان للإدارة عمداً: التعطيل يُوقف الوصول مع بقاء الأثر، والحذف
+    لمن سُجّل خطأً أصلاً.
+    """
 
     queryset           = StudentCourseAccess.objects.all()
     serializer_class   = StudentCourseAccessSerializer
@@ -413,13 +601,16 @@ class MyCoursesView(APIView):
 
     def get(self, request):
         student = request.user.student_profile
-        access_qs = StudentCourseAccess.objects.filter(
-            student=student, is_active=True
-        ).select_related("course__grade__level", "course__teacher").prefetch_related(
-            "course__units__lessons"
+
+        courses = (
+            Course.objects
+            .filter(id__in=accessible_course_ids(student))
+            .select_related("grade__level", "teacher")
+            .prefetch_related("units__lessons")
+            .order_by("grade__display_order", "display_order")
         )
-        courses = [acc.course for acc in access_qs]
-        serializer = CourseSerializer(courses, many=True)
+
+        serializer = StudentCourseSerializer(courses, many=True)
         return Response(serializer.data)
 
 
@@ -433,11 +624,8 @@ class MyCourseDetailView(APIView):
 
     def get(self, request, course_id):
         student = request.user.student_profile
-        try:
-            StudentCourseAccess.objects.get(
-                student=student, course_id=course_id, is_active=True
-            )
-        except StudentCourseAccess.DoesNotExist:
+
+        if not can_access_course(student, course_id):
             return Response(
                 {"detail": _("ليس لديك صلاحية الوصول لهذا الكورس.")},
                 status=status.HTTP_403_FORBIDDEN,
@@ -445,7 +633,7 @@ class MyCourseDetailView(APIView):
         course = Course.objects.prefetch_related(
             "units__lessons__exercise__questions__choices"
         ).get(pk=course_id)
-        return Response(CourseSerializer(course).data)
+        return Response(StudentCourseSerializer(course).data)
 
 
 class MyLessonDetailView(APIView):
@@ -472,13 +660,7 @@ class MyLessonDetailView(APIView):
             )
 
         # التحقق من وصول الطالب للكورس
-        try:
-            StudentCourseAccess.objects.get(
-                student=student,
-                course=lesson.unit.course,
-                is_active=True,
-            )
-        except StudentCourseAccess.DoesNotExist:
+        if not can_access_course(student, lesson.unit.course_id):
             return Response(
                 {"detail": _("ليس لديك صلاحية الوصول لهذه المحاضرة.")},
                 status=status.HTTP_403_FORBIDDEN,
@@ -488,10 +670,13 @@ class MyLessonDetailView(APIView):
         LessonProgress.objects.get_or_create(student=student, lesson=lesson)
 
         # إعادة بيانات المحاضرة مع التمرين بدون is_correct
-        data = LessonSerializer(lesson).data
+        data = StudentLessonSerializer(lesson).data
         # استبدال التمرين بالنسخة الآمنة للطالب
-        if lesson.exercise:
-            data["exercise"] = ExerciseStudentSerializer(lesson.exercise).data
+        # المحاضرة قد لا تملك تمريناً — الوصول المباشر للعلاقة العكسية
+        # OneToOne يرمي RelatedObjectDoesNotExist لا None.
+        exercise = getattr(lesson, "exercise", None)
+        if exercise:
+            data["exercise"] = ExerciseStudentSerializer(exercise).data
 
         return Response(data)
 
@@ -591,6 +776,53 @@ class MyProgressView(APIView):
         student = request.user.student_profile
         progresses = LessonProgress.objects.filter(student=student).select_related("lesson")
         return Response(LessonProgressSerializer(progresses, many=True).data)
+
+
+class LessonPlayerView(View):
+    """
+    GET /api/academic/player/?v=<video_id>
+
+    صفحة صغيرة تحتوي iframe اليوتيوب، تُخدَّم من نطاق المدرسة.
+
+    عميل الديسكتوب كان يفتح رابط ‎/embed/‎ مباشرةً في الـ WebView، ويوتيوب يردّ
+    على ذلك بـ Error 153 — فالرابط مُعدّ ليُحمَّل داخل iframe في صفحة، لا أن
+    يُنتقَل إليه كمستند أعلى. التطبيقان الآخران يفعلان الصحيح أصلاً: الويب
+    يستخدم iframe داخل صفحة الموقع، والموبايل يمرّر HTML مع
+    ‎baseUrl: 'https://numberoneschools.com'‎.
+
+    تُخدَّم من الخادم لا من نص HTML محلي حتى يكون الأصل (origin) والمُحيل
+    (referer) نطاق المدرسة فعلاً على ويندوز وماك معاً، بدل about:blank.
+
+    عامة بلا مصادقة: لا تكشف شيئاً — معرّف الفيديو يصل العميل أصلاً، والصفحة
+    لا تقرأ قاعدة البيانات.
+    """
+
+    #: معرّفات يوتيوب: حروف وأرقام وشرطتان. أي شيء آخر يُرفَض بدل أن يُطبَع.
+    VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{6,20}$")
+
+    TEMPLATE = (
+        "<!doctype html><html><head><meta charset=\"utf-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        "<style>html,body{{margin:0;height:100%;background:#0B0F16;overflow:hidden}}"
+        "iframe{{border:0;width:100%;height:100%;display:block}}</style></head>"
+        "<body oncontextmenu=\"return false\">"
+        "<iframe src=\"https://www.youtube.com/embed/{video_id}?modestbranding=1&amp;rel=0\""
+        " allow=\"accelerometer; autoplay; encrypted-media; picture-in-picture\""
+        " referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen></iframe>"
+        "</body></html>"
+    )
+
+    def get(self, request):
+        video_id = request.GET.get("v", "")
+
+        if not self.VIDEO_ID.match(video_id):
+            return HttpResponseBadRequest("invalid video id")
+
+        response = HttpResponse(self.TEMPLATE.format(video_id=video_id))
+
+        # الصفحة تُضمّن iframe من يوتيوب فقط؛ لا تُضمَّن هي في أي مكان آخر.
+        response["X-Frame-Options"] = "SAMEORIGIN"
+        return response
 
 
 # ─────────────────────────────────────────────────────────────────────────────

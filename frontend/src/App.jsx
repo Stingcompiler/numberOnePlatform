@@ -13,6 +13,8 @@ import LandingPage from './pages/public/LandingPage'
 import LoginPage from './pages/public/LoginPage'
 import StudentRegistrationPage from './pages/public/StudentRegistrationPage'
 import StudentAppOnlyPage from './pages/public/StudentAppOnlyPage'
+import StorePage from './pages/public/StorePage'
+import AppDetailPage from './pages/public/AppDetailPage'
 
 // Dashboard Layout
 import DashboardLayout from './components/layout/DashboardLayout'
@@ -55,6 +57,7 @@ const LectureSupervisorDetailPage = lazy(() => import('./pages/dashboard/Lecture
 const ProfilePage                 = lazy(() => import('./pages/dashboard/ProfilePage'))
 const PasswordManagementPage      = lazy(() => import('./pages/dashboard/PasswordManagementPage'))
 const LivePodcastPage             = lazy(() => import('./pages/dashboard/LivePodcastPage'))
+const StoreManagementPage         = lazy(() => import('./pages/dashboard/StoreManagementPage'))
 const LiveRoomDetailsPage         = lazy(() => import('./pages/dashboard/LiveRoomDetailsPage'))
 
 /* ── Page Loader ──────────────────────────────────────────────── */
@@ -122,6 +125,8 @@ function AppRoutes() {
       {/* ── صفحات Public ───────────────────────────────────────── */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/register" element={<StudentRegistrationPage />} />
+      <Route path="/store" element={<StorePage />} />
+      <Route path="/store/:id" element={<AppDetailPage />} />
       <Route path={LOGIN_PATH} element={
         <PublicRoute><LoginPage /></PublicRoute>
       } />
@@ -256,6 +261,9 @@ function AppRoutes() {
       />
       <Route path="/np-panel/backups"
         element={<DPage component={BackupPage} roles={ADMIN_ROLES} />}
+      />
+      <Route path="/np-panel/store"
+        element={<DPage component={StoreManagementPage} roles={ADMIN_ROLES} />}
       />
 
       {/* ── واجهات الطالب: محذوفة — الطلاب يستخدمون التطبيق فقط ── */}

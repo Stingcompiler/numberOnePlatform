@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:models="clr-namespace:NumberOne.Core.Models;assembly=NumberOne.Core"
+             x:Class="NumberOne.Desktop.Views.NotificationsView"
+             x:Name="Root"
+             x:DataType="vm:NotificationsViewModel">
+
+    <!--
+        الإشعارات — grouped by day, newest first.
+
+        Grouping is on LOCAL dates: a notification stamped 23:50 UTC must not
+        fall into "أمس" for a student reading it at 02:50 their time.
+
+        "تعليم الكل كمقروء" sits on the first group's header, as the design has
+        it, rather than in the top bar: it acts on this list, not on the app.
+    -->
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="24">
+
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Groups}" Spacing="24">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:NotificationGroup">
+                        <VerticalStackLayout Spacing="12">
+
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Label Grid.Column="0" Text="{Binding Label}"
+                                       Style="{StaticResource HeadingLabel}" />
+                                <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                                <Button Grid.Column="2" Text="تعليم الكل كمقروء"
+                                        Style="{StaticResource GhostButton}"
+                                        HeightRequest="28" FontSize="{StaticResource FontSecondary}"
+                                        Command="{Binding Source={x:Reference Root}, Path=BindingContext.MarkAllReadCommand}" />
+                            </Grid>
+
+                            <Border Style="{StaticResource TableCard}">
+                                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:Notification">
+                                            <Grid Style="{StaticResource TableRow}"
+                                                  ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"
+                                                  Padding="16,12">
+
+                                                <!-- Unread carries the dot and the
+                                                     weight; opening the row is what
+                                                     clears both. -->
+                                                <Ellipse Grid.Column="0" WidthRequest="6" HeightRequest="6"
+                                                         VerticalOptions="Start" Margin="0,6,0,0"
+                                                         IsVisible="{Binding IsRead, Converter={StaticResource Invert}}"
+                                                         Fill="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+
+                                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                    <Label Text="{Binding Title}"
+                                                           Style="{StaticResource CellLabel}"
+                                                           FontFamily="{Binding IsRead, Converter={StaticResource UnreadWeight}}" />
+                                                    <Label Text="{Binding Message}"
+                                                           Style="{StaticResource CopyLabel}" />
+                                                </VerticalStackLayout>
+
+                                                <Label Grid.Column="2" Text="{Binding TimeLabel}"
+                                                       Style="{StaticResource MutedLabel}"
+                                                       VerticalOptions="Start" />
+
+                                                <BoxView Grid.ColumnSpan="3" Style="{StaticResource RowRule}" Margin="-16,0" />
+
+                                                <Grid.GestureRecognizers>
+                                                    <TapGestureRecognizer
+                                                        Command="{Binding Source={x:Reference Root}, Path=BindingContext.MarkReadCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                </Grid.GestureRecognizers>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <!-- ══ States ════════════════════════════════════════════════ -->
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding Notifications.IsLoading}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="340" />
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="300" />
+                    <Border Style="{StaticResource SkeletonLine}" WidthRequest="320" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding Notifications.IsEmpty}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Label Text="لا توجد إشعارات جديدة." Style="{StaticResource CellLabelSecondary}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource TableCard}" IsVisible="{Binding Notifications.HasError}">
+                <VerticalStackLayout Style="{StaticResource StatePanel}">
+                    <Label Text="{Binding Notifications.ErrorMessage}"
+                           Style="{StaticResource CellLabelSecondary}"
+                           HorizontalTextAlignment="Center" />
+                    <Button Text="إعادة المحاولة" Style="{StaticResource SecondaryButton}"
+                            HorizontalOptions="Center" Command="{Binding LoadCommand}" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentView>

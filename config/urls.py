@@ -36,6 +36,10 @@ from django.views.static import serve
 # ── استيراد الـ URL patterns المقسّمة من site_settings ──────────────────────
 from site_settings.urls import public_urlpatterns, admin_urlpatterns
 from site_settings.seo_views import landing_ssr, robots_txt, sitemap_xml, privacy_policy
+from store.urls import (
+    public_urlpatterns as store_public_urlpatterns,
+    admin_urlpatterns as store_admin_urlpatterns,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # دوال مساعدة — خدمة ملفات React المبنية (frontend/dist/)
@@ -117,6 +121,10 @@ urlpatterns = [
     # ── Public: صفحة الهبوط (بدون مصادقة) ────────────────────────────────────
     path("api/public/", include((public_urlpatterns, "public"))),
 
+    # ── Store: متجر التطبيقات (عام + إدارة) ──────────────────────────────────
+    path("api/public/store/", include((store_public_urlpatterns, "store-public"))),
+    path("api/admin/store/",  include((store_admin_urlpatterns, "store-admin"))),
+
     # ── Admin Site Settings: لوحة التحكم ─────────────────────────────────────
     path("api/admin/", include((admin_urlpatterns, "admin-site"))),
 
@@ -128,7 +136,22 @@ urlpatterns = [
     # ── خدمة ملفات الـ Media (الصور المرفوعة) ─────────────────────────────────
     # WhiteNoise تخدم /static/ فقط. ملفات /media/ يُخدِّمها Django مباشرةً
     # عبر django.views.static.serve في كلتا البيئتين (DEBUG=True / DEBUG=False).
-    re_path(r'^media/(?P<path>.*)$', serve_protected_media),
+    # حارسان اثنان على /media/ لأن المحميّ نوعان مختلفان:
+    #
+    # 1) التعبير النمطي يستثني النسخ الاحتياطية من المسار أصلاً. مجلد النسخ قد
+    #    يقع داخل MEDIA_ROOT على الأقراص الدائمة (Render)، فلولا الاستثناء
+    #    لأمكن تنزيل قاعدة البيانات كاملةً من الإنترنت بلا مصادقة. يُحجب مجلد
+    #    ‎.backups‎ المخصص، وأي أرشيف ‎backup_*.zip‎ أينما وقع — والثاني شبكة
+    #    أمان لخطأ سهل: ضبط BACKUP_STORAGE_DIR على MEDIA_ROOT نفسه.
+    #    التنزيل المشروع يمرّ عبر /api/backups/<id>/download/ المحمي.
+    #
+    # 2) serve_protected_media يقصر مجلد registrations/ على مدير/مدير النظام،
+    #    وفيه وثائق شخصية (هوية، شهادة ميلاد، إيصال دفع).
+    #
+    # لا يغني أحدهما عن الآخر: الأول يمنع أرشيف قاعدة البيانات، والثاني يمنع
+    # بيانات الطلاب الشخصية.
+    re_path(r'^media/(?!\.backups/)(?!.*backup_[^/]*\.zip$)(?P<path>.*)$',
+            serve_protected_media),
 
     # ── SEO ───────────────────────────────────────────────────────────────────
     # يجب أن تسبق الـ catch-all، وإلا ابتلعها وأعاد index.html بدلاً منها

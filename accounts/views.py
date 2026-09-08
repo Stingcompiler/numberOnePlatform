@@ -24,7 +24,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import CustomUser, StudentProfile, TeacherProfile, Supervisor, StudentRequest, NewStudentRegistration, RegistrationCondition, LectureSupervisorProfile
-from .permissions import IsAdmin, IsAdminOrManager
+from .permissions import IsAdmin, IsAdminOrManager, IsStudentReadOnly
 from .serializers import (
     AdminResetPasswordSerializer,
     ChangePasswordSerializer,
@@ -269,9 +269,17 @@ class MeView(APIView):
 # ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 class ChangePasswordView(APIView):
-    """POST /api/auth/change-password/"""
+    """
+    POST /api/auth/change-password/
 
-    permission_classes = [IsAuthenticated]
+    الطلاب ممنوعون من تغيير كلمة مرورهم — تُدار من قبل الإدارة عبر
+    AdminResetPasswordView. IsStudentReadOnly يرفض الطرق غير الآمنة من
+    الطالب ويمرّر بقية الأدوار (أستاذ / مشرف كورسات / مدير) التي تغيّر
+    كلمتها ذاتياً من صفحة الحساب في لوحة التحكم.
+    """
+
+    # IsStudentReadOnly يفحص المصادقة بنفسه، فيغني عن IsAuthenticated.
+    permission_classes = [IsStudentReadOnly]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "change_password"
 
@@ -359,7 +367,26 @@ class StudentListCreateView(generics.ListCreateAPIView):
         )
 
 
-class StudentDetailView(generics.RetrieveUpdateDestroyAPIView):
+class DestroyWithUserMixin:
+    """
+    حذف ملف شخصي يحذف حساب المستخدم المرتبط به.
+
+    العلاقة OneToOne تتتالى من CustomUser إلى الملف لا العكس، فحذف الملف
+    وحده كان يترك صف المستخدم يتيماً واسمه محجوزاً إلى الأبد: يختفي الطالب
+    من كل القوائم، ثم يُرفض تسجيله من جديد بـ "اسم المستخدم مسجّل مسبقاً"
+    لحساب لا يراه أحد.
+
+    كل العلاقات الأخرى بـ CustomUser هي SET_NULL، فالكورسات والاختبارات
+    والدفعات التي أنشأها تبقى ويصير حقل المؤلِّف فارغاً.
+    """
+
+    def perform_destroy(self, instance):
+        user = instance.user
+        instance.delete()
+        user.delete()
+
+
+class StudentDetailView(DestroyWithUserMixin, generics.RetrieveUpdateDestroyAPIView):
     """GET / PATCH / DELETE /api/students/<id>/"""
 
     permission_classes = [IsAdminOrManager]
@@ -474,7 +501,7 @@ class TeacherListCreateView(generics.ListCreateAPIView):
         )
 
 
-class TeacherDetailView(generics.RetrieveUpdateDestroyAPIView):
+class TeacherDetailView(DestroyWithUserMixin, generics.RetrieveUpdateDestroyAPIView):
     """GET / PATCH / DELETE /api/teachers/<id>/"""
 
     permission_classes = [IsAdminOrManager]
@@ -918,7 +945,7 @@ class LectureSupervisorListCreateView(generics.ListCreateAPIView):
         )
 
 
-class LectureSupervisorDetailView(generics.RetrieveUpdateDestroyAPIView):
+class LectureSupervisorDetailView(DestroyWithUserMixin, generics.RetrieveUpdateDestroyAPIView):
     """GET / PATCH / DELETE /api/lecture-supervisors/<id>/ ??? ???????????? ??????"""
 
     permission_classes = [IsAdminOrManager]
@@ -950,13 +977,6 @@ class LectureSupervisorDetailView(generics.RetrieveUpdateDestroyAPIView):
         serializer.save()
         instance.refresh_from_db()
         return Response(LectureSupervisorProfileSerializer(instance).data)
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        user = instance.user
-        instance.delete()
-        user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class LectureSupervisorMeView(APIView):

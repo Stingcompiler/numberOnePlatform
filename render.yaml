@@ -23,7 +23,14 @@ services:
 
     # ── الخيارات المتعلقة بالبناء ──────────────────────────────────────────
     buildCommand: "./build.sh"
-    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120 --log-level info"
+    # ‎--timeout 600‎ لا 120: ضغط الوسائط كلها في نسخة احتياطية يتجاوز
+    # الدقيقتين، فكان gunicorn يقتل الـ worker في منتصف العمل — وهو سبب
+    # فشل النسخة "الكاملة" و"الملفات فقط" بينما تنجح "قاعدة البيانات".
+    #
+    # ‎--threads 6‎ لا 2: تنزيل حزمة من المتجر يحتجز خيطاً لدقائق على
+    # اتصال بطيء، وأربع فتحات تعني أن أربعة تنزيلات متزامنة توقف المنصة
+    # كلها. الخيوط شبه مجانية ذاكرياً لأنها تتشارك مساحة الـ worker.
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 6 --timeout 600 --log-level info"
 
     # ── التخزين الدائم لملفات الوسائط ─────────────────────────────────────
     # ⚠️  مطلوب يدوياً: Dashboard → الخدمة → Disks → Add Disk
@@ -33,7 +40,7 @@ services:
     disk:
       name: media-storage
       mountPath: /var/data/media
-      sizeGB: 1
+      sizeGB: 10
 
     # ── متغيرات البيئة ─────────────────────────────────────────────────────
     envVars:
@@ -52,6 +59,12 @@ services:
       #     BASE_DIR/media أي داخل نسخة الكود — ويُمحى مع كل عملية نشر.
       - key: MEDIA_ROOT
         value: "/var/data/media"
+
+      # النسخ الاحتياطية على نفس القرص الدائم، داخل مجلد مخفي.
+      # config/urls.py يستثني ".backups" من مسار /media/ العام حتى لا
+      # تُنزَّل نسخة قاعدة البيانات بلا مصادقة.
+      - key: BACKUP_STORAGE_DIR
+        value: "/var/data/media/.backups"
 
       # ALLOWED_HOSTS: الدومين المخصص + دومين Render
       - key: ALLOWED_HOSTS
@@ -86,4 +99,5 @@ databases:
     databaseName: number_platform
     user: number_platform_user
     region: frankfurt
-    plan: starter             # الخطة الفعلية المدفوعة
+    plan: basic-256mb         # يطابق الخطة القائمة فعلاً (خطط قواعد بيانات
+                              # Render لا تسمّى starter)

@@ -61,7 +61,7 @@ export function AuthProvider({ children }) {
   const isStudent           = user?.role === 'student'
   const isLectureSupervisor = user?.role === 'lecture_supervisor'
   const canManage           = isAdmin || isManager
-  const canManageLectures   = isAdmin || isManager || isLectureSupervisor
+  const canManageLectures   = isAdmin || isManager || isTeacher || isLectureSupervisor
 
   return (
     <AuthContext.Provider
