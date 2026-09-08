@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
+             xmlns:controls="clr-namespace:NumberOne.Desktop.Controls"
              x:Class="NumberOne.Desktop.Views.LessonView"
              x:Name="Root"
              x:DataType="vm:LessonViewModel">
@@ -15,11 +17,21 @@
     -->
 
     <ScrollView>
-        <Grid Padding="16" ColumnDefinitions="*,200" ColumnSpacing="12"
-              RowDefinitions="Auto">
+        <Grid Padding="16" ColumnSpacing="12" RowDefinitions="Auto">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <!--
+                    Collapsed to zero in fullscreen. The rail keeps its own
+                    IsVisible binding to Playlist.HasData; writing that property
+                    from code would override the binding and force the rail back
+                    on for a lesson that has no playlist at all.
+                -->
+                <ColumnDefinition x:Name="RailColumn" Width="200" />
+            </Grid.ColumnDefinitions>
 
             <!-- ══ Player and lesson ═════════════════════════════════════ -->
-            <VerticalStackLayout Grid.Column="0" Spacing="16" VerticalOptions="Start">
+            <VerticalStackLayout Grid.Column="0" x:Name="PlayerColumn"
+                                 Spacing="16" VerticalOptions="Start">
 
                 <VerticalStackLayout Style="{StaticResource StatePanel}"
                                      IsVisible="{Binding Lesson.IsLoading}">
@@ -36,7 +48,7 @@
                 <Border Style="{StaticResource WarningPanel}" IsVisible="{Binding Lesson.HasError}">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
-                                     Data="{StaticResource IconAlertCircle}"
+                                     Data="{ui:Icon Key=IconAlertCircle}"
                                      Stroke="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
                         <Label Grid.Column="1" Text="{Binding Lesson.ErrorMessage}"
                                Style="{StaticResource CopyLabel}" VerticalOptions="Center" />
@@ -56,7 +68,8 @@
                         The surround is #0B0F16 in both themes; a letterbox is
                         not theme-dependent.
                     -->
-                    <Border WidthRequest="920" HeightRequest="518"
+                    <Border x:Name="VideoFrame"
+                            WidthRequest="920" HeightRequest="518"
                             HorizontalOptions="Center"
                             Padding="0" StrokeThickness="1"
                             StrokeShape="RoundRectangle 8"
@@ -65,13 +78,15 @@
 
                         <Grid>
                             <!--
-                                LeftToRight, explicitly. The window is RTL and
-                                that cascades into the WebView, which mirrors
-                                everything the page draws — the video picture
-                                included. A flipped lecture is not a cosmetic
-                                problem: any text on the board reads backwards.
+                                Not a plain WebView. SecurePlayerWebView refuses
+                                every navigation that is not this lecture and
+                                grants no new windows at all, so "Watch on
+                                YouTube", the share sheet, the context menu and
+                                a middle-click lead nowhere. See its own summary
+                                for the three layers and why the visual one is
+                                the weakest.
                             -->
-                            <WebView x:Name="Player"
+                            <controls:SecurePlayerWebView x:Name="Player"
                                      FlowDirection="LeftToRight"
                                      Source="{Binding PlayerUrl}" />
 
@@ -107,6 +122,14 @@
                         </Grid>
                     </Border>
 
+                    <!--
+                        Everything below the picture, in one container so
+                        fullscreen can hide it with a single flag. Toggling the
+                        children individually would mean writing IsVisible over
+                        bindings that already own it.
+                    -->
+                    <VerticalStackLayout x:Name="BelowVideo" Spacing="16">
+
                     <!-- Server older than the app: say so rather than showing
                          an error frame the student cannot act on. -->
                     <Border Style="{StaticResource WarningPanel}"
@@ -121,7 +144,7 @@
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
                                      WidthRequest="13" HeightRequest="13"
-                                     Data="{StaticResource IconShield}" />
+                                     Data="{ui:Icon Key=IconShield}" />
                         <Label Grid.Column="1" x:Name="SecurityNotice"
                                Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
                     </Grid>
@@ -176,6 +199,7 @@
                         </Border>
                     </VerticalStackLayout>
                 </VerticalStackLayout>
+                    </VerticalStackLayout>
             </VerticalStackLayout>
 
             <!-- ══ محتويات الوحدة ════════════════════════════════════════ -->
@@ -185,7 +209,8 @@
                 my-lessons/{id}/ returns the lecture alone and knows nothing of
                 its neighbours.
             -->
-            <Border Grid.Column="1" Style="{StaticResource TableCard}"
+            <Border Grid.Column="1" x:Name="UnitRail"
+                    Style="{StaticResource TableCard}"
                     VerticalOptions="Start"
                     IsVisible="{Binding Playlist.HasData}">
                 <VerticalStackLayout>
@@ -230,7 +255,7 @@
                                                  WidthRequest="13" HeightRequest="13"
                                                  StrokeThickness="2"
                                                  IsVisible="{Binding IsCompleted}"
-                                                 Data="{StaticResource IconCheck}"
+                                                 Data="{ui:Icon Key=IconCheck}"
                                                  Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
 
                                     <BoxView Grid.ColumnSpan="3" Style="{StaticResource RowRule}" Margin="-12,0" />

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
              x:Class="NumberOne.Desktop.Views.ProfileView"
              x:DataType="vm:ProfileViewModel">
 
@@ -36,78 +37,75 @@
                 </Grid>
 
                 <!--
-                    Read-only fields drawn as inputs: the box says "this is your
-                    record" without implying it can be typed into. The one field
-                    that genuinely cannot change — نوع النظام — takes the
-                    disabled fill, so the difference is visible rather than
-                    discovered by clicking.
+                    A record, not a form.
+
+                    Each value used to sit in a bordered box - the style the top
+                    bar's search field uses - with its label above it, and the
+                    page read as something to fill in. Nothing on it is
+                    editable; there is not an input on the screen.
+
+                    So the boxes are gone and the card carries the edge instead
+                    of eight separate ones. Label small and muted, value below
+                    it, hairlines between rows: the same shape the الجهاز
+                    المرتبط card beside it was already using.
+
+                    نوع النظام is a category rather than something a student
+                    typed, so it takes a chip. It used to wear the disabled
+                    input fill, which only said anything while everything around
+                    it looked editable.
                 -->
-                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto"
-                      ColumnSpacing="16" RowSpacing="12">
-
-                    <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="4">
-                        <Label Text="اسم الطالب" Style="{StaticResource MutedLabel}" />
-                        <Border Style="{StaticResource TopBarField}">
-                            <Label Text="{Binding FullName}" Style="{StaticResource CellLabel}" />
-                        </Border>
+                <Border Style="{StaticResource Panel}">
+                    <VerticalStackLayout Spacing="14">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="اسم الطالب" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding FullName}" Style="{StaticResource CellLabelStrong}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                <Label Text="اسم المستخدم" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding Username}" Style="{StaticResource CellLabelStrong}"
+                                       FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView Style="{StaticResource RowRule}" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="رقم الهاتف" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding Phone}" Style="{StaticResource CellLabelStrong}"
+                                       FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                <Label Text="هاتف ولي الأمر" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding GuardianPhone}" Style="{StaticResource CellLabelStrong}"
+                                       FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView Style="{StaticResource RowRule}" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="اسم ولي الأمر" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding GuardianName}" Style="{StaticResource CellLabelStrong}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                <Label Text="السكن" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding Address}" Style="{StaticResource CellLabelStrong}" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView Style="{StaticResource RowRule}" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="المشرفة" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding SupervisorName}" Style="{StaticResource CellLabelStrong}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                <Label Text="نوع النظام" Style="{StaticResource MutedLabel}" />
+                                <Border Style="{StaticResource Chip}" HorizontalOptions="Start">
+                                    <Label Text="{Binding SystemTypeDisplay}" Style="{StaticResource ChipLabel}" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
                     </VerticalStackLayout>
-
-                    <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="4">
-                        <Label Text="اسم المستخدم" Style="{StaticResource MutedLabel}" />
-                        <Border Style="{StaticResource TopBarField}">
-                            <Label Text="{Binding Username}" Style="{StaticResource CellLabel}"
-                                   FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
-                        </Border>
-                    </VerticalStackLayout>
-
-                    <VerticalStackLayout Grid.Row="1" Grid.Column="0" Spacing="4">
-                        <Label Text="رقم الهاتف" Style="{StaticResource MutedLabel}" />
-                        <Border Style="{StaticResource TopBarField}">
-                            <Label Text="{Binding Phone}" Style="{StaticResource CellLabel}"
-                                   FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
-                        </Border>
-                    </VerticalStackLayout>
-
-                    <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="4">
-                        <Label Text="هاتف ولي الأمر" Style="{StaticResource MutedLabel}" />
-                        <Border Style="{StaticResource TopBarField}">
-                            <Label Text="{Binding GuardianPhone}" Style="{StaticResource CellLabel}"
-                                   FlowDirection="LeftToRight" HorizontalTextAlignment="Start" />
-                        </Border>
-                    </VerticalStackLayout>
-
-                    <VerticalStackLayout Grid.Row="2" Grid.Column="0" Spacing="4">
-                        <Label Text="اسم ولي الأمر" Style="{StaticResource MutedLabel}" />
-                        <Border Style="{StaticResource TopBarField}">
-                            <Label Text="{Binding GuardianName}" Style="{StaticResource CellLabel}" />
-                        </Border>
-                    </VerticalStackLayout>
-
-                    <VerticalStackLayout Grid.Row="2" Grid.Column="1" Spacing="4">
-                        <Label Text="السكن" Style="{StaticResource MutedLabel}" />
-                        <Border Style="{StaticResource TopBarField}">
-                            <Label Text="{Binding Address}" Style="{StaticResource CellLabel}" />
-                        </Border>
-                    </VerticalStackLayout>
-
-                    <VerticalStackLayout Grid.Row="3" Grid.Column="0" Spacing="4">
-                        <Label Text="المشرفة" Style="{StaticResource MutedLabel}" />
-                        <Border Style="{StaticResource TopBarField}">
-                            <Label Text="{Binding SupervisorName}"
-                                   Style="{StaticResource CellLabelSecondary}" />
-                        </Border>
-                    </VerticalStackLayout>
-
-                    <VerticalStackLayout Grid.Row="3" Grid.Column="1" Spacing="4">
-                        <Label Text="نوع النظام" Style="{StaticResource MutedLabel}" />
-                        <Border Style="{StaticResource TopBarField}"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource DisabledBgLight}, Dark={StaticResource DisabledBgDark}}">
-                            <Label Text="{Binding SystemTypeDisplay}"
-                                   Style="{StaticResource CellLabel}"
-                                   TextColor="{AppThemeBinding Light={StaticResource DisabledTextLight}, Dark={StaticResource DisabledTextDark}}" />
-                        </Border>
-                    </VerticalStackLayout>
-                </Grid>
+                </Border>
             </VerticalStackLayout>
 
             <!-- ══ الجهاز والملف المالي ══════════════════════════════════ -->
@@ -146,7 +144,7 @@
                                                 BackgroundColor="Transparent">
                                             <shapes:Path Style="{StaticResource IconPathMuted}"
                                                          WidthRequest="13" HeightRequest="13"
-                                                         Data="{StaticResource IconCopy}" />
+                                                         Data="{ui:Icon Key=IconCopy}" />
                                             <Border.GestureRecognizers>
                                                 <TapGestureRecognizer Command="{Binding CopyDeviceIdCommand}" />
                                             </Border.GestureRecognizers>
@@ -185,14 +183,30 @@
                         figure that rides along on /auth/me/ is the balance. The
                         two rows are omitted rather than filled with a guess.
                     -->
-                    <Border Style="{StaticResource TableCard}">
-                        <Grid HeightRequest="40" Padding="16,0" ColumnDefinitions="*,Auto">
-                            <Label Grid.Column="0" Text="المتبقي"
-                                   Style="{StaticResource CellLabelStrong}" />
-                            <Label Grid.Column="1" Text="{Binding BalanceLabel}"
-                                   Style="{StaticResource CellLabelStrong}"
-                                   TextColor="{AppThemeBinding Light={StaticResource WarningLight}, Dark={StaticResource WarningDark}}" />
-                        </Grid>
+                    <!--
+                        A figure, not a one-row table.
+
+                        It sat in a TableCard as a single 40px row, which is the
+                        shape of a table with one line in it - and read as the
+                        least important thing on the screen rather than the
+                        number a student came to check. It is set the way the
+                        dashboard sets its figures, in the same Panel the two
+                        cards above it use.
+
+                        The colour now says something. Amber used to be painted
+                        on every balance, so an account with nothing to pay
+                        carried the same warning as one behind on fees; it is
+                        the ordinary ink when the account is settled.
+                    -->
+                    <Border Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="المتبقي" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding BalanceLabel}"
+                                   Style="{StaticResource StatValue}"
+                                   TextColor="{Binding HasOutstandingBalance, Converter={StaticResource BalanceInk}}" />
+                            <Label Text="{Binding BalanceCaption}"
+                                   Style="{StaticResource StatCaption}" />
+                        </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
             </VerticalStackLayout>

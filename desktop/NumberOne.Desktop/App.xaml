@@ -37,6 +37,7 @@
             <local:SelectedTabBorderConverter x:Key="SelectedTabBorder" />
             <local:CompletedInkConverter x:Key="CompletedInk" />
             <local:IconKeyConverter x:Key="IconKey" />
+            <local:BalanceInkConverter x:Key="BalanceInk" />
             <local:EnabledOpacityConverter x:Key="EnabledOpacity" />
             <local:ZeroToTrueConverter x:Key="ZeroToTrue" />
             <local:ExpandChevronConverter x:Key="ExpandChevron" />

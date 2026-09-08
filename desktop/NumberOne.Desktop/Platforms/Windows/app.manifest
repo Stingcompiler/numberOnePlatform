@@ -12,6 +12,23 @@
       <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2, PerMonitor</dpiAwareness>
 
       <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+
+      <!--
+        Makes this process's ANSI code page UTF-8.
+
+        The app's name is Arabic, and it was reaching the taskbar as
+        "????? ?????? ???? ??" - one question mark per letter. The string is
+        correct UTF-16 in the assembly and the window holds it fine when
+        written with SetWindowTextW, so something between the two was
+        flattening it to the machine's ANSI code page, which has no Arabic in
+        it. Writing the title again after the framework only wins a race, and
+        every other Arabic string that takes the same path would still be
+        wrong.
+
+        With this, that conversion is UTF-8 in both directions and nothing is
+        lost. Windows 10 1903 and later; this app already requires 10.0.19041.
+      -->
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
     </windowsSettings>
   </application>
 </assembly>

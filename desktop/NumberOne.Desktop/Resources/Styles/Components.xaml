@@ -28,7 +28,22 @@
         <Setter Property="StrokeThickness" Value="1.75" />
         <Setter Property="StrokeLineCap" Value="Round" />
         <Setter Property="StrokeLineJoin" Value="Round" />
-        <Setter Property="Fill" Value="Transparent" />
+
+        <!--
+            NO Fill, deliberately.
+
+            It was Transparent, which is a brush like any other - so MAUI ran
+            its fill path for every icon, and filling is implemented as "clip to
+            the shape, then paint a rectangle". These icons are open strokes
+            with nothing enclosed, so the region being clipped to has no area,
+            and combining that into a clip the container already set gave
+            Direct2D a bad number: COMException 0x88990011 out of
+            ShapeDrawable.DrawFillPath, which left the icon undrawn.
+
+            That is what "the icons disappear" was. Unset, the fill path is
+            skipped and only the stroke is drawn - which is all a line icon
+            ever needed.
+        -->
         <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
         <Setter Property="VerticalOptions" Value="Center" />
         <Setter Property="HorizontalOptions" Value="Center" />
@@ -200,6 +215,47 @@
 
     <Style x:Key="StatCaption" TargetType="Label" BasedOn="{StaticResource MutedLabel}">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+    </Style>
+
+    <!-- ── Quick access ─────────────────────────────────────────────────── -->
+
+    <!--
+        A shortcut tile: a tinted icon plate over a centred label.
+        The whole tile is the target, and hover lifts the surface rather than
+        the icon — a card that only responds under its icon reads as broken.
+    -->
+    <Style x:Key="QuickTile" TargetType="Border" BasedOn="{StaticResource Panel}">
+        <Setter Property="Padding" Value="12,16" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource HoverLight}, Dark={StaticResource HoverDark}}" />
+                            <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource BorderStrongLight}, Dark={StaticResource BorderStrongDark}}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <!-- The 40px plate the glyph sits on. Its fill is the tile's hue at 8%. -->
+    <Style x:Key="QuickTilePlate" TargetType="Border">
+        <Setter Property="WidthRequest" Value="40" />
+        <Setter Property="HeightRequest" Value="40" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 10" />
+        <Setter Property="HorizontalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="QuickTileLabel" TargetType="Label">
+        <Setter Property="FontSize" Value="{StaticResource FontSecondary}" />
+        <Setter Property="FontFamily" Value="{StaticResource FontUiMedium}" />
+        <Setter Property="HorizontalTextAlignment" Value="Center" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
     </Style>
 
     <!-- ── Sidebar ──────────────────────────────────────────────────────── -->

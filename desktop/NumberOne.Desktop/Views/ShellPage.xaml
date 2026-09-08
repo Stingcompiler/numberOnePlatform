@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
              x:Class="NumberOne.Desktop.Views.ShellPage"
              FlowDirection="RightToLeft"
              BackgroundColor="{AppThemeBinding Light={StaticResource BgLight}, Dark={StaticResource BgDark}}">
@@ -75,7 +76,7 @@
                                  Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                         <shapes:Path Grid.Column="0" x:Name="NavHomeIcon"
                                      Style="{StaticResource IconPath}"
-                                     Data="{StaticResource IconHome}" />
+                                     Data="{ui:Icon Key=IconHome}" />
                         <Label Grid.Column="1" x:Name="NavHomeLabel" Text="الرئيسية"
                                Style="{StaticResource NavLabel}" />
                         <Grid.GestureRecognizers>
@@ -94,11 +95,30 @@
                                  Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                         <shapes:Path Grid.Column="0" x:Name="NavCoursesIcon"
                                      Style="{StaticResource IconPath}"
-                                     Data="{StaticResource IconCourses}" />
+                                     Data="{ui:Icon Key=IconCourses}" />
                         <Label Grid.Column="1" x:Name="NavCoursesLabel" Text="الكورسات"
                                Style="{StaticResource NavLabel}" />
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnCoursesClicked" />
+                        </Grid.GestureRecognizers>
+                    </Grid>
+
+                    <Grid x:Name="NavLectures" Style="{StaticResource NavRow}"
+                          ColumnDefinitions="Auto,*">
+                        <Border x:Name="NavLecturesBg" Grid.ColumnSpan="2" Margin="-10,0"
+                                Padding="0" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" />
+                        <BoxView x:Name="NavLecturesBar" Grid.ColumnSpan="2"
+                                 WidthRequest="2" Margin="-10,8" IsVisible="False"
+                                 HorizontalOptions="Start"
+                                 Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <shapes:Path Grid.Column="0" x:Name="NavLecturesIcon"
+                                     Style="{StaticResource IconPath}"
+                                     Data="{ui:Icon Key=IconLecture}" />
+                        <Label Grid.Column="1" x:Name="NavLecturesLabel" Text="المحاضرات"
+                               Style="{StaticResource NavLabel}" />
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLecturesClicked" />
                         </Grid.GestureRecognizers>
                     </Grid>
 
@@ -113,7 +133,7 @@
                                  Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                         <shapes:Path Grid.Column="0" x:Name="NavLiveIcon"
                                      Style="{StaticResource IconPath}"
-                                     Data="{StaticResource IconLive}" />
+                                     Data="{ui:Icon Key=IconLive}" />
                         <Label Grid.Column="1" x:Name="NavLiveLabel" Text="البث المباشر"
                                Style="{StaticResource NavLabel}" />
                         <Grid.GestureRecognizers>
@@ -132,7 +152,7 @@
                                  Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                         <shapes:Path Grid.Column="0" x:Name="NavExamsIcon"
                                      Style="{StaticResource IconPath}"
-                                     Data="{StaticResource IconExams}" />
+                                     Data="{ui:Icon Key=IconExams}" />
                         <Label Grid.Column="1" x:Name="NavExamsLabel"
                                Text="الإختبارات والإمتحانات"
                                Style="{StaticResource NavLabel}" LineBreakMode="TailTruncation" />
@@ -152,7 +172,7 @@
                                  Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                         <shapes:Path Grid.Column="0" x:Name="NavResultsIcon"
                                      Style="{StaticResource IconPath}"
-                                     Data="{StaticResource IconResults}" />
+                                     Data="{ui:Icon Key=IconResults}" />
                         <Label Grid.Column="1" x:Name="NavResultsLabel" Text="النتائج"
                                Style="{StaticResource NavLabel}" />
                         <Grid.GestureRecognizers>
@@ -171,7 +191,7 @@
                                  Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                         <shapes:Path Grid.Column="0" x:Name="NavNotificationsIcon"
                                      Style="{StaticResource IconPath}"
-                                     Data="{StaticResource IconBell}" />
+                                     Data="{ui:Icon Key=IconBell}" />
                         <Label Grid.Column="1" x:Name="NavNotificationsLabel" Text="الإشعارات"
                                Style="{StaticResource NavLabel}" />
                         <!--
@@ -210,7 +230,7 @@
                                  Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                         <shapes:Path Grid.Column="0" x:Name="NavProfileIcon"
                                      Style="{StaticResource IconPath}"
-                                     Data="{StaticResource IconUser}" />
+                                     Data="{ui:Icon Key=IconUser}" />
                         <Label Grid.Column="1" x:Name="NavProfileLabel" Text="حسابي"
                                Style="{StaticResource NavLabel}" />
                         <Grid.GestureRecognizers>
@@ -221,7 +241,7 @@
                     <Grid x:Name="NavSignOut" Style="{StaticResource NavRow}"
                           ColumnDefinitions="Auto,*">
                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
-                                     Data="{StaticResource IconSignOut}" />
+                                     Data="{ui:Icon Key=IconSignOut}" />
                         <Label Grid.Column="1" x:Name="NavSignOutLabel" Text="تسجيل الخروج"
                                Style="{StaticResource NavLabel}" />
                         <Grid.GestureRecognizers>
@@ -272,7 +292,7 @@
                                     <shapes:Path x:Name="ThemeLightIcon"
                                                  Style="{StaticResource IconPathSmall}"
                                                  StrokeThickness="1.75"
-                                                 Data="{StaticResource IconSun}" />
+                                                 Data="{ui:Icon Key=IconSun}" />
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnLightThemeClicked" />
                                     </Border.GestureRecognizers>
@@ -283,7 +303,7 @@
                                     <shapes:Path x:Name="ThemeDarkIcon"
                                                  Style="{StaticResource IconPathSmall}"
                                                  StrokeThickness="1.75"
-                                                 Data="{StaticResource IconMoon}" />
+                                                 Data="{ui:Icon Key=IconMoon}" />
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnDarkThemeClicked" />
                                     </Border.GestureRecognizers>
@@ -296,10 +316,18 @@
         </Grid>
 
         <!-- ══ Top bar and content ═══════════════════════════════════════ -->
-        <Grid Grid.Column="1" RowDefinitions="48,Auto,*">
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <!-- Collapsed to zero for a fullscreen lecture. Hiding the bar
+                     alone would leave its 48px behind as a dead band. -->
+                <RowDefinition x:Name="TopBarRow" Height="48" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
             <!-- ── Top bar ───────────────────────────────────────────────── -->
-            <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto"
+            <Grid Grid.Row="0" x:Name="TopBar"
+                  ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto"
                   ColumnSpacing="16" Padding="24,0"
                   BackgroundColor="{AppThemeBinding Light={StaticResource BgLight}, Dark={StaticResource BgDark}}">
 
@@ -312,7 +340,7 @@
                         Style="{StaticResource IconButton}">
                     <shapes:Path Style="{StaticResource IconPathSmall}"
                                  StrokeThickness="2"
-                                 Data="{StaticResource IconChevronRight}" />
+                                 Data="{ui:Icon Key=IconChevronRight}" />
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnBackClicked" />
                     </Border.GestureRecognizers>
@@ -321,7 +349,7 @@
                 <Border Grid.Column="1" x:Name="RailToggle" Style="{StaticResource IconButtonBare}">
                     <shapes:Path Style="{StaticResource IconPathMuted}"
                                  WidthRequest="15" HeightRequest="15"
-                                 Data="{StaticResource IconMenu}" />
+                                 Data="{ui:Icon Key=IconMenu}" />
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnRailToggleClicked" />
                     </Border.GestureRecognizers>
@@ -343,7 +371,7 @@
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                             <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
                                          WidthRequest="14" HeightRequest="14"
-                                         Data="{StaticResource IconSearch}" />
+                                         Data="{ui:Icon Key=IconSearch}" />
                             <Entry Grid.Column="1" x:Name="SearchEntry"
                                    Style="{StaticResource TopBarEntry}"
                                    TextChanged="OnSearchChanged" />
@@ -353,7 +381,7 @@
                     <Border x:Name="TopBarBell" Style="{StaticResource IconButtonBare32}">
                         <Grid>
                             <shapes:Path Style="{StaticResource IconPath}"
-                                         Data="{StaticResource IconBell}" />
+                                         Data="{ui:Icon Key=IconBell}" />
                             <!-- The count badge overlaps the bell's leading
                                  corner, ringed in the page background so it
                                  reads as sitting above the icon. -->
@@ -382,7 +410,7 @@
                         <HorizontalStackLayout Spacing="6">
                             <shapes:Path Style="{StaticResource IconPathMuted}"
                                          WidthRequest="14" HeightRequest="14"
-                                         Data="{StaticResource IconMonitor}" />
+                                         Data="{ui:Icon Key=IconMonitor}" />
                             <Label x:Name="DeviceTypeLabel"
                                    Style="{StaticResource CellLabelSecondary}"
                                    FlowDirection="LeftToRight" />
@@ -405,7 +433,7 @@
                          Color="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
                 <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
                              WidthRequest="14" HeightRequest="14"
-                             Data="{StaticResource IconWifiOff}"
+                             Data="{ui:Icon Key=IconWifiOff}"
                              Stroke="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
                 <Label Grid.Column="1" x:Name="OfflineLabel" VerticalOptions="Center"
                        FontSize="{StaticResource FontSecondary}"

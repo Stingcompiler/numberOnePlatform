@@ -9,10 +9,209 @@ public partial class App : Application
 {
     private readonly IServiceProvider _services;
 
+    /// <summary>Where the student's light/dark choice is remembered.</summary>
+    public const string ThemePreferenceKey = "app_theme";
+
     public App(IServiceProvider services)
     {
         InitializeComponent();
         _services = services;
+
+        RecordCrashes();
+        ApplyStartupTheme();
+    }
+
+    /// <summary>Where an unhandled exception is written. Also shown to the student.</summary>
+    public static string CrashLogPath =>
+        Path.Combine(FileSystem.AppDataDirectory, "crash.log");
+
+    /// <summary>
+    /// Writes anything that gets away to a file.
+    ///
+    /// This app runs on school machines with no debugger and no console, so an
+    /// unhandled exception is currently a window that closes and a student who
+    /// says "it broke". The type, the message and the stack are what turn that
+    /// into something fixable, and they have to survive the process ending to
+    /// be worth anything.
+    ///
+    /// Appends rather than overwrites: the first failure is usually the real
+    /// one, and a crash on the way out of a crash must not erase it.
+    ///
+    /// This does NOT stop the crash. It only makes it legible — nothing here
+    /// marks an exception handled, because swallowing an unknown fault would
+    /// leave the app running in a state nobody has reasoned about.
+    /// </summary>
+    private static void RecordCrashes()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            Record("AppDomain", e.ExceptionObject as Exception);
+
+        // A faulted task nobody awaited. The write paths are guarded now, but
+        // an async void handler can still surface here.
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Record("UnobservedTask", e.Exception);
+            e.SetObserved();
+        };
+
+        // A section that failed for a reason that is not the network. It shows
+        // the student a failed panel rather than closing the app, so without
+        // this the defect behind it would leave no trace at all.
+        Core.ViewModels.SectionDiagnostics.Unexpected = ex => Record("Section", ex);
+    }
+
+    /// <summary>
+    /// Records a fault the platform caught. Public because WinUI raises its own
+    /// UnhandledException on the UI thread, and that handler lives in the
+    /// platform App class rather than here.
+    /// </summary>
+    public static void RecordUnhandled(string source, Exception? ex) => Record(source, ex);
+
+    /// <summary>
+    /// Puts the fault in front of the student, wherever it happened.
+    ///
+    /// Shows the exception type, its message and the first line of the stack —
+    /// which names the method — rather than a polite apology. Nobody has
+    /// diagnosed this yet, and a person who can read those three things back is
+    /// the shortest path to a fix. Everything else is in the crash log.
+    /// </summary>
+    public static void ShowFault(Exception? ex)
+    {
+        if (ex is null) return;
+        if (IsPlatformFault(ex)) return;
+
+        var page = Current?.Windows.FirstOrDefault()?.Page;
+        if (page is null) return;
+
+        var where = ex.StackTrace?
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault()?.Trim() ?? "";
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            try
+            {
+                await page.DisplayAlertAsync(
+                    "حدث خطأ",
+                    $"{ex.GetType().Name}: {ex.Message}\n\n{where}\n\n{CrashLogPath}",
+                    "حسناً");
+            }
+            catch (Exception)
+            {
+                // No page, or a dialog already up. The log still has it.
+            }
+        });
+    }
+
+    /// <summary>
+    /// True for a fault that arrived from below our own code.
+    ///
+    /// The test is the stack, not the exception type. WinUI raises these
+    /// through the app's UnhandledException with NO MANAGED FRAMES AT ALL: the
+    /// failure happened inside the compositor, inside Direct2D, or in a WinRT
+    /// interface cast, and nothing of ours appears in it. The app carries on -
+    /// every one of these has been followed by a frame that drew correctly.
+    ///
+    /// Four have been seen on this app. DCOMPOSITION_ERROR_SURFACE_BEING_
+    /// RENDERED and 0x80070490, when a frame is disturbed mid-render;
+    /// 0x88990011 (D2DERR_BAD_NUMBER) from a shape Direct2D could not build,
+    /// which is fixed at its source now that the icons no longer ask to be
+    /// filled; and InvalidCastException "No such interface supported" -
+    /// E_NOINTERFACE through the WinRT projection - which appears occasionally
+    /// after signing out and back in, and which I have neither reproduced nor
+    /// explained.
+    ///
+    /// All of them are recorded. What stops is the dialog: putting
+    /// "InvalidCastException: No such interface supported" in front of a
+    /// student, over a dashboard that is working, tells them nothing they can
+    /// act on about a fault that has already passed.
+    ///
+    /// Anything carrying a managed frame still surfaces. That is where our own
+    /// bugs live, and this must never become a way of not seeing them.
+    /// </summary>
+    private static bool IsPlatformFault(Exception ex)
+    {
+        // A fault of ours names at least one of our own methods.
+        if (!string.IsNullOrWhiteSpace(ex.StackTrace)) return false;
+
+        return ex is System.Runtime.InteropServices.COMException or InvalidCastException;
+    }
+
+    /// <summary>
+    /// Signatures already written, with how many times. Compositor faults
+    /// repeat in bursts of five and six per navigation.
+    /// </summary>
+    private static readonly Dictionary<string, int> Seen = new();
+
+    private const int KeepPerSignature = 3;
+    private const long MaxLogBytes = 512 * 1024;
+
+    private static void Record(string source, Exception? ex)
+    {
+        if (ex is null) return;
+
+        // A recoverable render fault repeats without limit - 373 of the first
+        // 377 entries in the field were the same compositor message, and the
+        // two real faults in that file were buried among them. Keeping a few of
+        // each proves it happened and how often; keeping every one costs the
+        // log its only purpose.
+        if (IsPlatformFault(ex))
+        {
+            var signature = ex.GetType().Name + ":" + ex.HResult + ":" + ex.Message;
+
+            lock (Seen)
+            {
+                Seen.TryGetValue(signature, out var count);
+                Seen[signature] = count + 1;
+
+                if (count >= KeepPerSignature) return;
+            }
+        }
+
+        try
+        {
+            // A student's machine is not somewhere a log may grow for ever.
+            // Starting over loses history, but the useful entry is nearly
+            // always the most recent one.
+            if (new FileInfo(CrashLogPath) is { Exists: true } file && file.Length > MaxLogBytes)
+                File.Delete(CrashLogPath);
+        }
+        catch (Exception)
+        {
+            // Cannot stat or delete it; the append below still tries.
+        }
+
+        try
+        {
+            var entry =
+                $"{Environment.NewLine}=== {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss} · {source} ==={Environment.NewLine}" +
+                ex + Environment.NewLine;
+
+            File.AppendAllText(CrashLogPath, entry);
+        }
+        catch (Exception)
+        {
+            // Logging a crash must never cause one. A full disk or a locked
+            // file is not worth taking the app down a second time for.
+        }
+    }
+
+    /// <summary>
+    /// Light unless the student has chosen dark, pinned before the first window
+    /// exists.
+    ///
+    /// It has to happen here rather than in the shell: login and both blocked
+    /// screens are shown before a shell is ever built, and setting the theme
+    /// there would leave those three following the OS. School and lab machines
+    /// are often left on the Windows dark default, so a student who had never
+    /// touched the setting would meet a dark sign-in page while the dashboard,
+    /// the printed handouts and the design itself are all light.
+    /// </summary>
+    private static void ApplyStartupTheme()
+    {
+        var stored = Preferences.Default.Get(ThemePreferenceKey, "");
+
+        Current!.UserAppTheme = stored == "dark" ? AppTheme.Dark : AppTheme.Light;
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
@@ -34,11 +233,34 @@ public partial class App : Application
 
         var window = new Window(navigation)
         {
-            Title = UiText.BrandName,
+            // Deliberately blank, and set on the window handle instead.
+            //
+            // WinUI keeps its own copy of the title and writes it over the
+            // window text whenever that copy changes — and its copy is stored
+            // through a conversion that sizes the buffer in characters while
+            // UTF-8 Arabic takes two bytes each. A twenty character name came
+            // back as eleven, measured on the running window, whether it was
+            // set through MAUI, through WinUI's own Title, or written to the
+            // handle underneath it.
+            //
+            // Left empty, WinUI has nothing to write back, and the real name is
+            // set on the handle where it survives intact. See WindowChrome.
+            Title = string.Empty,
 
-            // The whole UI is RTL. Set on the window so it cascades to every
-            // page, rather than being repeated and eventually forgotten on one.
-            FlowDirection = FlowDirection.RightToLeft,
+            // Deliberately NOT RightToLeft, though everything inside it is.
+            //
+            // A window's flow direction is what Windows mirrors the title bar
+            // by: the caption buttons move to the left edge and the title is
+            // laid out from the opposite side. MAUI's own title strip does not
+            // move with them, so the app name and the close button ended up
+            // drawn over each other, with the window icon landing in the middle
+            // of the text.
+            //
+            // The pages carry RightToLeft themselves - the NavigationPage above
+            // sets it, which is the setting that actually reaches them - so the
+            // UI reads right to left either way. Arabic in a left-to-right
+            // caption is still shaped and ordered correctly; bidi handles the
+            // text, and only the chrome around it stays where Windows puts it.
 
             Width = 1440,
             Height = 900,
@@ -46,11 +268,112 @@ public partial class App : Application
             MinimumHeight = 700,
         };
 
-        window.Created += (_, _) => ProtectFromCapture(window);
+        window.Created += (_, _) =>
+        {
+            ProtectFromCapture(window);
+            UseSystemTitleBar(window);
+            ApplyWindowChrome(window);
+            Maximize(window);
+
+            // And again once startup has finished writing.
+            //
+            // The framework sets the title itself, last, so anything applied
+            // here is overwritten: first with a question mark per Arabic
+            // letter, and once the process was made UTF-8, with the name cut
+            // off after eleven characters — the same conversion sizing a
+            // buffer in characters while UTF-8 Arabic takes two bytes each.
+            // Both were read back off the running window.
+            //
+            // It writes only during startup: a title set afterwards was still
+            // intact twenty characters long and four seconds later, so the last
+            // word is there for the taking. Created is the hook because
+            // Activated never arrives for this window — a delayed pass hung off
+            // it silently did nothing, which is how that was found.
+            window.Dispatcher.DispatchDelayed(
+                TimeSpan.FromMilliseconds(1500), () => ApplyWindowChrome(window));
+        };
+
+        // Kept as well, for the day it starts firing: re-applying is cheap and
+        // the clearing of the mirror bit is guarded by a check.
+        window.Activated += (_, _) => ApplyWindowChrome(window);
 
         WireNavigation();
 
+        // A student who never signed out should land in the app, not at a form.
+        // Deliberately not awaited: CreateWindow is synchronous, and blocking
+        // it on a network call would hold the first frame behind the server.
+        _ = RestoreSessionAsync(navigation);
+
         return window;
+    }
+
+    /// <summary>
+    /// Opens straight into the app when the machine still holds a live session.
+    ///
+    /// The login page stays the navigation root either way, so sign-out and an
+    /// expired session keep working exactly as before — both pop back to it.
+    /// This only decides whether the shell is pushed on top before the student
+    /// ever sees the form.
+    /// </summary>
+    private async Task RestoreSessionAsync(NavigationPage navigation)
+    {
+        var login = _services.GetRequiredService<LoginViewModel>();
+        var auth = _services.GetRequiredService<AuthService>();
+
+        login.IsRestoringSession = true;
+
+        try
+        {
+            var restore = await auth.RestoreSessionAsync();
+
+            // Unverified counts. The tokens are there and the server could not
+            // be asked; sending the student to a login form that also cannot
+            // reach the server would strand them.
+            if (restore is not (SessionRestore.Restored or SessionRestore.Unverified))
+                return;
+
+            await MainThread.InvokeOnMainThreadAsync(() => PushShellAsync(navigation));
+        }
+        catch (Exception)
+        {
+            // Nothing here may take the launch down. Falling through leaves the
+            // student on the login page, which always works.
+        }
+        finally
+        {
+            login.IsRestoringSession = false;
+        }
+    }
+
+    /// <summary>
+    /// Pushes the signed-in shell. Shared by the restore above and the
+    /// SignedIn handler, so both wire the sign-out return the same way.
+    /// </summary>
+    private async Task PushShellAsync(NavigationPage navigation)
+    {
+        var shell = _services.GetRequiredService<ShellPage>();
+
+        // No back arrow in the title bar.
+        //
+        // NavigationPage puts one there for any page pushed onto it, and the
+        // only thing under the shell is the login form — so the arrow at the
+        // top of the window popped a signed-in student back to the sign-in
+        // screen, and took the render thread down with it on the way
+        // (COMException 0x88990011, D2DERR_BAD_NUMBER, out of OnDraw).
+        //
+        // There is no route back from the shell by design: the way out of a
+        // session is تسجيل الخروج, which clears the tokens. An arrow that
+        // returns to a login form while the session is still live is not a
+        // shortcut for that, it is a way to a screen with no way forward.
+        NavigationPage.SetHasBackButton(shell, false);
+
+        shell.SignedOut += async (_, _) =>
+        {
+            if (Current?.Windows.FirstOrDefault()?.Page is NavigationPage back)
+                await back.PopToRootAsync();
+        };
+
+        await navigation.PushAsync(shell);
     }
 
     /// <summary>
@@ -73,6 +396,79 @@ public partial class App : Application
     }
 
     /// <summary>
+    /// Lets Windows draw the title bar instead of MAUI.
+    ///
+    /// MAUI extends its own strip into the caption area and writes the app
+    /// title into it. That strip is part of the window content, so it inherits
+    /// the RightToLeft flow the rest of the UI needs — while the caption
+    /// buttons stay where the system put them. The title then starts at the
+    /// same edge the close button occupies and the two sit on top of each
+    /// other, which is what a student sees the moment the app opens.
+    ///
+    /// Handing the bar back to the system fixes it at the source rather than
+    /// nudging the text clear: Windows has drawn right-to-left captions for
+    /// decades, and puts the buttons and the title on opposite edges without
+    /// being asked. The app already draws its own header inside the content,
+    /// so nothing of the design is lost with the strip.
+    /// </summary>
+    private static void UseSystemTitleBar(Window window)
+    {
+#if WINDOWS
+        if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window platformWindow)
+            platformWindow.ExtendsContentIntoTitleBar = false;
+#endif
+    }
+
+    /// <summary>
+    /// Hands the window handle to the Win32 frame fixes.
+    ///
+    /// Both of them — the mirrored caption and the question-mark title — were
+    /// measured on the running window after being "fixed" through the managed
+    /// APIs, so they are applied where they were observed. See WindowChrome.
+    /// </summary>
+    private static void ApplyWindowChrome(Window window)
+    {
+#if WINDOWS
+        if (window.Handler?.PlatformView is not Microsoft.UI.Xaml.Window platformWindow) return;
+
+        Platforms.Windows.WindowChrome.Apply(
+            WinRT.Interop.WindowNative.GetWindowHandle(platformWindow),
+            UiText.BrandName);
+#endif
+    }
+
+    /// <summary>
+    /// Opens maximised.
+    ///
+    /// The Width and Height on the Window are the restored size — what the
+    /// student gets when they un-maximise — not the opening size, so they stay.
+    /// This app is a workspace: tables with six and seven columns, a 920x518
+    /// lecture surface, a sidebar and a unit rail either side of it. At the
+    /// 1024 minimum those all fit, but only just, and nobody opens a lecture
+    /// app to look at something else beside it.
+    ///
+    /// Maximised, not fullscreen: fullscreen takes the title bar and the
+    /// student's own way to close or move the window with it, and the app
+    /// already has an in-lecture expand for the one place that wants the whole
+    /// screen.
+    /// </summary>
+    private static void Maximize(Window window)
+    {
+#if WINDOWS
+        if (window.Handler?.PlatformView is not Microsoft.UI.Xaml.Window platformWindow) return;
+
+        var handle = WinRT.Interop.WindowNative.GetWindowHandle(platformWindow);
+        var id = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(handle);
+
+        if (Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id) is { } appWindow &&
+            appWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter)
+        {
+            presenter.Maximize();
+        }
+#endif
+    }
+
+    /// <summary>
     /// Routes the auth flow. Kept here rather than in the pages so the view
     /// models stay free of navigation concerns and remain testable headless.
     /// </summary>
@@ -82,15 +478,8 @@ public partial class App : Application
 
         login.SignedIn += async (_, _) =>
         {
-            var shell = _services.GetRequiredService<ShellPage>();
-            shell.SignedOut += async (_, _) =>
-            {
-                if (Current?.Windows.FirstOrDefault()?.Page is NavigationPage back)
-                    await back.PopToRootAsync();
-            };
-
             if (Current?.Windows.FirstOrDefault()?.Page is NavigationPage navigation)
-                await navigation.PushAsync(shell);
+                await PushShellAsync(navigation);
         };
 
         login.Blocked += async (_, state) =>

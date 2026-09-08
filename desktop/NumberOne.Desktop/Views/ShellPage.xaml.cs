@@ -17,7 +17,6 @@ public partial class ShellPage : ContentPage
     private readonly StudentApi _api;
     private readonly IWindowProtection _protection;
     private readonly IDeviceIdentityProvider _device;
-    private readonly HomeView _home;
 
     /// <summary>
     /// The view currently hosted, when it owns a timer. The lesson player and
@@ -46,17 +45,13 @@ public partial class ShellPage : ContentPage
     private bool _railExpanded = true;
 
     /// <summary>The routes the sidebar can mark as current.</summary>
-    private enum Route { Home, Courses, Live, Exams, Results, Notifications, Profile }
-
-    /// <summary>Remembers the student's light/dark choice across launches.</summary>
-    private const string ThemePreferenceKey = "app_theme";
+    private enum Route { Home, Courses, Lectures, Live, Exams, Results, Notifications, Profile }
 
     public ShellPage(
         AuthService auth,
         StudentApi api,
         IWindowProtection protection,
-        IDeviceIdentityProvider device,
-        HomeView home)
+        IDeviceIdentityProvider device)
     {
         InitializeComponent();
 
@@ -64,7 +59,6 @@ public partial class ShellPage : ContentPage
         _api = api;
         _protection = protection;
         _device = device;
-        _home = home;
 
         var user = auth.CurrentUser;
         SidebarStudentName.Text = user?.WatermarkName ?? "";
@@ -79,16 +73,6 @@ public partial class ShellPage : ContentPage
         OfflineLabel.Text = SessionViewModel.OfflineMessage;
 
         ApplyStoredTheme();
-
-        // The dashboard's cross-links and row actions are navigation, which
-        // belongs to the host. Wired once: HomeView is a singleton instance
-        // reused across visits, unlike the screens rebuilt in Show*.
-        _home.ViewModel.ShowExamsRequested += (_, _) => ShowExams();
-        _home.ViewModel.ShowLiveRequested += (_, _) => ShowLive();
-        _home.ViewModel.ShowNotificationsRequested += (_, _) => ShowNotifications();
-        _home.ViewModel.CourseOpened += (_, courseId) => ShowCourseDetail(courseId);
-        _home.ViewModel.ExamStarted += (_, examId) => ShowExamRunner(examId);
-        _home.ViewModel.Toasted += (_, message) => ShowToast(message.Text, message.Kind);
 
         // Connectivity is polled by the platform, not inferred from a failed
         // request: a single 500 is not the same as being offline, and treating
@@ -120,15 +104,22 @@ public partial class ShellPage : ContentPage
 
     // ── Navigation ───────────────────────────────────────────────────────────
 
-    private void OnHomeClicked(object? sender, EventArgs e) => ShowHome();
-    private void OnCoursesClicked(object? sender, EventArgs e) => ShowCourses();
-    private void OnLiveClicked(object? sender, EventArgs e) => ShowLive();
-    private void OnExamsClicked(object? sender, EventArgs e) => ShowExams();
-    private void OnResultsClicked(object? sender, EventArgs e) => ShowResults();
-    private void OnNotificationsClicked(object? sender, EventArgs e) => ShowNotifications();
-    private void OnProfileClicked(object? sender, EventArgs e) => ShowProfile();
+    // Every one of these goes through Navigate: the sidebar rows are tap
+    // handlers too, so they carry the same hazard as a table row, and a screen
+    // that fails to build must report rather than close the window.
+    private void OnHomeClicked(object? sender, EventArgs e) => Navigate(ShowHome);
+    private void OnCoursesClicked(object? sender, EventArgs e) => Navigate(ShowCourses);
+    private void OnLecturesClicked(object? sender, EventArgs e) => Navigate(ShowLectures);
+    private void OnLiveClicked(object? sender, EventArgs e) => Navigate(ShowLive);
+    private void OnExamsClicked(object? sender, EventArgs e) => Navigate(ShowExams);
+    private void OnResultsClicked(object? sender, EventArgs e) => Navigate(ShowResults);
+    private void OnNotificationsClicked(object? sender, EventArgs e) => Navigate(ShowNotifications);
+    private void OnProfileClicked(object? sender, EventArgs e) => Navigate(ShowProfile);
 
-    private void OnBackClicked(object? sender, EventArgs e) => _goBack?.Invoke();
+    private void OnBackClicked(object? sender, EventArgs e)
+    {
+        if (_goBack is { } back) Navigate(back);
+    }
 
     /// <summary>
     /// Swaps the hosted view, tearing down whatever the previous one was
@@ -145,6 +136,9 @@ public partial class ShellPage : ContentPage
     {
         _teardownCurrent?.Invoke();
         _teardownCurrent = teardown;
+
+        // Leaving a lecture that was expanded must not take the nav with it.
+        ApplyChromeVisibility(true);
 
         _route = route;
         _goBack = back;
@@ -172,14 +166,115 @@ public partial class ShellPage : ContentPage
     /// </summary>
     private void SetCount(string text) => PageCount.Text = text;
 
+    /// <summary>
+    /// Runs a navigation after the current input event has finished.
+    ///
+    /// Every row and tile navigates from inside its own tap handler, and Host
+    /// replaces ContentHost.Content — which disconnects the handler of the very
+    /// view whose gesture is still unwinding. Tearing a native control out from
+    /// under an event it is still dispatching is a good way to fault inside the
+    /// platform, where the stack says nothing about this code.
+    ///
+    /// One dispatcher turn is enough: the gesture completes, then the screen
+    /// changes. Nothing about the navigation is asynchronous otherwise, so this
+    /// costs a frame and no correctness.
+    ///
+    /// It also catches. Building a screen must not be able to take the app
+    /// down: a failure here leaves the student where they were, with a message
+    /// naming the fault, instead of a window that closes with nothing to
+    /// report. The exception still reaches crash.log.
+    /// </summary>
+    private void Navigate(Action go) => Dispatcher.Dispatch(() =>
+    {
+        try
+        {
+            go();
+        }
+        catch (Exception ex)
+        {
+            App.RecordUnhandled("Navigate", ex);
+            ShowNavigationFailure(ex);
+        }
+    });
+
+    /// <summary>
+    /// Names the fault on screen.
+    ///
+    /// Deliberately shows the exception type and message rather than a polite
+    /// "something went wrong": this is a fault nobody has diagnosed yet, and a
+    /// student who can read it back is the fastest route to fixing it. The
+    /// wording says the screen failed, not that the student did something.
+    /// </summary>
+    private async void ShowNavigationFailure(Exception ex)
+    {
+        try
+        {
+            await DisplayAlertAsync(
+                "تعذّر فتح الصفحة",
+                $"{ex.GetType().Name}: {ex.Message}\n\n" +
+                $"سُجّل التفصيل في:\n{App.CrashLogPath}",
+                "حسناً");
+        }
+        catch (Exception)
+        {
+            // A dialog that cannot open is not worth a second failure.
+        }
+    }
+
+    /// <summary>
+    /// Hides the sidebar and top bar so a fullscreen lecture is the only thing
+    /// on screen, and restores them after.
+    ///
+    /// Always restored on navigation: leaving the lecture while it is expanded
+    /// would otherwise strand the student in a window with no nav and no way
+    /// back, which is the failure mode that makes a fullscreen toggle dangerous
+    /// rather than merely broken.
+    /// </summary>
+    private void ApplyChromeVisibility(bool visible)
+    {
+        Sidebar.IsVisible = visible;
+        TopBar.IsVisible = visible;
+
+        // The row is fixed at 48, so hiding the bar without collapsing it would
+        // leave a dead band above the picture.
+        TopBarRow.Height = visible ? new GridLength(48) : new GridLength(0);
+    }
+
     private void ShowHome()
     {
-        Host(_home, Route.Home, "الرئيسية");
+        // Rebuilt on each visit, like every other screen.
+        //
+        // It used to be the one view held as a single instance and shown again,
+        // and it was the one screen whose icons vanished: navigating away hands
+        // the view out of the visual tree and disconnects its handlers, and on
+        // the way back MAUI rebuilds them without re-applying Shape.Data. A
+        // Label re-applies its Text, so the cards and their words came back
+        // while every icon on them was gone.
+        //
+        // Reusing the instance saved nothing anyway. BeginLoad already reloads
+        // every section on each visit, so the only thing kept was the object -
+        // and with it a Path whose geometry the platform had let go.
+        var home = new HomeView(new HomeViewModel(_api, _auth));
+
+        // The dashboard's cross-links and row actions are navigation, which
+        // belongs to the host rather than the view model.
+        home.ViewModel.ShowExamsRequested += (_, _) => Navigate(ShowExams);
+        home.ViewModel.ShowLiveRequested += (_, _) => Navigate(ShowLive);
+        home.ViewModel.ShowNotificationsRequested += (_, _) => Navigate(ShowNotifications);
+        home.ViewModel.ShowCoursesRequested += (_, _) => Navigate(ShowCourses);
+        home.ViewModel.ShowLecturesRequested += (_, _) => Navigate(ShowLectures);
+        home.ViewModel.ShowResultsRequested += (_, _) => Navigate(ShowResults);
+        home.ViewModel.ShowProfileRequested += (_, _) => Navigate(ShowProfile);
+        home.ViewModel.CourseOpened += (_, courseId) => Navigate(() => ShowCourseDetail(courseId));
+        home.ViewModel.ExamStarted += (_, examId) => Navigate(() => ShowExamRunner(examId));
+        home.ViewModel.Toasted += (_, message) => ShowToast(message.Text, message.Kind);
+
+        Host(home, Route.Home, "الرئيسية");
 
         // Sections start loading as the view is shown. Deliberately not awaited:
         // each renders as it lands, which is the whole point of them being
         // independent.
-        _home.BeginLoad();
+        home.BeginLoad();
     }
 
     private void ShowCourses()
@@ -187,17 +282,33 @@ public partial class ShellPage : ContentPage
         // Rebuilt on each visit so the table reflects progress made since the
         // last time it was open, rather than a stale snapshot.
         var courses = new CoursesView(new CoursesViewModel(_api, _auth));
-        courses.ViewModel.CourseOpened += (_, courseId) => ShowCourseDetail(courseId);
+        courses.ViewModel.CourseOpened += (_, courseId) => Navigate(() => ShowCourseDetail(courseId));
         courses.ViewModel.CountChanged += (_, label) => SetCount(label);
 
         Host(courses, Route.Courses, "الكورسات", search: courses.ViewModel);
         courses.BeginLoad();
     }
 
+    private void ShowLectures()
+    {
+        var lectures = new LecturesView(new LecturesViewModel(_api, _auth));
+        lectures.ViewModel.CountChanged += (_, label) => SetCount(label);
+
+        // A lecture opened from the flat list still needs its course: the
+        // player builds its unit rail from the course tree, and back goes to
+        // the course rather than here — the rail is the better place to
+        // continue from once a lecture is open.
+        lectures.ViewModel.LectureOpened += (_, target) =>
+            Navigate(() => ShowLesson(target.LessonId, target.CourseId));
+
+        Host(lectures, Route.Lectures, "المحاضرات", search: lectures.ViewModel);
+        lectures.BeginLoad();
+    }
+
     private void ShowCourseDetail(int courseId)
     {
         var detail = new CourseDetailView(new CourseDetailViewModel(_api, _auth, courseId));
-        detail.ViewModel.LessonOpened += (_, lessonId) => ShowLesson(lessonId, courseId);
+        detail.ViewModel.LessonOpened += (_, lessonId) => Navigate(() => ShowLesson(lessonId, courseId));
 
         Host(detail, Route.Courses, "الكورس", back: ShowCourses);
         detail.BeginLoad();
@@ -212,8 +323,13 @@ public partial class ShellPage : ContentPage
         // Picking another lecture out of the unit rail rebuilds the screen
         // rather than swapping the source: the watermark clock, the exercise
         // state and the playlist selection all belong to one lecture.
-        lesson.ViewModel.LessonPicked += (_, nextLessonId) => ShowLesson(nextLessonId, courseId);
+        lesson.ViewModel.LessonPicked += (_, nextLessonId) => Navigate(() => ShowLesson(nextLessonId, courseId));
         lesson.ViewModel.Toasted += (_, message) => ShowToast(message.Text, message.Kind);
+
+        // Fullscreen means the lecture and nothing else, so the chrome goes
+        // too. It belongs to this page, which is why the lecture screen asks
+        // rather than doing it itself.
+        lesson.FullscreenChanged += (_, on) => ApplyChromeVisibility(!on);
 
         // Teardown stops the watermark clock when the student leaves.
         Host(lesson, Route.Courses, "المحاضرة",
@@ -225,7 +341,7 @@ public partial class ShellPage : ContentPage
     private void ShowExams()
     {
         var exams = new ExamsView(new ExamsViewModel(_api));
-        exams.ViewModel.ExamStarted += (_, examId) => ShowExamRunner(examId);
+        exams.ViewModel.ExamStarted += (_, examId) => Navigate(() => ShowExamRunner(examId));
         exams.ViewModel.CountChanged += (_, label) => SetCount(label);
 
         Host(exams, Route.Exams, "الإختبارات والإمتحانات", search: exams.ViewModel);
@@ -251,7 +367,7 @@ public partial class ShellPage : ContentPage
     private void ShowResults()
     {
         var results = new ResultsView(new ResultsViewModel(_api));
-        results.ViewModel.AttemptOpened += (_, attemptId) => ShowAttemptDetail(attemptId);
+        results.ViewModel.AttemptOpened += (_, attemptId) => Navigate(() => ShowAttemptDetail(attemptId));
         results.ViewModel.CountChanged += (_, label) => SetCount(label);
 
         Host(results, Route.Results, "النتائج", search: results.ViewModel);
@@ -308,6 +424,7 @@ public partial class ShellPage : ContentPage
     {
         Mark(Route.Home, NavHomeBg, NavHomeBar, NavHomeIcon, NavHomeLabel);
         Mark(Route.Courses, NavCoursesBg, NavCoursesBar, NavCoursesIcon, NavCoursesLabel);
+        Mark(Route.Lectures, NavLecturesBg, NavLecturesBar, NavLecturesIcon, NavLecturesLabel);
         Mark(Route.Live, NavLiveBg, NavLiveBar, NavLiveIcon, NavLiveLabel);
         Mark(Route.Exams, NavExamsBg, NavExamsBar, NavExamsIcon, NavExamsLabel);
         Mark(Route.Results, NavResultsBg, NavResultsBar, NavResultsIcon, NavResultsLabel);
@@ -368,6 +485,7 @@ public partial class ShellPage : ContentPage
 
         NavHomeLabel.IsVisible = _railExpanded;
         NavCoursesLabel.IsVisible = _railExpanded;
+        NavLecturesLabel.IsVisible = _railExpanded;
         NavLiveLabel.IsVisible = _railExpanded;
         NavExamsLabel.IsVisible = _railExpanded;
         NavResultsLabel.IsVisible = _railExpanded;
@@ -385,18 +503,22 @@ public partial class ShellPage : ContentPage
 
     private void ApplyStoredTheme()
     {
-        var stored = Preferences.Default.Get(ThemePreferenceKey, "");
+        var stored = Preferences.Default.Get(App.ThemePreferenceKey, "");
 
-        // No stored choice means follow the OS, which is what the app was
-        // already doing. Only an explicit tap pins the theme.
+        // Light is the default, and it is pinned rather than inherited.
+        //
+        // Following the OS looked reasonable and was wrong here: school and lab
+        // machines are frequently left on the Windows dark default, so a student
+        // who had never touched the setting would open a dark app — while every
+        // printed handout, the web dashboard and the design itself are light.
+        // Dark is a choice this app offers, not one the machine makes for it.
         var theme = stored switch
         {
             "dark" => AppTheme.Dark,
-            "light" => AppTheme.Light,
-            _ => Application.Current?.RequestedTheme ?? AppTheme.Light,
+            _ => AppTheme.Light,
         };
 
-        if (stored.Length > 0 && Application.Current is not null)
+        if (Application.Current is not null)
             Application.Current.UserAppTheme = theme;
 
         PaintThemeToggle(theme);
@@ -407,7 +529,7 @@ public partial class ShellPage : ContentPage
         if (Application.Current is not null)
             Application.Current.UserAppTheme = theme;
 
-        Preferences.Default.Set(ThemePreferenceKey, theme == AppTheme.Dark ? "dark" : "light");
+        Preferences.Default.Set(App.ThemePreferenceKey, theme == AppTheme.Dark ? "dark" : "light");
 
         PaintThemeToggle(theme);
 

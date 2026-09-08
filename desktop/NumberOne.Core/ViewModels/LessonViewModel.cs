@@ -222,8 +222,20 @@ public sealed partial class LessonViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanComplete))]
     private async Task MarkCompleteAsync(CancellationToken ct)
     {
-        if (await _api.MarkLessonCompleteAsync(_lessonId, ct).ConfigureAwait(true))
+        // Never throws: a dropped connection here used to come out of a command
+        // with nothing to catch it.
+        var attempt = await ApiAttempt
+            .TryAsync(token => _api.MarkLessonCompleteAsync(_lessonId, token), ct)
+            .ConfigureAwait(true);
+
+        if (attempt.Ok && attempt.Value)
+        {
             IsCompleted = true;
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(attempt.Error))
+            Toasted?.Invoke(this, new ToastMessage(attempt.Error, ToastKind.Error));
     }
 
     private bool CanComplete() => Lesson.HasData && !IsCompleted;
@@ -248,6 +260,36 @@ public sealed partial class LessonViewModel : ObservableObject
     public Func<string, Task<bool>> BrowserLauncher { get; set; } = _ => Task.FromResult(false);
 
     public event EventHandler<ToastMessage>? Toasted;
+
+    /// <summary>
+    /// Shown when the player refuses to leave the app.
+    ///
+    /// Stated plainly rather than apologetically: this is the app working as
+    /// the school intends, not a failure. A student who clicks YouTube's logo
+    /// and gets silence would otherwise reasonably conclude the app is stuck.
+    /// </summary>
+    public const string NavigationBlockedMessage =
+        "المحاضرة تُشاهَد داخل التطبيق فقط.";
+
+    /// <summary>
+    /// Called by the view when the web view cancelled a navigation or refused a
+    /// new window.
+    ///
+    /// Rate-limited to one message every few seconds: YouTube's chrome can fire
+    /// several attempts from a single click, and three identical toasts would
+    /// read as an error rather than a rule.
+    /// </summary>
+    public void ReportBlockedNavigation()
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        if (now - _lastBlockedReport < TimeSpan.FromSeconds(4)) return;
+
+        _lastBlockedReport = now;
+        Toasted?.Invoke(this, new ToastMessage(NavigationBlockedMessage, ToastKind.Warning));
+    }
+
+    private DateTimeOffset _lastBlockedReport = DateTimeOffset.MinValue;
 
     /// <summary>
     /// The attachment opens outside the app rather than in the WebView. The
@@ -319,7 +361,21 @@ public sealed partial class LessonViewModel : ObservableObject
                 .ToList(),
         };
 
-        Result = await _api.SubmitExerciseAsync(request, ct).ConfigureAwait(true);
+        // The student's answers stay in _answers on failure, so "تسليم" resends
+        // the same paper rather than clearing it.
+        var attempt = await ApiAttempt
+            .TryAsync(token => _api.SubmitExerciseAsync(request, token), ct)
+            .ConfigureAwait(true);
+
+        if (!attempt.Ok)
+        {
+            if (!string.IsNullOrEmpty(attempt.Error))
+                Toasted?.Invoke(this, new ToastMessage(attempt.Error, ToastKind.Error));
+
+            return;
+        }
+
+        Result = attempt.Value;
     }
 
     /// <summary>
@@ -397,11 +453,27 @@ public sealed partial class LessonViewModel : ObservableObject
         return lesson;
     }
 
+    /// <summary>
+    /// The unit rail, started without being awaited so the video does not wait
+    /// on it.
+    ///
+    /// Fire-and-forget means nothing observes a failure here, so nothing in it
+    /// may throw. SectionState no longer lets anything escape, and this catch
+    /// covers the notification that follows it — a rail that fails to load is
+    /// a missing convenience, never a reason for the lecture to go down.
+    /// </summary>
     private async Task LoadPlaylistSectionAsync(CancellationToken ct)
     {
-        await Playlist.LoadAsync(ct).ConfigureAwait(true);
+        try
+        {
+            await Playlist.LoadAsync(ct).ConfigureAwait(true);
 
-        OnPropertyChanged(nameof(LessonMeta));
+            OnPropertyChanged(nameof(LessonMeta));
+        }
+        catch (Exception ex)
+        {
+            SectionDiagnostics.Unexpected?.Invoke(ex);
+        }
     }
 
     private async Task<UnitPlaylist> LoadPlaylistAsync(CancellationToken ct)

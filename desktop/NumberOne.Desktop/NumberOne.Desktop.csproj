@@ -1,6 +1,22 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
+		<!--
+			Stops the XAML-generated handler intercepting every unhandled exception
+			with Debugger.Break().
+
+			That break fires BEFORE our own UnhandledException handler, so under a
+			debugger the app halts on a generated line with no message and the crash
+			log is never written — and with no debugger attached it does nothing at
+			all and the window simply closes. Either way the fault is invisible,
+			which is how the same crash was reported three times with nothing
+			attached to it.
+
+			With this defined, Platforms/Windows/App.xaml.cs handles it: the
+			exception is written to crash.log and shown on screen.
+		-->
+		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION</DefineConstants>
+
 		<!--
 			Desktop only. No Linux target exists for MAUI.
 
@@ -38,10 +54,23 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#C0392B" />
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#FFFFFF" BaseSize="128,128" />
+		<!--
+			The school's own mark, not the template's.
+
+			These shipped as the stock .NET assets: a purple square with the bot
+			on it, and a splash byte-identical to that same bot. Only the icon's
+			background colour had ever been changed, so the app announced itself
+			in the taskbar, the Start menu and Alt-Tab as a .NET sample.
+
+			One image each, no ForegroundFile: the logo is a complete mark with
+			its own ground, and splitting it into a tinted background plus an
+			overlay would only give the compositor a chance to crop the brush
+			ring.
+		-->
+		<MauiIcon Include="Resources\AppIcon\appicon.png" />
+		<MauiSplashScreen Include="Resources\Splash\splash.png" Color="#FFFFFF" BaseSize="128,128" />
 		<MauiImage Include="Resources\Images\*" />
-		<MauiFont Include="Resources\Fonts\*" />
+		<MauiFont Include="Resources\Fonts\*.ttf" />
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 

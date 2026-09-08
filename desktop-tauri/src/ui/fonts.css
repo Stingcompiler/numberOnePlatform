@@ -1,0 +1,53 @@
+/*
+  Cairo for the interface, Tajawal for running copy, at 400 / 500 / 700 — the
+  design's ramp.
+
+  Bundled, never fetched. The app has to work on a lab PC behind a filter, and
+  a webfont that fails to load falls back to a Latin face that cannot shape
+  Arabic at all — the text would render as disconnected letters.
+
+  Both are SIL Open Font Licence; the licences travel with the files in
+  src/assets/fonts/.
+*/
+
+@font-face {
+  font-family: "Cairo";
+  src: url("../assets/fonts/Cairo-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Cairo";
+  src: url("../assets/fonts/CairoMedium-Regular.ttf") format("truetype");
+  font-weight: 500;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Cairo";
+  src: url("../assets/fonts/Cairo-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Tajawal";
+  src: url("../assets/fonts/Tajawal-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Tajawal";
+  src: url("../assets/fonts/Tajawal-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Tajawal";
+  src: url("../assets/fonts/Tajawal-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: block;
+}

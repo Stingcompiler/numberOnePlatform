@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             x:Class="NumberOne.Desktop.Views.LecturesView"
+             x:Name="Root"
+             x:DataType="vm:LecturesViewModel">
+
+    <!--
+        المحاضرات — every lecture across every course, flat.
+
+        The courses table answers "how far am I through each subject". This
+        answers "what have I not watched yet", which is a question six separate
+        course trees cannot show at once.
+
+        Same six-column table language as الكورسات, so the two read as one app
+        rather than two: heads at 11/500 tracked out, 44px rows, a rule under
+        each, hover on anything that navigates.
+    -->
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="12">
+
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <Label Grid.Column="0" Text="كل المحاضرات"
+                       Style="{StaticResource HeadingLabel}" />
+                <BoxView Grid.Column="1" Style="{StaticResource SectionRule}" />
+                <Label Grid.Column="2" Text="{Binding WatchedLabel}"
+                       Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+            </Grid>
+
+            <!--
+                Two states, not a row of filters. By mid-term most rows are
+                watched, and finding the next one is the reason to open a flat
+                list at all.
+            -->
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="الكل" Style="{StaticResource TabButton}"
+                        Command="{Binding ShowAllCommand}"
+                        BackgroundColor="{Binding ShowingAll, Converter={StaticResource SelectedTabTint}}"
+                        BorderColor="{Binding ShowingAll, Converter={StaticResource SelectedTabBorder}}"
+                        TextColor="{Binding ShowingAll, Converter={StaticResource SelectedTabInk}}" />
+                <Button Text="لم تُشاهَد بعد" Style="{StaticResource TabButton}"
+                        Command="{Binding ShowUnwatchedCommand}"
+                        BackgroundColor="{Binding UnwatchedOnly, Converter={StaticResource SelectedTabTint}}"
+                        BorderColor="{Binding UnwatchedOnly, Converter={StaticResource SelectedTabBorder}}"
+                        TextColor="{Binding UnwatchedOnly, Converter={StaticResource SelectedTabInk}}" />
+            </HorizontalStackLayout>
+
+            <Border Style="{StaticResource TableCard}">
+                <VerticalStackLayout>
+
+                    <Grid Style="{StaticResource TableHeaderRow}"
+                          ColumnDefinitions="2.4*,1.4*,1.4*,*,88,88"
+                          IsVisible="{Binding HasRows}">
+                        <Label Grid.Column="0" Text="المحاضرة" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="1" Text="الكورس" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="2" Text="الوحدة" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="3" Text="المدة" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="4" Text="المرفقات" Style="{StaticResource TableHeaderLabel}" />
+                        <Label Grid.Column="5" Text="الحالة" Style="{StaticResource TableHeaderLabel}"
+                               HorizontalTextAlignment="Center" />
+                        <BoxView Grid.ColumnSpan="6" Style="{StaticResource RowRule}" Margin="-16,0" />
+                    </Grid>
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Visible}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LectureRow">
+                                <Grid Style="{StaticResource TableRow}"
+                                      ColumnDefinitions="2.4*,1.4*,1.4*,*,88,88"
+                                      HeightRequest="44">
+
+                                    <!-- A watched lecture drops to secondary, so
+                                         the unwatched ones stand out down the
+                                         column rather than only in the last one. -->
+                                    <Label Grid.Column="0" Text="{Binding Title}"
+                                           Style="{StaticResource CellLabelStrong}"
+                                           TextColor="{Binding IsCompleted, Converter={StaticResource CompletedInk}}" />
+
+                                    <Label Grid.Column="1" Text="{Binding CourseName}"
+                                           Style="{StaticResource CellLabelSecondary}" />
+                                    <Label Grid.Column="2" Text="{Binding UnitName}"
+                                           Style="{StaticResource CellLabelSecondary}" />
+                                    <Label Grid.Column="3" Text="{Binding DurationLabel}"
+                                           Style="{StaticResource CellLabelNumeric}" />
+
+                                    <Border Grid.Column="4" Style="{StaticResource Chip}"
+                                            HorizontalOptions="Start"
+                                            IsVisible="{Binding HasAttachment}">
+                                        <Label Text="PDF" Style="{StaticResource ChipLabel}"
+                                               FlowDirection="LeftToRight" />
+                                    </Border>
+
+                                    <Label Grid.Column="5" Text="{Binding StatusLabel}"
+                                           Style="{StaticResource PillLabel}"
+                                           HorizontalTextAlignment="Center"
+                                           TextColor="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
+
+                                    <BoxView Grid.ColumnSpan="6" Style="{StaticResource RowRule}" Margin="-16,0" />
+
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={x:Reference Root}, Path=BindingContext.OpenLectureCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <!-- ── Loading ───────────────────────────────────────── -->
+                    <VerticalStackLayout IsVisible="{Binding Lectures.IsLoading}">
+                        <Grid HeightRequest="44" Padding="16,0"
+                              ColumnDefinitions="2.4*,1.4*,1.4*,*,88,88" ColumnSpacing="16">
+                            <Border Grid.Column="0" Style="{StaticResource SkeletonLine}" />
+                            <Border Grid.Column="1" Style="{StaticResource SkeletonLine}" />
+                            <Border Grid.Column="2" Style="{StaticResource SkeletonLine}" />
+                            <Border Grid.Column="3" Style="{StaticResource SkeletonLine}" />
+                            <BoxView Grid.ColumnSpan="6" Style="{StaticResource RowRule}" Margin="-16,0" />
+                        </Grid>
+                        <Grid HeightRequest="44" Padding="16,0"
+                              ColumnDefinitions="2.4*,1.4*,1.4*,*,88,88" ColumnSpacing="16">
+                            <Border Grid.Column="0" Style="{StaticResource SkeletonLine}" />
+                            <Border Grid.Column="1" Style="{StaticResource SkeletonLine}" />
+                            <Border Grid.Column="2" Style="{StaticResource SkeletonLine}" />
+                            <Border Grid.Column="3" Style="{StaticResource SkeletonLine}" />
+                            <BoxView Grid.ColumnSpan="6" Style="{StaticResource RowRule}" Margin="-16,0" />
+                        </Grid>
+                        <Grid HeightRequest="44" Padding="16,0"
+                              ColumnDefinitions="2.4*,1.4*,1.4*,*,88,88" ColumnSpacing="16">
+                            <Border Grid.Column="0" Style="{StaticResource SkeletonLine}" />
+                            <Border Grid.Column="1" Style="{StaticResource SkeletonLine}" />
+                            <Border Grid.Column="2" Style="{StaticResource SkeletonLine}" />
+                            <Border Grid.Column="3" Style="{StaticResource SkeletonLine}" />
+                        </Grid>
+                    </VerticalStackLayout>
+
+                    <!-- ── Nothing to watch ──────────────────────────────── -->
+                    <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                         IsVisible="{Binding Lectures.IsEmpty}">
+                        <Label Text="لا توجد محاضرات في كورساتك بعد."
+                               Style="{StaticResource CellLabelSecondary}"
+                               HorizontalTextAlignment="Center" />
+                        <Label Text="تُضاف المحاضرات من قبل المدرّسين، وتظهر هنا فور نشرها."
+                               Style="{StaticResource CopyLabel}"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+
+                    <!-- ── Nothing matched ───────────────────────────────── -->
+                    <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                         IsVisible="{Binding IsFilteredEmpty}">
+                        <Label Text="لا توجد محاضرات مطابقة."
+                               Style="{StaticResource CellLabelSecondary}" />
+                        <Button Text="إزالة الفلاتر" Style="{StaticResource NeutralButton}"
+                                HorizontalOptions="Center"
+                                Command="{Binding ClearFiltersCommand}" />
+                    </VerticalStackLayout>
+
+                    <!-- ── Failed ────────────────────────────────────────── -->
+                    <VerticalStackLayout Style="{StaticResource StatePanel}"
+                                         IsVisible="{Binding Lectures.HasError}">
+                        <Label Text="{Binding Lectures.ErrorMessage}"
+                               Style="{StaticResource CellLabelSecondary}"
+                               HorizontalTextAlignment="Center" />
+                        <Button Text="إعادة المحاولة" Style="{StaticResource SecondaryButton}"
+                                HorizontalOptions="Center"
+                                Command="{Binding LoadCommand}" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentView>

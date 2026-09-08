@@ -138,39 +138,94 @@ public sealed class AuthService
     }
 
     /// <summary>
-    /// Restores a session at launch from stored tokens. Returns false when there
-    /// is nothing to restore or the tokens are dead - the caller shows login.
-    /// A 401 here is handled by AuthenticatingHandler, which will have tried a
-    /// refresh before this sees the failure.
+    /// Restores a session at launch from stored tokens, so a student who never
+    /// signed out lands in the app rather than at a login form.
+    ///
+    /// A 401 here is already handled by AuthenticatingHandler, which will have
+    /// tried a refresh before this sees the failure — so a rejection at this
+    /// point means the refresh token is dead too, not merely that the access
+    /// token expired overnight.
+    ///
+    /// The four outcomes are deliberately distinct. Collapsing "offline" into
+    /// "rejected" is the trap: it sends a student with perfectly good tokens to
+    /// a login form that cannot reach the server either, which is a dead end
+    /// they can only escape by finding a network.
     /// </summary>
-    public async Task<bool> TryRestoreSessionAsync(CancellationToken ct = default)
+    public async Task<SessionRestore> RestoreSessionAsync(CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(await _tokens.GetAccessTokenAsync().ConfigureAwait(false)))
-            return false;
+            return SessionRestore.None;
 
         try
         {
             using var response = await _http.GetAsync(ApiEndpoints.Me, ct).ConfigureAwait(false);
+
             if (!response.IsSuccessStatusCode)
-                return false;
+                return await RejectAsync().ConfigureAwait(false);
 
             var user = await response.Content
                 .ReadFromJsonAsync<User>(ApiClientFactory.Json, ct)
                 .ConfigureAwait(false);
 
             if (user is null || !user.IsStudent)
-                return false;
+                return await RejectAsync().ConfigureAwait(false);
+
+            // The binding is checked on every launch, not only at sign-in.
+            //
+            // An administrator can unbind an account, and it can then be bound
+            // to another machine. The tokens on THIS machine stay valid through
+            // all of that, so without this check a student who had been moved
+            // to a new computer would keep a working session on the old one —
+            // which is the whole thing the one-device rule exists to prevent.
+            var bound = user.StudentProfile?.DeviceId;
+            var here = SafeDeviceId();
+
+            // Only compared when BOTH are known. A machine whose hardware id
+            // cannot be read must not be locked out of its own session over a
+            // comparison that could not be made — the sign-in path already
+            // refuses to bind without an id, so nothing is weakened by being
+            // permissive here.
+            if (!string.IsNullOrWhiteSpace(bound) &&
+                !string.IsNullOrWhiteSpace(here) &&
+                !string.Equals(bound, here, StringComparison.Ordinal))
+            {
+                return await RejectAsync().ConfigureAwait(false);
+            }
 
             CurrentUser = user;
-            return true;
+            return SessionRestore.Restored;
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex) when (ApiAttempt.IsTransport(ex))
         {
-            // Offline at launch. The tokens may well be fine, so leave them in
-            // place; the caller can show the cached session or the offline bar
-            // rather than throwing the student back to login.
-            return false;
+            // Offline at launch. The tokens are probably fine, so they stay:
+            // the caller opens the app and every section shows its own retry.
+            // If they turn out to be dead, the first request that gets through
+            // raises SessionExpired and the student is sent to login then.
+            return SessionRestore.Unverified;
         }
+    }
+
+    /// <summary>
+    /// The tokens are no good. Clearing them is the point — leaving a dead pair
+    /// on a shared machine is exactly what sign-out exists to avoid.
+    /// </summary>
+    private async Task<SessionRestore> RejectAsync()
+    {
+        CurrentUser = null;
+        await _tokens.ClearAsync().ConfigureAwait(false);
+
+        return SessionRestore.Rejected;
+    }
+
+    /// <summary>
+    /// The hardware id, or null. A provider that cannot read the machine throws;
+    /// that must not stop a launch, and a null simply skips the binding check
+    /// rather than locking the student out of their own app.
+    /// </summary>
+    private string? SafeDeviceId()
+    {
+        try { return _device.GetDeviceId(); }
+        catch (Exception) { return null; }
     }
 
     /// <summary>
@@ -265,6 +320,16 @@ public static class DesktopMessages
 
     public const string UnexpectedResponse =
         "استجابة غير متوقعة من الخادم. يرجى المحاولة لاحقاً.";
+
+    /// <summary>
+    /// A section failed for a reason that is not the network.
+    ///
+    /// Worded so it can never be mistaken for being offline: a student who
+    /// retries a connection problem is doing the right thing, and a student who
+    /// retries a defect is not.
+    /// </summary>
+    public const string SectionFailed =
+        "تعذّر عرض هذا القسم. إن تكرر الأمر فأبلغ إدارة المدرسة.";
 
     public const string StudentsOnly =
         "هذا التطبيق مخصص للطلاب فقط. يرجى استخدام لوحة التحكم عبر المتصفح.";

@@ -95,15 +95,48 @@ public class SectionStateTests
     }
 
     [Fact]
-    public async Task An_unexpected_exception_is_not_swallowed_into_a_spinner()
+    public async Task An_unexpected_exception_fails_the_section_without_taking_the_app_down()
     {
-        // A programming error should surface as a crash in development rather
-        // than as a section that loads forever in production.
-        var section = new SectionState<List<int>>(
-            _ => throw new InvalidOperationException("boom"),
-            list => list.Count == 0);
+        // This test used to assert the opposite — that a defect propagated, so
+        // it would surface as a crash in development rather than a section that
+        // loads forever.
+        //
+        // The first half of that was right and still holds: it must never leave
+        // a spinner. The second half was wrong in production. Several loads are
+        // started fire-and-forget, so nothing observes the exception and it ends
+        // the process: the student gets a window that closes and no way to say
+        // what happened, which is exactly how this arrived as a bug report.
+        //
+        // The defect now fails its own section and is handed to the diagnostics
+        // sink, which the app points at its crash log. Visible to a developer,
+        // survivable for a student.
+        Exception? reported = null;
+        SectionDiagnostics.Unexpected = ex => reported = ex;
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => section.LoadAsync());
+        try
+        {
+            var section = new SectionState<List<int>>(
+                _ => throw new InvalidOperationException("boom"),
+                list => list.Count == 0);
+
+            var boom = await Record.ExceptionAsync(() => section.LoadAsync());
+
+            Assert.Null(boom);
+            Assert.False(section.IsLoading);
+            Assert.True(section.HasError);
+
+            // Never the offline message: a student who retries a connection
+            // problem is doing the right thing, and one who retries a defect is
+            // not.
+            Assert.Equal(DesktopMessages.SectionFailed, section.ErrorMessage);
+            Assert.NotEqual(DesktopMessages.NoConnection, section.ErrorMessage);
+
+            Assert.IsType<InvalidOperationException>(reported);
+        }
+        finally
+        {
+            SectionDiagnostics.Unexpected = null;
+        }
     }
 
     [Fact]

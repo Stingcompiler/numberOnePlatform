@@ -1,0 +1,7 @@
+{
+  "name": "lesson-player-check",
+  "private": true,
+  "description": "Exercises the injected desktop lecture player under a real DOM.",
+  "scripts": { "test": "node check.js" },
+  "devDependencies": { "jsdom": "^24.0.0" }
+}

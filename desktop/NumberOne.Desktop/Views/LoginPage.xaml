@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:NumberOne.Core.ViewModels;assembly=NumberOne.Core"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:ui="clr-namespace:NumberOne.Desktop.Markup"
              x:Class="NumberOne.Desktop.Views.LoginPage"
              x:DataType="vm:LoginViewModel"
              FlowDirection="RightToLeft"
@@ -52,21 +53,21 @@
                         <HorizontalStackLayout Spacing="8">
                             <shapes:Path Style="{StaticResource IconPath}" StrokeThickness="2"
                                          WidthRequest="15" HeightRequest="15"
-                                         Data="{StaticResource IconCheck}"
+                                         Data="{ui:Icon Key=IconCheck}"
                                          Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                             <Label Text="{x:Static vm:UiText.BrandBulletOne}" Style="{StaticResource SecondaryLabel}" />
                         </HorizontalStackLayout>
                         <HorizontalStackLayout Spacing="8">
                             <shapes:Path Style="{StaticResource IconPath}" StrokeThickness="2"
                                          WidthRequest="15" HeightRequest="15"
-                                         Data="{StaticResource IconCheck}"
+                                         Data="{ui:Icon Key=IconCheck}"
                                          Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                             <Label Text="{x:Static vm:UiText.BrandBulletTwo}" Style="{StaticResource SecondaryLabel}" />
                         </HorizontalStackLayout>
                         <HorizontalStackLayout Spacing="8">
                             <shapes:Path Style="{StaticResource IconPath}" StrokeThickness="2"
                                          WidthRequest="15" HeightRequest="15"
-                                         Data="{StaticResource IconCheck}"
+                                         Data="{ui:Icon Key=IconCheck}"
                                          Stroke="{AppThemeBinding Light={StaticResource SuccessLight}, Dark={StaticResource SuccessDark}}" />
                             <Label Text="{x:Static vm:UiText.BrandBulletThree}" Style="{StaticResource SecondaryLabel}" />
                         </HorizontalStackLayout>
@@ -88,7 +89,19 @@
                                WidthRequest="96" HeightRequest="96" />
                     </Border>
 
-                    <Border Style="{StaticResource Panel}" Padding="24" WidthRequest="420">
+                    <!--
+                        While a stored session is being checked, the logo stays
+                        and the card does not appear. A student who never signed
+                        out is about to land in the app; flashing a sign-in form
+                        at them first reads as having been logged out.
+                    -->
+                    <ActivityIndicator IsVisible="{Binding IsRestoringSession}"
+                                       IsRunning="{Binding IsRestoringSession}"
+                                       HorizontalOptions="Center" Margin="0,24"
+                                       Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+
+                    <Border Style="{StaticResource Panel}" Padding="24" WidthRequest="420"
+                            IsVisible="{Binding ShowsForm}">
                         <VerticalStackLayout Spacing="16">
 
                             <VerticalStackLayout Spacing="4">
@@ -104,7 +117,7 @@
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
                                                      WidthRequest="15" HeightRequest="15"
-                                                     Data="{StaticResource IconUser}" />
+                                                     Data="{ui:Icon Key=IconUser}" />
                                         <Entry Grid.Column="1" Text="{Binding Username}"
                                                Style="{StaticResource LoginEntry}"
                                                ReturnType="Next"
@@ -120,7 +133,7 @@
                                     <Grid ColumnDefinitions="Auto,*,24" ColumnSpacing="8">
                                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
                                                      WidthRequest="15" HeightRequest="15"
-                                                     Data="{StaticResource IconLock}" />
+                                                     Data="{ui:Icon Key=IconLock}" />
                                         <Entry Grid.Column="1"
                                                Text="{Binding Password}"
                                                IsPassword="{Binding PasswordVisible, Converter={StaticResource Invert}}"
@@ -130,7 +143,7 @@
                                                VerticalOptions="Center" />
                                         <shapes:Path Grid.Column="2" Style="{StaticResource IconPathMuted}"
                                                      WidthRequest="15" HeightRequest="15"
-                                                     Data="{StaticResource IconEye}"
+                                                     Data="{ui:Icon Key=IconEye}"
                                                      ToolTipProperties.Text="{x:Static vm:UiText.ShowPassword}">
                                             <shapes:Path.GestureRecognizers>
                                                 <TapGestureRecognizer Command="{Binding TogglePasswordVisibilityCommand}" />
@@ -148,7 +161,7 @@
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                                     <shapes:Path Grid.Column="0" Style="{StaticResource IconPath}"
                                                  WidthRequest="14" HeightRequest="14"
-                                                 Data="{StaticResource IconAlertCircle}"
+                                                 Data="{ui:Icon Key=IconAlertCircle}"
                                                  Stroke="{AppThemeBinding Light={StaticResource DangerLight}, Dark={StaticResource DangerDark}}" />
                                     <Label Grid.Column="1" Text="{Binding ErrorMessage}"
                                            Style="{StaticResource CopyLabel}"
@@ -165,10 +178,11 @@
                     <!-- Which machine this is, and what signing in here will
                          bind. Said before the binding, not after it. -->
                     <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8"
-                          HorizontalOptions="Center" WidthRequest="420">
+                          HorizontalOptions="Center" WidthRequest="420"
+                          IsVisible="{Binding ShowsForm}">
                         <shapes:Path Grid.Column="0" Style="{StaticResource IconPathMuted}"
                                      WidthRequest="13" HeightRequest="13"
-                                     Data="{StaticResource IconMonitor}" />
+                                     Data="{ui:Icon Key=IconMonitor}" />
                         <Label Grid.Column="1" Text="{Binding DeviceFootnote}"
                                Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
                     </Grid>

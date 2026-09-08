@@ -78,6 +78,20 @@ public sealed partial class LoginViewModel : ObservableObject
     /// <summary>"جارٍ الدخول…" while the call is in flight, so the width does not jump.</summary>
     public string SubmitLabel => IsBusy ? UiText.SigningIn : UiText.SignIn;
 
+    /// <summary>
+    /// A stored session is being checked at launch.
+    ///
+    /// The form is hidden while this runs. A student who never signed out is
+    /// about to land in the app, and showing them a sign-in card for the half
+    /// second it takes to confirm that reads as being logged out — the exact
+    /// impression the restore exists to remove.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsForm))]
+    private bool _isRestoringSession;
+
+    public bool ShowsForm => !IsRestoringSession;
+
     // ── This machine ─────────────────────────────────────────────────────────
 
     public string? DeviceId { get; }

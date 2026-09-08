@@ -1,0 +1,20 @@
+<!doctype html>
+<!--
+  dir and lang are set here rather than on the window.
+
+  In MAUI the RTL flag was set on the Window itself, and Windows mirrored the
+  whole title bar with it: the close button and the app name were drawn on top
+  of each other. Here the direction is a document property and the frame is
+  left alone, which is where it belongs.
+-->
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>مدارس ومعاهد نمبر ون</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
