@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
 import fetchAll from '../../api/fetchAll'
+import Pagination from '../../components/ui/Pagination'
 
 /* ── نافذة منح وصول ────────────────────────────────────────────── */
 function GrantAccessModal({ onClose, onGranted }) {
@@ -190,19 +191,38 @@ export default function StudentCourseAccessPage() {
   const [filterStudent, setFilterStudent] = useState('')
   const [actionError, setActionError] = useState('')
 
+  // ترقيم صفحات من الخادم — كانت الصفحة تعرض أول 10 سجلات فقط بلا وسيلة لبقيتها
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  // البحث انتقل إلى الخادم كي يشمل كل السجلات لا الصفحة المعروضة فقط
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350)
+    return () => clearTimeout(t)
+  }, [search])
+
+  // العودة للصفحة الأولى عند تغيير البحث أو الفلتر
+  useEffect(() => { setPage(1) }, [debouncedSearch, filterCourse, filterStudent])
+
   const load = useCallback(() => {
     setLoading(true)
-    const params = {}
+    const params = { page }
     if (filterCourse) params.course = filterCourse
     if (filterStudent) params.student = filterStudent
-    // fetchAll لا api.get: النقطة مُجزَّأة بعشرة سجلات، وقراءة data.results
-    // وحدها كانت تُخفي كل ما بعد العاشر — فلا يستطيع المدير تعطيله أو حذفه
-    // لأنه غير معروض أصلاً.
-    fetchAll('/academic/access/', params)
-      .then((data) => setAccesses(Array.isArray(data) ? data : (data?.results || [])))
+    if (debouncedSearch) params.search = debouncedSearch
+    // الترقيم يبقى على الخادم ولا يُستبدل بجلب كل الصفحات: العلّة كانت أن
+    // الواجهة تقرأ data.results وتتجاهل count فلا تعرض ما بعد السجل العاشر.
+    // إعادة count إلى Pagination تُظهر البقية دون تحميل الجدول كاملاً، والبحث
+    // والفلاتر الثلاثة تُنفَّذ على الخادم فتشمل كل السجلات لا الصفحة وحدها.
+    api.get('/academic/access/', { params })
+      .then(({ data }) => {
+        setAccesses(data.results || data)
+        setTotal(data.count ?? (Array.isArray(data) ? data.length : 0))
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [filterCourse, filterStudent])
+  }, [filterCourse, filterStudent, page, debouncedSearch])
 
   useEffect(() => { load() }, [load])
 
@@ -249,14 +269,10 @@ export default function StudentCourseAccessPage() {
     }
   }
 
-  // فلتر بحث محلي
-  const filtered = search
-    ? accesses.filter(a =>
-        (a.student_name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (a.course_name || '').toLowerCase().includes(search.toLowerCase())
-      )
-    : accesses
+  // البحث صار على الخادم (يشمل كل السجلات لا الصفحة الحالية فقط)
+  const filtered = accesses
 
+  // ملاحظة: هذه إحصاءات الصفحة الحالية، والإجمالي الكلي يظهر أسفل القائمة
   const activeCount   = accesses.filter(a => a.is_active).length
   const inactiveCount = accesses.length - activeCount
 
@@ -420,6 +436,13 @@ export default function StudentCourseAccessPage() {
               )}
             </tbody>
           </table>
+
+          <div className="px-4 pb-4">
+            <p className="text-white/40 text-xs text-center mb-2">
+              إجمالي السجلات: <span className="text-brand-blue font-medium">{total}</span>
+            </p>
+            <Pagination count={total} currentPage={page} onPageChange={setPage} />
+          </div>
         </div>
       )}
 

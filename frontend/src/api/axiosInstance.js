@@ -17,12 +17,22 @@ const api = axios.create({
   // العنوان المطلق يتجاوزه، فكان كل تطوير محلي يضرب قاعدة الإنتاج.
   baseURL: import.meta.env.VITE_API_URL || '/api',
   withCredentials: true,          // ضروري لإرسال HttpOnly Cookies
+  // ── CSRF: axios يقرأ كوكي csrftoken ويُرسله كترويسة X-CSRFToken تلقائياً ──
+  // في الطلبات المُغيِّرة للحالة (same-origin في الإنتاج). Django يتحقق منها.
+  xsrfCookieName: 'csrftoken',
+  xsrfHeaderName: 'X-CSRFToken',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
   timeout: 15000,
 })
+
+// ── تمهيد كوكي CSRF ──────────────────────────────────────────────────────────
+// يُستدعى مرة عند إقلاع التطبيق وبعد تسجيل الدخول لضمان توفّر كوكي csrftoken
+// قبل أي طلب POST/PUT/PATCH/DELETE. طلب GET مُعفى من CSRF فلا يُحجب.
+export const ensureCsrfToken = () =>
+  api.get('/auth/csrf/').catch(() => {})
 
 // ── متغير لمنع تكرار طلبات Refresh المتزامنة ──────────────────────
 let isRefreshing = false

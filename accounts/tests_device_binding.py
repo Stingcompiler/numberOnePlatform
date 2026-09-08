@@ -170,15 +170,49 @@ class LoginSerializerDeviceTests(TestCase):
         })
         self.assertFalse(serializer.is_valid())
 
-    def test_login_without_device_id_does_not_bind(self):
-        """تسجيل الدخول من لوحة التحكم لا يمرّر device_id — يجب ألا يربط شيئاً."""
+    def test_student_login_without_device_id_is_refused(self):
+        """
+        الطالب بلا device_id يُرفض ولا يُربط شيء.
+
+        كان هذا الاختبار يؤكّد قبولَ الطلب (device_id اختياري)، وهو توثيق
+        للسلوك المتساهل السابق لا اشتراط له. إغفال الحقل كان طريقاً لتجاوز
+        سياسة "جهاز واحد لكل طالب": يكفي حذفه من الطلب. الطالب لا يصل
+        للمنصة إلا من التطبيق، والتطبيق يرسل الحقل دائماً، فصار إلزامياً.
+        ما كان الاختبار يحرسه — ألّا يُربط شيء — ما يزال محروساً هنا.
+        """
         profile = _make_student("s_no_device")
 
         serializer = LoginSerializer(data={
             "username": "s_no_device",
             "password": "pass12345",
         })
-        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["non_field_errors"][0].code, "device_required",
+        )
 
         profile.refresh_from_db()
         self.assertIsNone(profile.device_id)
+
+    def test_staff_login_without_device_id_still_works(self):
+        """
+        غير الطالب يدخل بلا device_id ولا يُربط شيء.
+
+        الإلزام يخصّ الطلاب وحدهم: لوحة التحكم لا ترسل الحقل، وجعله
+        إلزامياً على الجميع كان ليُخرج الإدارة والأساتذة من نظامهم.
+        """
+        CustomUser.objects.create_user(
+            username="mgr_no_device",
+            password="pass12345",
+            full_name="مدير بلا جهاز",
+            role=CustomUser.Roles.MANAGER,
+        )
+
+        serializer = LoginSerializer(data={
+            "username": "mgr_no_device",
+            "password": "pass12345",
+        })
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertFalse(
+            StudentProfile.objects.filter(user__username="mgr_no_device").exists()
+        )

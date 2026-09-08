@@ -30,7 +30,17 @@ export const authService = {
     }
     
     await SecureStore.setItemAsync('student_logged_in', 'true');
-    
+
+    // حفظ نسخة من ملف المستخدم لاستعادة الجلسة عند تعذّر الوصول للخادم
+    // (انقطاع شبكة أو انتهاء مهلة عند الإقلاع) بدل إظهار شاشة الدخول بلا داعٍ.
+    if (user) {
+      try {
+        await SecureStore.setItemAsync('student_user', JSON.stringify(user));
+      } catch (e) {
+        // تخزين اختياري — لا يمنع تسجيل الدخول إن فشل
+      }
+    }
+
     return user;
   },
 
@@ -46,6 +56,7 @@ export const authService = {
     } finally {
       await SecureStore.deleteItemAsync('student_access_token');
       await SecureStore.deleteItemAsync('student_refresh_token');
+      await SecureStore.deleteItemAsync('student_user');
       await SecureStore.deleteItemAsync('student_logged_in');
     }
   },

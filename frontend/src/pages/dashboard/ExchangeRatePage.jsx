@@ -9,6 +9,7 @@ import {
   RefreshCw, AlertTriangle, Calendar,
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import Pagination from '../../components/ui/Pagination'
 
 export default function ExchangeRatePage() {
   const [rates,   setRates]   = useState([])
@@ -18,18 +19,22 @@ export default function ExchangeRatePage() {
   const [form, setForm] = useState({ rate: '', is_active: true, note: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // ترقيم صفحات — سجل الأسعار مُجزَّأ من الخادم وكان يعرض أول 10 فقط
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
 
   const load = useCallback(() => {
     setLoading(true)
     Promise.all([
-      api.get('/finance/exchange-rates/'),
+      api.get('/finance/exchange-rates/', { params: { page } }),
       api.get('/finance/exchange-rates/current/').catch(() => ({ data: null })),
     ]).then(([rRes, cRes]) => {
       setRates(rRes.data.results || rRes.data)
+      setTotal(rRes.data.count ?? (Array.isArray(rRes.data) ? rRes.data.length : 0))
       setCurrent(cRes.data)
     }).catch(console.error)
       .finally(() => setLoading(false))
-  }, [])
+  }, [page])
 
   useEffect(() => { load() }, [load])
 
@@ -217,6 +222,11 @@ export default function ExchangeRatePage() {
                     ))}
                   </tbody>
                 </table>
+
+                <p className="text-white/40 text-xs text-center pt-3">
+                  إجمالي السجلات: <span className="text-brand-blue font-medium">{total}</span>
+                </p>
+                <Pagination count={total} currentPage={page} onPageChange={setPage} />
               </div>
             )}
           </div>

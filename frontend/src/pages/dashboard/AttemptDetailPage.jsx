@@ -259,7 +259,7 @@ export default function AttemptDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate(`/dashboard/exams/${attempt.exam}/submissions`)}
+          onClick={() => navigate(`/np-panel/exams/${attempt.exam}/submissions`)}
           className="btn-ghost p-2"
         >
           <ArrowRight size={18} />
@@ -420,7 +420,7 @@ export default function AttemptDetailPage() {
       {/* Footer nav */}
       <div className="flex justify-center pt-2 pb-8">
         <button
-          onClick={() => navigate(`/dashboard/exams/${attempt.exam}/submissions`)}
+          onClick={() => navigate(`/np-panel/exams/${attempt.exam}/submissions`)}
           className="btn-secondary text-sm"
         >
           <ArrowRight size={14} /> العودة لقائمة المحاولات

@@ -129,6 +129,9 @@ export default function PublicLayout({ children, settings }) {
           </ul>
 
           {/* زر القائمة — على الهاتف وحده */}
+          {/* أُزيل زر "تسجيل الدخول": لوحة التحكم مخصصة للطاقم، والطلاب
+              يستخدمون تطبيق الهاتف. المسار غير معلن ويُدخل إليه مباشرةً.
+              لذلك لم يبقَ في هذه الحاوية إلا زر القائمة، وهو للهاتف وحده. */}
           <div className="flex items-center md:hidden">
             <button
               id="navbar-mobile-toggle"

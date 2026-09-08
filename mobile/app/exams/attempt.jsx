@@ -34,6 +34,13 @@ export default function ExamAttemptScreen() {
   const [activeMatchingLeftItem, setActiveMatchingLeftItem] = useState(null);
 
   const timerRef = useRef(null);
+  // حراس ضد التسليم المزدوج:
+  // timerStartedRef: يؤكد أن العدّ التنازلي بدأ فعلاً (يمنع تسليماً تلقائياً كاذباً)
+  // autoSubmittedRef: يضمن تسليماً تلقائياً واحداً فقط عند انتهاء الوقت
+  // submittingRef: يمنع إرسال طلبين متزامنين (يُصفّر عند الفشل للسماح بإعادة المحاولة)
+  const timerStartedRef = useRef(false);
+  const autoSubmittedRef = useRef(false);
+  const submittingRef = useRef(false);
 
   const loadExam = async () => {
     try {
@@ -102,21 +109,29 @@ export default function ExamAttemptScreen() {
   // Start timer once exam details are loaded
   useEffect(() => {
     if (exam && timeLeft > 0) {
+      timerStartedRef.current = true;
       timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            handleAutoSubmit();
-            return 0;
-          }
-          return prev - 1;
-        });
+        // مُحدِّث نقي: لا آثار جانبية بداخله.
+        // استدعاء handleAutoSubmit هنا سابقاً كان قد يُنفَّذ مرتين (React 19)
+        // فيُنتج تنبيهين ومحاولتَي تسليم للاختبار نفسه.
+        setTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
       }, 1000);
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [exam, timeLeft === 0]);
+
+  // التسليم التلقائي عند انتهاء الوقت — خارج مُحدِّث الحالة ومحمي بحارس
+  // لا يعمل إلا إذا كان العدّ التنازلي قد بدأ فعلاً (يمنع تسليم اختبار بلا مدة)
+  useEffect(() => {
+    if (timeLeft !== 0) return;
+    if (!timerStartedRef.current) return;
+    if (autoSubmittedRef.current) return;
+    autoSubmittedRef.current = true;
+    if (timerRef.current) clearInterval(timerRef.current);
+    handleAutoSubmit();
+  }, [timeLeft]);
 
   const handleAutoSubmit = () => {
     Alert.alert(
@@ -128,6 +143,9 @@ export default function ExamAttemptScreen() {
   };
 
   const submitAnswers = async (force = false) => {
+    // حارس ضد التسليم المزدوج (نقر متكرر أو تسليم يدوي متزامن مع التلقائي)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setShowConfirmModal(false);
 
@@ -167,6 +185,9 @@ export default function ExamAttemptScreen() {
       }
     } catch (e) {
       console.log('Error submitting exam:', e);
+      // تصفير الحارس عند الفشل فقط، كي يستطيع الطالب إعادة المحاولة.
+      // عند النجاح يبقى مرفوعاً لمنع إنشاء محاولة ثانية.
+      submittingRef.current = false;
       Alert.alert('خطأ في التسليم', 'فشل تسليم إجابات الاختبار. يرجى التحقق من اتصالك بالإنترنت والمحاولة مجدداً.');
     } finally {
       setSubmitting(false);

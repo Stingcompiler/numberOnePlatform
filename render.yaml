@@ -1,22 +1,25 @@
 # =============================================================================
-# render.yaml — Render Infrastructure as Code
+# render.yaml — توثيق بنية النشر على Render
 # =============================================================================
-# هذا الملف يُعرّف كل خدمات المشروع على Render.
-# وثائق: https://render.com/docs/blueprint-spec
+# ⚠️  هذا الملف مرجعي/توثيقي فقط — الخدمة الحالية أُنشئت يدوياً من لوحة Render
+#     ولم تُنشأ من Blueprint. لا تُطبّقه عبر New → Blueprint وإلا أنشأ Render
+#     خدمة وقاعدة بيانات جديدتين بجوار القائمتين.
 #
-# الاستخدام:
-#   1. ارفع الكود على GitHub
-#   2. في Render Dashboard: New → Blueprint → ربط المستودع
-#   3. Render سيقرأ هذا الملف وينشئ الخدمات تلقائياً
+#     أي تغيير حقيقي في الإعدادات يجب أن يتم من لوحة Render مباشرةً، ثم
+#     يُحدَّث هذا الملف ليطابق الواقع.
+#
+# سبب هذا التنبيه: كان الملف يصف خدمة باسم مختلف وخطة free، بينما الواقع
+# خدمة باسم numberoneplatform على خطة starter — وهو ما أدّى إلى تشخيص خاطئ
+# لسبب اختفاء ملفات الوسائط.
 # =============================================================================
 
 services:
   # ─── خدمة الويب الرئيسية (Django + React) ──────────────────────────────────
   - type: web
-    name: number-platform-api
+    name: numberoneplatform   # الاسم الفعلي للخدمة على Render
     runtime: python
     region: frankfurt         # اختر المنطقة الأقرب لمستخدميك
-    plan: starter             # free | starter | standard | pro
+    plan: starter             # الخطة الفعلية (الأقراص الدائمة تتطلب starter فأعلى)
 
     # ── الخيارات المتعلقة بالبناء ──────────────────────────────────────────
     buildCommand: "./build.sh"
@@ -30,6 +33,10 @@ services:
     startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 6 --timeout 600 --log-level info"
 
     # ── التخزين الدائم لملفات الوسائط ─────────────────────────────────────
+    # ⚠️  مطلوب يدوياً: Dashboard → الخدمة → Disks → Add Disk
+    #     بدون هذا القرص تُكتب الملفات على نظام ملفات مؤقت وتُمسح مع كل نشر،
+    #     بينما تبقى مساراتها في PostgreSQL ⇒ صور مكسورة (404).
+    #     يجب أن يطابق mountPath قيمة متغير البيئة MEDIA_ROOT أدناه.
     disk:
       name: media-storage
       mountPath: /var/data/media
@@ -48,6 +55,8 @@ services:
         value: "3.12.0"
 
       # مسار التخزين الدائم للملفات الوسائطية المرفوعة
+      # ⚠️  مطلوب يدوياً في Environment. بدونه يستخدم Django المسار الافتراضي
+      #     BASE_DIR/media أي داخل نسخة الكود — ويُمحى مع كل عملية نشر.
       - key: MEDIA_ROOT
         value: "/var/data/media"
 
@@ -57,21 +66,26 @@ services:
       - key: BACKUP_STORAGE_DIR
         value: "/var/data/media/.backups"
 
-      # ALLOWED_HOSTS: يُضاف دومين Render تلقائياً + أي دومين مخصص
-      # استبدل number-platform-api.onrender.com بالدومين الفعلي بعد النشر
+      # ALLOWED_HOSTS: الدومين المخصص + دومين Render
       - key: ALLOWED_HOSTS
-        value: "numberoneplatform.onrender.com"
+        value: "numberoneschools.com,www.numberoneschools.com,numberoneplatform.onrender.com"
 
-      # CORS & CSRF: يجب أن يطابق عنوان الـ Frontend
+      # CORS & CSRF: يجب أن تطابق الدومين الذي يُقدَّم منه الموقع
       - key: CORS_ALLOWED_ORIGINS
-        value: "https://numberoneplatform.onrender.com"
+        value: "https://numberoneschools.com,https://www.numberoneschools.com"
 
       - key: CSRF_TRUSTED_ORIGINS
-        value: "https://numberoneplatform.onrender.com"
+        value: "https://numberoneschools.com,https://www.numberoneschools.com"
 
       # Cookies آمنة في HTTPS
       - key: COOKIE_SECURE
         value: "True"
+
+      # حساب مراجعة متجر Google Play — اسم مستخدم واحد يُستثنى من ربط الجهاز
+      # كي يتمكن المراجع من الدخول من أي جهاز. يُضبط يدوياً في اللوحة عند
+      # تقديم التطبيق للمراجعة، ويُحذف بعد الموافقة.
+      # - key: REVIEW_ACCOUNT_USERNAME
+      #   value: "play_reviewer"
 
       # DATABASE_URL: يُحقن تلقائياً من قاعدة البيانات المرتبطة أدناه
       - key: DATABASE_URL
@@ -85,4 +99,5 @@ databases:
     databaseName: number_platform
     user: number_platform_user
     region: frankfurt
-    plan: basic-256mb         # يطابق الخطة القائمة فعلاً
+    plan: basic-256mb         # يطابق الخطة القائمة فعلاً (خطط قواعد بيانات
+                              # Render لا تسمّى starter)

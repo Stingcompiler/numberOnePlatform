@@ -18,6 +18,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -48,6 +49,25 @@ from .serializers import (
 # ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 JWT_SETTINGS = getattr(settings, "SIMPLE_JWT", {})
+
+
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
+
+
+@method_decorator(ensure_csrf_cookie, name="get")
+class CSRFTokenView(APIView):
+    """
+    GET /api/auth/csrf/
+    يضبط كوكي csrftoken في المتصفح كي تُرسله الواجهة كترويسة X-CSRFToken
+    في الطلبات المُغيِّرة للحالة (POST/PUT/PATCH/DELETE). للويب فقط؛ لا يمسّ الموبايل.
+    """
+
+    permission_classes = [AllowAny]
+    throttle_classes = []
+
+    def get(self, request):
+        return Response({"detail": "CSRF cookie set"})
 
 
 def _set_auth_cookies(response: Response, refresh_token) -> None:
@@ -97,6 +117,20 @@ class LoginView(APIView):
     """POST /api/auth/login/"""
 
     permission_classes = [AllowAny]
+    # لا مصادقة على نقطة تسجيل الدخول.
+    #
+    # تطبيق الهاتف يرفق Authorization: Bearer على كل طلب متى وُجد توكن مخزَّن،
+    # بما في ذلك طلب تسجيل الدخول نفسه. فإذا كان التوكن منتهياً أو تالفاً كانت
+    # SimpleJWT ترفض الطلب بـ 401 "Given token not valid for any token type"
+    # قبل أن يصل إلى منطق الدخول أصلاً — فيبقى الطالب محبوساً إلى الأبد، لأن
+    # كل محاولة جديدة تُرسل نفس التوكن الفاسد.
+    #
+    # تسجيل الدخول لا يحتاج هوية سابقة بطبيعته، فتعطيل المصادقة هنا هو السلوك
+    # الصحيح، ويُصلح الطلاب المثبِّتين للنسخة الحالية فوراً دون انتظار تحديث.
+    authentication_classes = []
+    # حدّ معدّل على تسجيل الدخول (حسب IP) لإبطاء تخمين كلمات المرور
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
     def post(self, request):
         serializer = LoginSerializer(
@@ -161,6 +195,10 @@ class TokenRefreshCookieView(APIView):
     """
 
     permission_classes = [AllowAny]
+    # لا مصادقة DRF: الـ view يتحقق من Refresh Token يدوياً من الكوكي أو الجسم.
+    # تعطيلها يمنع تفعيل فحص CSRF على هذه النقطة، وهو ضروري لأن استدعاء التجديد
+    # في تطبيق الموبايل يتم عبر axios خام بلا ترويسة Authorization (يعتمد الكوكي).
+    authentication_classes = []
 
     def post(self, request):
         refresh_cookie_name = JWT_SETTINGS.get("AUTH_COOKIE_REFRESH", "refresh_token")
@@ -240,7 +278,10 @@ class ChangePasswordView(APIView):
     كلمتها ذاتياً من صفحة الحساب في لوحة التحكم.
     """
 
+    # IsStudentReadOnly يفحص المصادقة بنفسه، فيغني عن IsAuthenticated.
     permission_classes = [IsStudentReadOnly]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "change_password"
 
     def post(self, request):
         serializer = ChangePasswordSerializer(
@@ -372,6 +413,39 @@ class StudentDetailView(DestroyWithUserMixin, generics.RetrieveUpdateDestroyAPIV
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class StudentUnbindAllDevicesView(APIView):
+    """
+    POST /api/students/unbind-all-devices/  — فكّ ارتباط الأجهزة عن كل الطلاب.
+
+    يُستخدم عند تغيّر مفتاح توقيع التطبيق (مثل الانتقال إلى Play App Signing):
+    معرّف ANDROID_ID مرتبط بمفتاح التوقيع منذ أندرويد 8، فيتغيّر معرّف كل
+    الأجهزة دفعةً واحدة ويُمنع جميع الطلاب من الدخول. هذه النقطة تُعيد ضبط
+    الارتباط لتُتيح لهم الدخول من التثبيت الجديد، ثم يُعاد الربط تلقائياً
+    عند أول تسجيل دخول.
+
+    مقصورة على مدير النظام، وتتطلب تأكيداً صريحاً في الجسم لمنع الاستدعاء
+    العرضي، لأن أثرها يشمل كل الحسابات.
+    """
+
+    permission_classes = [IsAdmin]
+
+    def post(self, request):
+        if request.data.get("confirm") is not True:
+            return Response(
+                {"detail": _("التأكيد مطلوب: أرسل confirm=true.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        bound = StudentProfile.objects.exclude(device_id__isnull=True).exclude(device_id="")
+        count = bound.count()
+        bound.update(device_id=None, device_bound_at=None)
+
+        return Response({
+            "detail": _("تم فكّ ارتباط الأجهزة عن جميع الطلاب."),
+            "unbound_count": count,
+        })
 
 
 class StudentUnbindDeviceView(APIView):

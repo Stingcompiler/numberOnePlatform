@@ -15,7 +15,7 @@ export default function StudentPhoneDataPage() {
   useEffect(() => {
     api.get(`/students/${id}/`)
       .then(r => setStudent(r.data))
-      .catch(() => navigate('/dashboard/students'))
+      .catch(() => navigate('/np-panel/students'))
       .finally(() => setLoading(false))
   }, [id, navigate])
 
@@ -55,7 +55,7 @@ export default function StudentPhoneDataPage() {
     <div>
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate(`/dashboard/students/${id}`)} className="btn-ghost p-2 rounded-xl">
+        <button onClick={() => navigate(`/np-panel/students/${id}`)} className="btn-ghost p-2 rounded-xl">
           <ArrowRight size={18} />
         </button>
         <div>

@@ -119,7 +119,7 @@ export default function CourseDetailsPage() {
       })))
     }).catch((err) => {
       console.error(err)
-      if (err.response?.status === 404) navigate('/dashboard/academic/courses')
+      if (err.response?.status === 404) navigate('/np-panel/academic/courses')
     }).finally(() => setLoading(false))
   }, [id, navigate, page])
 
@@ -256,7 +256,7 @@ export default function CourseDetailsPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => navigate(`/dashboard/academic/units/${unit.id}`)}
+                      onClick={() => navigate(`/np-panel/academic/units/${unit.id}`)}
                       className="btn-ghost border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10 py-1 px-3 text-[10px] sm:text-xs shrink-0 flex items-center gap-1 rounded-md"
                     >
                       التفاصيل <ArrowLeft size={12} />

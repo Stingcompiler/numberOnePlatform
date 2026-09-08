@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   Modal,
   Platform,
+  PanResponder,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -18,7 +19,11 @@ import {
   Minimize2,
   RotateCcw,
   AlertCircle,
+  RotateCw,
 } from 'lucide-react-native';
+
+/** مقدار القفز لأزرار التقديم والإرجاع (ثوانٍ) */
+const SKIP_SECONDS = 10;
 import { SPACING, TYPOGRAPHY, RADIUS } from '../theme/tokens';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -52,6 +57,36 @@ export default function VideoPlayer({
   
   const controlsTimeoutRef = useRef(null);
   const [progressBarWidth, setProgressBarWidth] = useState(0);
+
+  // ── السحب على شريط التقدم ────────────────────────────────────────────────
+  // كان الشريط TouchableOpacity بـ onPress فقط، أي أنه يدعم النقر ولا يدعم
+  // السحب إطلاقاً. PanResponder (من نواة React Native، بلا مكتبة إضافية)
+  // يوفّر السحب الحقيقي.
+  //
+  // المراجع بدل الحالة لأن دوال PanResponder تُنشأ مرة واحدة ولا ترى أحدث
+  // قيم الحالة (closure قديمة):
+  //   seekingRef       : أثناء السحب نتجاهل تحديثات المشغّل حتى لا يقفز المؤشر
+  //   seekLockUntilRef : بعد الإفلات يُبلّغ يوتيوب الوقت القديم للحظات،
+  //                      فنتجاهل التحديثات مؤقتاً لمنع ارتداد الشريط
+  //   durationRef / widthRef : أحدث القيم لحساب الوقت من موضع اللمس
+  const [isSeeking, setIsSeeking] = useState(false);
+  const seekingRef = useRef(false);
+  const seekLockUntilRef = useRef(0);
+  const durationRef = useRef(0);
+  const widthRef = useRef(0);
+  const dragTimeRef = useRef(0);
+
+  useEffect(() => { durationRef.current = duration; }, [duration]);
+  useEffect(() => { widthRef.current = progressBarWidth; }, [progressBarWidth]);
+
+  /** يحوّل موضع اللمس إلى ثوانٍ، مقيّداً بين 0 ومدة الفيديو */
+  const timeFromTouch = (locationX) => {
+    const w = widthRef.current;
+    const d = durationRef.current;
+    if (!w || !d) return 0;
+    const ratio = Math.min(1, Math.max(0, locationX / w));
+    return Math.min(d, Math.max(0, ratio * d));
+  };
 
   // Auto-hide controls timer
   const triggerShowControls = () => {
@@ -241,10 +276,17 @@ export default function VideoPlayer({
       } else if (data.event === 'stateChange') {
         setPlayerState(data.state);
         setDuration(data.duration || 0);
-        setCurrentTime(data.currentTime || 0);
+        // لا نلمس الوقت أثناء السحب أو في فترة القفل بعده
+        if (!seekingRef.current && Date.now() >= seekLockUntilRef.current) {
+          setCurrentTime(data.currentTime || 0);
+        }
       } else if (data.event === 'progress') {
-        setCurrentTime(data.currentTime || 0);
         setDuration(data.duration || 0);
+        // تجاهل تحديثات المشغّل أثناء السحب وبعده مباشرةً، وإلا ارتدّ المؤشر
+        // إلى الموضع القديم وبدا التحكم غير مستجيب.
+        if (!seekingRef.current && Date.now() >= seekLockUntilRef.current) {
+          setCurrentTime(data.currentTime || 0);
+        }
       } else if (data.event === 'error') {
         setError('تعذر تشغيل هذا الفيديو.');
         setLoading(false);
@@ -275,25 +317,64 @@ export default function VideoPlayer({
   };
 
   const seekTo = (time) => {
-    webViewRef.current?.postMessage(JSON.stringify({ command: 'seekTo', time }));
+    // تقييد ضمن حدود الفيديو قبل الإرسال
+    const d = durationRef.current;
+    const t = Math.min(d > 0 ? d : time, Math.max(0, time));
+    // بعد الإرسال يُبلّغ المشغّل الوقت القديم للحظة، فنتجاهل تحديثاته مؤقتاً
+    seekLockUntilRef.current = Date.now() + 800;
+    setCurrentTime(t);
     webViewRef.current?.injectJavaScript(`
       if (window.player && typeof window.player.seekTo === 'function') {
-        window.player.seekTo(${time}, true);
+        window.player.seekTo(${t}, true);
       }
       true;
     `);
+    triggerShowControls();
   };
 
-  const handleSeekPress = (e) => {
-    if (progressBarWidth > 0 && duration > 0) {
-      const { locationX } = e.nativeEvent;
-      const ratio = locationX / progressBarWidth;
-      const seekTime = ratio * duration;
-      setCurrentTime(seekTime);
-      seekTo(seekTime);
-      triggerShowControls();
-    }
+  /** أزرار الإرجاع/التقديم — مقيّدة بين 0 والمدة الكاملة */
+  const skipBy = (seconds) => {
+    const base = seekingRef.current ? dragTimeRef.current : currentTime;
+    seekTo(base + seconds);
   };
+
+  // يُنشأ مرة واحدة: كل القيم المتغيّرة تُقرأ من المراجع أعلاه
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        // يمنع الأب (ScrollView/صفحة الدرس) من خطف الإيماءة أثناء السحب
+        onPanResponderTerminationRequest: () => false,
+        onShouldBlockNativeResponder: () => true,
+
+        onPanResponderGrant: (e) => {
+          seekingRef.current = true;
+          setIsSeeking(true);
+          const t = timeFromTouch(e.nativeEvent.locationX);
+          dragTimeRef.current = t;
+          setCurrentTime(t);   // تحديث فوري للواجهة أثناء السحب
+          triggerShowControls();
+        },
+        onPanResponderMove: (e) => {
+          const t = timeFromTouch(e.nativeEvent.locationX);
+          dragTimeRef.current = t;
+          setCurrentTime(t);   // الواجهة فقط — لا أوامر seek أثناء السحب
+        },
+        onPanResponderRelease: () => {
+          // أمر seek واحد بالقيمة النهائية، لا عشرات الأوامر أثناء السحب
+          seekingRef.current = false;
+          setIsSeeking(false);
+          seekTo(dragTimeRef.current);
+        },
+        onPanResponderTerminate: () => {
+          seekingRef.current = false;
+          setIsSeeking(false);
+          seekTo(dragTimeRef.current);
+        },
+      }),
+    []
+  );
 
   const formatTime = (secs) => {
     if (isNaN(secs) || secs === undefined) return '00:00';
@@ -343,8 +424,17 @@ export default function VideoPlayer({
         {/* Custom Controls Overlay */}
         {showControls && !loading && !error && (
           <View style={styles.controlsOverlay}>
-            {/* Center Play/Pause button */}
+            {/* Center: إرجاع 10 ثوانٍ — تشغيل/إيقاف — تقديم 10 ثوانٍ */}
             <View style={styles.centerControlRow}>
+              <TouchableOpacity
+                onPress={() => skipBy(-SKIP_SECONDS)}
+                style={styles.skipButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <RotateCcw size={22} color="#ffffff" />
+                <Text style={styles.skipLabel}>{SKIP_SECONDS}</Text>
+              </TouchableOpacity>
+
               {playerState === 1 ? (
                 <TouchableOpacity onPress={pause} style={styles.controlButtonCircle}>
                   <Pause size={28} color="#ffffff" fill="#ffffff" />
@@ -358,6 +448,15 @@ export default function VideoPlayer({
                   <Play size={28} color="#ffffff" fill="#ffffff" style={{ marginLeft: 3 }} />
                 </TouchableOpacity>
               )}
+
+              <TouchableOpacity
+                onPress={() => skipBy(SKIP_SECONDS)}
+                style={styles.skipButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <RotateCw size={22} color="#ffffff" />
+                <Text style={styles.skipLabel}>{SKIP_SECONDS}</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Bottom Controls Bar */}
@@ -368,11 +467,13 @@ export default function VideoPlayer({
                   {formatTime(currentTime)} / {formatTime(duration)}
                 </Text>
 
-                {/* Progress Bar Container */}
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={handleSeekPress}
+                {/* شريط التقدم — سحب حقيقي عبر PanResponder.
+                    منطقة اللمس أعرض من الشريط المرئي (hitSlop رأسي) كي يسهل
+                    الإمساك به بالإصبع على أندرويد. */}
+                <View
+                  {...panResponder.panHandlers}
                   onLayout={(e) => setProgressBarWidth(e.nativeEvent.layout.width)}
+                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
                   style={styles.progressBarWrapper}
                 >
                   <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
@@ -386,7 +487,23 @@ export default function VideoPlayer({
                       ]}
                     />
                   </View>
-                </TouchableOpacity>
+                  {/* مقبض يكبر أثناء السحب ليؤكد للمستخدم أن الإمساك تمّ */}
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.progressThumb,
+                      {
+                        backgroundColor: colors.accent,
+                        left: `${progressPct}%`,
+                        width: isSeeking ? 16 : 11,
+                        height: isSeeking ? 16 : 11,
+                        borderRadius: isSeeking ? 8 : 5.5,
+                        marginLeft: isSeeking ? -8 : -5.5,
+                        marginTop: isSeeking ? -8 : -5.5,
+                      },
+                    ]}
+                  />
+                </View>
 
                 {/* Fullscreen Button */}
                 <TouchableOpacity
@@ -455,8 +572,25 @@ const styles = StyleSheet.create({
   },
   centerControlRow: {
     flex: 1,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 28,
+  },
+  skipButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skipLabel: {
+    position: 'absolute',
+    color: '#ffffff',
+    fontSize: 8,
+    fontWeight: '700',
+    marginTop: 1,
   },
   controlButtonCircle: {
     width: 60,
@@ -487,8 +621,13 @@ const styles = StyleSheet.create({
   },
   progressBarWrapper: {
     flex: 1,
-    height: 20,
+    height: 28,          // منطقة لمس أعرض ليسهل الإمساك بالإصبع
     justifyContent: 'center',
+  },
+  progressThumb: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -5.5,
   },
   progressBarBg: {
     height: 4,

@@ -35,56 +35,56 @@ const ADMIN_NAV_GROUPS = [
   {
     group: 'الرئيسية',
     items: [
-      { label: 'لوحة التحكم', icon: LayoutDashboard, href: '/dashboard' },
+      { label: 'لوحة التحكم', icon: LayoutDashboard, href: '/np-panel' },
     ],
   },
   {
     group: 'إدارة الأشخاص',
     items: [
-      { label: 'الطلاب',           icon: Users,         href: '/dashboard/students' },
-      { label: 'طلبات التسجيل',    icon: UserPlus,       href: '/dashboard/student-requests' },
-      { label: 'شروط التسجيل',    icon: ShieldCheck,    href: '/dashboard/registration-conditions' },
-      { label: 'الأساتذة',         icon: GraduationCap,  href: '/dashboard/teachers' },
-      { label: 'المشرفات',         icon: UserCheck,      href: '/dashboard/supervisors' },
-      { label: 'مشرفو الكورسات',  icon: UserCog,        href: '/dashboard/lecture-supervisors' },
-      { label: 'إدارة كلمات المرور', icon: KeyRound,       href: '/dashboard/password-management' },
-      { label: 'بطاقات الكادر',    icon: LayoutList,     href: '/dashboard/staff' },
+      { label: 'الطلاب',           icon: Users,         href: '/np-panel/students' },
+      { label: 'طلبات التسجيل',    icon: UserPlus,       href: '/np-panel/student-requests' },
+      { label: 'شروط التسجيل',    icon: ShieldCheck,    href: '/np-panel/registration-conditions' },
+      { label: 'الأساتذة',         icon: GraduationCap,  href: '/np-panel/teachers' },
+      { label: 'المشرفات',         icon: UserCheck,      href: '/np-panel/supervisors' },
+      { label: 'مشرفو الكورسات',  icon: UserCog,        href: '/np-panel/lecture-supervisors' },
+      { label: 'إدارة كلمات المرور', icon: KeyRound,       href: '/np-panel/password-management' },
+      { label: 'بطاقات الكادر',    icon: LayoutList,     href: '/np-panel/staff' },
     ],
   },
   {
     group: 'الأكاديمية',
     items: [
-      { label: 'المراحل والفصول',   icon: Layers,         href: '/dashboard/academic/levels' },
-      { label: 'الكورسات',          icon: BookMarked,     href: '/dashboard/academic/courses' },
-      { label: 'المحاضرات',         icon: Play,           href: '/dashboard/academic/lessons' },
-      { label: 'البودكاست المباشر', icon: Radio,          href: '/dashboard/academic/live-podcast' },
-      { label: 'التسليمات',         icon: ClipboardList,  href: '/dashboard/academic/submissions' },
-      { label: 'الاختبارات',        icon: FileCheck,      href: '/dashboard/exams' },
-      { label: 'وصول الكورسات',     icon: ShieldCheck,    href: '/dashboard/course-access' },
+      { label: 'المراحل والفصول',   icon: Layers,         href: '/np-panel/academic/levels' },
+      { label: 'الكورسات',          icon: BookMarked,     href: '/np-panel/academic/courses' },
+      { label: 'المحاضرات',         icon: Play,           href: '/np-panel/academic/lessons' },
+      { label: 'البودكاست المباشر', icon: Radio,          href: '/np-panel/academic/live-podcast' },
+      { label: 'التسليمات',         icon: ClipboardList,  href: '/np-panel/academic/submissions' },
+      { label: 'الاختبارات',        icon: FileCheck,      href: '/np-panel/exams' },
+      { label: 'وصول الكورسات',     icon: ShieldCheck,    href: '/np-panel/course-access' },
     ],
   },
   {
     group: 'المالية والتقارير',
     items: [
-      { label: 'المالية',           icon: DollarSign,     href: '/dashboard/finance' },
-      { label: 'سعر الصرف',        icon: TrendingUp,     href: '/dashboard/exchange-rates' },
-      { label: 'التقارير',          icon: BarChart3,      href: '/dashboard/reports' },
+      { label: 'المالية',           icon: DollarSign,     href: '/np-panel/finance' },
+      { label: 'سعر الصرف',        icon: TrendingUp,     href: '/np-panel/exchange-rates' },
+      { label: 'التقارير',          icon: BarChart3,      href: '/np-panel/reports' },
     ],
   },
   {
     group: 'التواصل والموقع',
     items: [
-      { label: 'الإعلانات',         icon: Megaphone,      href: '/dashboard/announcements' },
-      { label: 'صندوق الوارد',      icon: Inbox,          href: '/dashboard/inbox' },
-      { label: 'أدوات التواصل',     icon: Link2,          href: '/dashboard/contact-tools' },
-      { label: 'إدارة المتجر',      icon: Store,          href: '/dashboard/store' },
+      { label: 'الإعلانات',         icon: Megaphone,      href: '/np-panel/announcements' },
+      { label: 'صندوق الوارد',      icon: Inbox,          href: '/np-panel/inbox' },
+      { label: 'أدوات التواصل',     icon: Link2,          href: '/np-panel/contact-tools' },
+      { label: 'إدارة المتجر',      icon: Store,          href: '/np-panel/store' },
     ],
   },
   {
     group: 'النظام',
     items: [
-      { label: 'النسخ الاحتياطي',   icon: HardDrive,      href: '/dashboard/backups' },
-      { label: 'إعدادات الموقع',    icon: Settings,       href: '/dashboard/settings' },
+      { label: 'النسخ الاحتياطي',   icon: HardDrive,      href: '/np-panel/backups' },
+      { label: 'إعدادات الموقع',    icon: Settings,       href: '/np-panel/settings' },
     ],
   },
 ]
@@ -93,18 +93,18 @@ const TEACHER_NAV_GROUPS = [
   {
     group: 'الرئيسية',
     items: [
-      { label: 'لوحة التحكم', icon: LayoutDashboard, href: '/dashboard' },
+      { label: 'لوحة التحكم', icon: LayoutDashboard, href: '/np-panel' },
     ],
   },
   {
     group: 'الأكاديمية',
     items: [
-      { label: 'المراحل والفصول',  icon: Layers,        href: '/dashboard/academic/levels' },
-      { label: 'الكورسات',         icon: BookMarked,    href: '/dashboard/academic/courses' },
-      { label: 'المحاضرات',        icon: Play,          href: '/dashboard/academic/lessons' },
-      { label: 'البودكاست المباشر',icon: Radio,         href: '/dashboard/academic/live-podcast' },
-      { label: 'التسليمات',        icon: ClipboardList, href: '/dashboard/academic/submissions' },
-      { label: 'الاختبارات',       icon: FileCheck,     href: '/dashboard/exams' },
+      { label: 'المراحل والفصول',  icon: Layers,        href: '/np-panel/academic/levels' },
+      { label: 'الكورسات',         icon: BookMarked,    href: '/np-panel/academic/courses' },
+      { label: 'المحاضرات',        icon: Play,          href: '/np-panel/academic/lessons' },
+      { label: 'البودكاست المباشر',icon: Radio,         href: '/np-panel/academic/live-podcast' },
+      { label: 'التسليمات',        icon: ClipboardList, href: '/np-panel/academic/submissions' },
+      { label: 'الاختبارات',       icon: FileCheck,     href: '/np-panel/exams' },
     ],
   },
 ]
@@ -113,15 +113,15 @@ const COURSES_SUPERVISOR_NAV_GROUPS = [
   {
     group: 'الرئيسية',
     items: [
-      { label: 'لوحة التحكم', icon: LayoutDashboard, href: '/dashboard' },
+      { label: 'لوحة التحكم', icon: LayoutDashboard, href: '/np-panel' },
     ],
   },
   {
     group: 'الكورسات والمحاضرات',
     items: [
-      { label: 'جميع الكورسات',     icon: BookMarked, href: '/dashboard/academic/courses' },
-      { label: 'إدارة المحاضرات',  icon: Play,       href: '/dashboard/academic/lessons' },
-      { label: 'البودكاست المباشر', icon: Radio,      href: '/dashboard/academic/live-podcast' },
+      { label: 'جميع الكورسات',     icon: BookMarked, href: '/np-panel/academic/courses' },
+      { label: 'إدارة المحاضرات',  icon: Play,       href: '/np-panel/academic/lessons' },
+      { label: 'البودكاست المباشر', icon: Radio,      href: '/np-panel/academic/live-podcast' },
     ],
   },
 ]
@@ -292,7 +292,7 @@ function NotificationBell() {
           {/* تذييل — رابط صندوق الوارد الكامل */}
           <div className="border-t border-white/10 bg-dark-700/30">
             <Link
-              to="/dashboard/inbox"
+              to="/np-panel/inbox"
               onClick={() => setOpen(false)}
               className="flex items-center justify-center gap-1.5 py-2.5 text-xs text-brand-blue hover:text-white transition-colors font-medium"
             >
@@ -320,7 +320,7 @@ function SidebarNavGroup({ group, items, onLinkClick }) {
         <NavLink
           key={item.href}
           to={item.href}
-          end={item.href === '/dashboard'}
+          end={item.href === '/np-panel'}
           className={({ isActive }) =>
             `sidebar-item ${isActive ? 'active' : ''}`
           }
@@ -402,7 +402,7 @@ export default function DashboardLayout({ children }) {
             </div>
           ) : (
             <NavLink
-              to="/dashboard/profile"
+              to="/np-panel/profile"
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-2 py-2 rounded-xl transition-all ${

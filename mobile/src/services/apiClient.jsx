@@ -12,9 +12,19 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
+// نقاط لا تحتاج هوية سابقة — يجب ألا تحمل ترويسة Authorization إطلاقاً.
+// إرسال توكن منتهٍ إلى /auth/login/ كان يُرجع 401 قبل الوصول لمنطق الدخول،
+// فيبقى المستخدم عاجزاً عن الدخول لأن كل محاولة تُرسل نفس التوكن الفاسد.
+const NO_AUTH_PATHS = ['/auth/login/', '/auth/refresh/'];
+
 apiClient.interceptors.request.use(
   async (config) => {
     try {
+      const url = config.url || '';
+      if (NO_AUTH_PATHS.some((p) => url.includes(p))) {
+        delete config.headers['Authorization'];
+        return config;
+      }
       const token = await SecureStore.getItemAsync('student_access_token');
       if (token) {
         config.headers['Authorization'] = `Bearer ${token}`;

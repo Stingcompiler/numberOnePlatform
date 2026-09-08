@@ -11,6 +11,7 @@ Views الكاملة للهيكل الأكاديمي
 
 import re
 
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.utils.translation import gettext_lazy as _
 from django.views import View
@@ -23,7 +24,7 @@ from rest_framework.views import APIView
 from accounts.models import CustomUser
 from accounts.permissions import (
     IsAdminOrManager, IsAdminOrReadOnly, IsStudent, IsLectureSupervisor,
-    LectureWritePermission, LectureSubContentPermission,
+    IsStaffReadAdminWrite, LectureWritePermission, LectureSubContentPermission,
 )
 from .models import (
     Level, Grade, Course, Unit, Lesson,
@@ -49,6 +50,21 @@ from .serializers import (
 from rest_framework import serializers as drf_serializers
 
 
+def _restrict_courses_to_student(qs, student):
+    """
+    يُقيّد queryset الكورسات لما يحق للطالب رؤيته فقط.
+
+    يمنع تجاوز جدار الدفع: قراءة كورسات مراحل أخرى أو نظام آخر عبر
+    نقطة /academic/courses/ الإدارية.
+
+    القاعدة نفسها المستعملة لفتح المحتوى (academic.access) ولا تُكرَّر هنا:
+    كانت هذه الدالة تقصر طالب الأونلاين على مرحلته وحدها، فيفتح الطالب
+    المُمنوح كورساً يدوياً محتواه ولا يراه في القائمة. تفويضُ القاعدة يمنع
+    افتراق الاثنتين، ولا يوسّع وصولاً — ما يظهر هنا هو ما يُفتح هناك.
+    """
+    return qs.filter(id__in=accessible_course_ids(student))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Level — المراحل
 # ─────────────────────────────────────────────────────────────────────────────
@@ -60,7 +76,7 @@ class LevelListCreateView(generics.ListCreateAPIView):
     """
 
     serializer_class   = LevelSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffReadAdminWrite]
 
     def get_queryset(self):
         qs = Level.objects.prefetch_related("grades").order_by("display_order")
@@ -75,7 +91,7 @@ class LevelDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     queryset           = Level.objects.prefetch_related("grades")
     serializer_class   = LevelSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffReadAdminWrite]
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
@@ -89,7 +105,7 @@ class LevelDetailView(generics.RetrieveUpdateDestroyAPIView):
 class GradeListCreateView(generics.ListCreateAPIView):
     """GET /api/academic/grades/ | POST"""
 
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffReadAdminWrite]
 
     def get_queryset(self):
         qs = Grade.objects.select_related("level").prefetch_related("courses")
@@ -110,7 +126,7 @@ class GradeDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     queryset           = Grade.objects.select_related("level").prefetch_related("courses")
     serializer_class   = GradeSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffReadAdminWrite]
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
@@ -138,6 +154,10 @@ class CourseListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs = Course.objects.select_related("grade__level", "teacher").prefetch_related("units")
+        # الطالب: يُقيّد لكورساته المصرّح بها فقط (منع تجاوز جدار الدفع)
+        user = self.request.user
+        if getattr(user, "role", None) == CustomUser.Roles.STUDENT:
+            qs = _restrict_courses_to_student(qs, user.student_profile)
         # فلترة حسب الفصل أو المرحلة
         grade_id = self.request.query_params.get("grade")
         level_id = self.request.query_params.get("level")
@@ -159,14 +179,21 @@ class CourseListCreateView(generics.ListCreateAPIView):
 class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
     """GET / PATCH / DELETE /api/academic/courses/<id>/"""
 
-    queryset = Course.objects.select_related("grade__level", "teacher").prefetch_related(
-        "units__lessons"
-    )
     serializer_class   = CourseSerializer
+
+    def get_queryset(self):
+        qs = Course.objects.select_related("grade__level", "teacher").prefetch_related(
+            "units__lessons"
+        )
+        # الطالب: لا يصل إلا لكورساته المصرّح بها (كورس آخر ⇒ 404 لا تسريب)
+        user = self.request.user
+        if getattr(user, "role", None) == CustomUser.Roles.STUDENT:
+            qs = _restrict_courses_to_student(qs, user.student_profile)
+        return qs
 
     def get_permissions(self):
         """
-        GET: جميع المصادق عليهم (شامل مشرف الكورسات)
+        GET: جميع المصادق عليهم (شامل مشرف الكورسات والطالب — مفلتر على مستوى الكائن)
         POST/PATCH/DELETE: مدير فقط
         """
         from rest_framework.permissions import IsAuthenticated
@@ -208,7 +235,7 @@ class UnitListCreateView(generics.ListCreateAPIView):
     """GET /api/academic/units/?course=<id> | POST"""
 
     serializer_class   = UnitSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffReadAdminWrite]
 
     def get_queryset(self):
         qs = Unit.objects.select_related("course").prefetch_related("lessons")
@@ -223,7 +250,7 @@ class UnitDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     queryset           = Unit.objects.select_related("course").prefetch_related("lessons")
     serializer_class   = UnitSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffReadAdminWrite]
 
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
@@ -497,11 +524,21 @@ class StudentCourseAccessListCreateView(generics.ListCreateAPIView):
         ).filter(student__system_type="flash")
         student_id = self.request.query_params.get("student")
         course_id  = self.request.query_params.get("course")
+        search     = self.request.query_params.get("search")
         if student_id:
             qs = qs.filter(student_id=student_id)
         if course_id:
             qs = qs.filter(course_id=course_id)
-        return qs
+        # البحث على الخادم: كانت الواجهة تُصفّي محلياً، وهو ما يعني — مع ترقيم
+        # الصفحات — البحث داخل السجلات المعروضة فقط. نقله للخادم يجعله يشمل
+        # كل السجلات. ترتيب ثابت مطلوب أيضاً وإلا تكرّرت/سقطت سجلات بين الصفحات.
+        if search:
+            qs = qs.filter(
+                Q(student__user__full_name__icontains=search)
+                | Q(student__user__username__icontains=search)
+                | Q(course__name__icontains=search)
+            )
+        return qs.order_by("-granted_at", "-id")
 
     def perform_create(self, serializer):
         serializer.save(granted_by=self.request.user)

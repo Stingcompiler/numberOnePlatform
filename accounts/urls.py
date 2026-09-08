@@ -7,8 +7,9 @@ accounts/urls.py
 from django.urls import path
 from .views import (
     LoginView, LogoutView, TokenRefreshCookieView,
-    MeView, ChangePasswordView, AdminResetPasswordView,
+    MeView, ChangePasswordView, AdminResetPasswordView, CSRFTokenView,
     StudentListCreateView, StudentDetailView, StudentUnbindDeviceView,
+    StudentUnbindAllDevicesView,
     TeacherListCreateView, TeacherDetailView,
     SupervisorListCreateView, SupervisorDetailView,
     SupervisorStudentReportView, AllSupervisorsReportView,
@@ -22,6 +23,7 @@ from .views import (
 
 urlpatterns = [
     # ── المصادقة ──────────────────────────────────────────────────────────────
+    path("auth/csrf/",            CSRFTokenView.as_view(),          name="auth-csrf"),
     path("auth/login/",           LoginView.as_view(),              name="auth-login"),
     path("auth/logout/",          LogoutView.as_view(),             name="auth-logout"),
     path("auth/refresh/",         TokenRefreshCookieView.as_view(), name="auth-refresh"),
@@ -32,6 +34,8 @@ urlpatterns = [
     # ── الطلاب ───────────────────────────────────────────────────────────────
     path("students/",                          StudentListCreateView.as_view(),  name="student-list"),
     path("students/<int:pk>/",                 StudentDetailView.as_view(),      name="student-detail"),
+    # يجب أن يسبق مسارات <int:pk> وإلا فُسِّر "unbind-all-devices" كمعرّف رقمي
+    path("students/unbind-all-devices/",       StudentUnbindAllDevicesView.as_view(), name="student-unbind-all"),
     path("students/<int:pk>/unbind-device/",   StudentUnbindDeviceView.as_view(), name="student-unbind-device"),
 
     # ── الأساتذة ─────────────────────────────────────────────────────────────

@@ -151,7 +151,7 @@ function LessonCard({ lesson, onDelete, onCreateExercise }) {
           <h3 className="font-cairo font-bold text-white text-sm line-clamp-2 flex-1">{lesson.title}</h3>
           <div className="flex items-center gap-1 shrink-0">
             <button
-              onClick={() => navigate(`/dashboard/academic/lessons/${lesson.id}`)}
+              onClick={() => navigate(`/np-panel/academic/lessons/${lesson.id}`)}
               className="btn-ghost p-1.5 text-brand-blue/60 hover:text-brand-blue"
               title="عرض التفاصيل"
             >
@@ -216,7 +216,7 @@ function LessonCard({ lesson, onDelete, onCreateExercise }) {
           )}
           {/* View Details button */}
           <button
-            onClick={() => navigate(`/dashboard/academic/lessons/${lesson.id}`)}
+            onClick={() => navigate(`/np-panel/academic/lessons/${lesson.id}`)}
             className="w-full flex items-center justify-center gap-1.5 text-[11px] text-white/50 hover:text-brand-blue
                        border border-white/08 hover:border-brand-blue/30 rounded-xl py-1.5 transition-all hover:bg-brand-blue/5"
           >

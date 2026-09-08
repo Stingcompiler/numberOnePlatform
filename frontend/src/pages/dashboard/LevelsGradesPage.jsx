@@ -5,6 +5,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axiosInstance'
 import fetchAll from '../../api/fetchAll'
+import Pagination from '../../components/ui/Pagination'
 
 /* ═══════════════════════════════════════════════════════════════════
    نافذة إنشاء/تعديل عامة (Generic Modal)
@@ -98,6 +99,9 @@ export default function LevelsGradesPage() {
 
   // فلاتر الفصول
   const [filterLevel, setFilterLevel] = useState('')
+  // ترقيم صفحات الفصول — النقطة مُجزَّأة من الخادم وكانت تعرض أول 10 فقط
+  const [gradePage, setGradePage] = useState(1)
+  const [gradeTotal, setGradeTotal] = useState(0)
 
   const loadLevels = useCallback(() => {
     setLoading(true)
@@ -110,15 +114,20 @@ export default function LevelsGradesPage() {
 
   const loadGrades = useCallback(() => {
     setLoading(true)
-    const params = { system_type: activeSystemType }
+    const params = { system_type: activeSystemType, page: gradePage }
     if (filterLevel) params.level = filterLevel
 
     api.get('/academic/grades/', { params })
       .then((res) => {
         setGrades(res.data.results || res.data)
+        setGradeTotal(res.data.count ?? (Array.isArray(res.data) ? res.data.length : 0))
       }).catch(console.error)
       .finally(() => setLoading(false))
-  }, [filterLevel, activeSystemType])
+  }, [filterLevel, activeSystemType, gradePage])
+
+  // العودة للصفحة الأولى عند تغيير الفلتر أو النظام حتى لا يبقى المستخدم
+  // على رقم صفحة غير موجود في النتائج الجديدة
+  useEffect(() => { setGradePage(1) }, [filterLevel, activeSystemType])
 
   useEffect(() => {
     if (activeTab === 'levels') loadLevels()
@@ -324,7 +333,7 @@ export default function LevelsGradesPage() {
                       <div className="flex items-center gap-2 pt-2 border-t border-white/05">
                          <span className="text-white/40 text-xs">الكورسات المرتبطة: {grade.courses?.length || 0}</span>
                          <button 
-                           onClick={() => navigate(`/dashboard/academic/grades/${grade.id}`)}
+                           onClick={() => navigate(`/np-panel/academic/grades/${grade.id}`)}
                            className="btn-ghost mr-auto text-xs text-brand-blue py-1 px-2 border border-brand-blue/30 rounded flex items-center gap-1"
                          >
                             التفاصيل <ArrowLeft size={10} />
@@ -334,6 +343,8 @@ export default function LevelsGradesPage() {
                 ))}
              </div>
            )}
+
+           <Pagination count={gradeTotal} currentPage={gradePage} onPageChange={setGradePage} />
          </div>
       )}
 

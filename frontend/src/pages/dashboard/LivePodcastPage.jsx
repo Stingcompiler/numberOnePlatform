@@ -16,6 +16,7 @@ import {
   ArrowLeft
 } from "lucide-react"
 import api from "../../api/axiosInstance"
+import Pagination from "../../components/ui/Pagination"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -268,7 +269,7 @@ function RoomCard({ room, onEditRoom, onDeleteRoom, onToggle, onRefresh }) {
         
         {/* Navigation to details */}
         <button 
-          onClick={() => navigate(`/dashboard/academic/live-podcast/rooms/${room.id}`)} 
+          onClick={() => navigate(`/np-panel/academic/live-podcast/rooms/${room.id}`)} 
           className="ml-2 px-4 py-2 rounded-xl bg-brand-blue/10 text-brand-blue font-semibold text-sm hover:bg-brand-blue/20 transition-colors flex items-center gap-2">
           إدارة الجلسات
           <ArrowLeft size={14} />
@@ -288,18 +289,22 @@ export default function LivePodcastPage() {
   const [error,     setError]     = useState("")
   const [showForm,  setShowForm]  = useState(false)
   const [editRoom,  setEditRoom]  = useState(null)
+  // ترقيم صفحات — النقطة مُجزَّأة من الخادم وكانت تعرض أول 10 غرف فقط
+  const [page,      setPage]      = useState(1)
+  const [total,     setTotal]     = useState(0)
 
   const fetchRooms = useCallback(async () => {
     setLoading(true); setError("")
     try {
-      const { data } = await api.get("/live/rooms/")
+      const { data } = await api.get("/live/rooms/", { params: { page } })
       setRooms(Array.isArray(data) ? data : (data.results || []))
+      setTotal(Array.isArray(data) ? data.length : (data.count ?? 0))
     } catch {
       setError("تعذّر تحميل الغرف. يرجى المحاولة مجدداً.")
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [page])
 
   useEffect(() => { fetchRooms() }, [fetchRooms])
 
@@ -403,6 +408,11 @@ export default function LivePodcastPage() {
               onRefresh={fetchRooms}
             />
           ))}
+
+          <p className="text-white/40 text-xs text-center pt-2">
+            إجمالي الغرف: <span className="text-brand-blue font-medium">{total}</span>
+          </p>
+          <Pagination count={total} currentPage={page} onPageChange={setPage} />
         </div>
       )}
 

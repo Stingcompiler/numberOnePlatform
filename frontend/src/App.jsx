@@ -70,14 +70,22 @@ const PageLoader = () => (
 /* ── مسار صفحة "الوصول غير متاح عبر المتصفح" (للطلاب) ─────────── */
 const STUDENT_BLOCKED_PATH = '/student-app-only'
 
+/* ── مسار تسجيل الدخول ─────────────────────────────────────────
+   مسار غير معلن: لا يظهر أي زر أو رابط يقود إليه في الموقع العام،
+   وهو مستبعد من sitemap ومحجوب في robots.txt. لتغييره لاحقاً
+   يكفي تعديل هذا السطر — كل الإحالات تشتق منه.
+   ملاحظة: هذا إخفاء لا حماية؛ الحماية الفعلية هي المصادقة وحدّ
+   معدّل المحاولات على /api/auth/login/. */
+export const LOGIN_PATH = '/np-access'
+
 /* ── حارس المسارات الخاصة ─────────────────────────────────────── */
 function PrivateRoute({ children, roles }) {
   const { user, loading } = useAuth()
   if (loading) return <PageLoader />
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to={LOGIN_PATH} replace />
   // الطلاب: المنصة عبر تطبيق الهاتف فقط — لا وصول للوحة التحكم من المتصفح
   if (user.role === 'student') return <Navigate to={STUDENT_BLOCKED_PATH} replace />
-  if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />
+  if (roles && !roles.includes(user.role)) return <Navigate to="/np-panel" replace />
   return children
 }
 
@@ -87,7 +95,7 @@ function PublicRoute({ children }) {
   if (loading) return null
   // الطالب المسجَّل لا يُعاد للوحة التحكم (يمنع حلقة إعادة التوجيه)
   if (user?.role === 'student') return <Navigate to={STUDENT_BLOCKED_PATH} replace />
-  if (user) return <Navigate to="/dashboard" replace />
+  if (user) return <Navigate to="/np-panel" replace />
   return children
 }
 
@@ -119,142 +127,142 @@ function AppRoutes() {
       <Route path="/register" element={<StudentRegistrationPage />} />
       <Route path="/store" element={<StorePage />} />
       <Route path="/store/:id" element={<AppDetailPage />} />
-      <Route path="/login" element={
+      <Route path={LOGIN_PATH} element={
         <PublicRoute><LoginPage /></PublicRoute>
       } />
       <Route path={STUDENT_BLOCKED_PATH} element={<StudentAppOnlyPage />} />
 
       {/* ── Dashboard — الرئيسية ───────────────────────────────── */}
-      <Route path="/dashboard"
+      <Route path="/np-panel"
         element={<DPage component={DashboardHome} />}
       />
 
       {/* ── إدارة الحسابات ────────────────────────────────────── */}
-      <Route path="/dashboard/students"
+      <Route path="/np-panel/students"
         element={<DPage component={StudentsPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/students/:id"
+      <Route path="/np-panel/students/:id"
         element={<DPage component={lazy(() => import('./pages/dashboard/StudentDetailsPage'))} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/teachers"
+      <Route path="/np-panel/teachers"
         element={<DPage component={TeachersPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/supervisors"
+      <Route path="/np-panel/supervisors"
         element={<DPage component={SupervisorsPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/supervisors/:id"
+      <Route path="/np-panel/supervisors/:id"
         element={<DPage component={SupervisorDetailPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/student-requests"
+      <Route path="/np-panel/student-requests"
         element={<DPage component={StudentRequestsPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/student-requests/:id"
+      <Route path="/np-panel/student-requests/:id"
         element={<DPage component={RegistrationRequestDetailPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/students/:id/phone"
+      <Route path="/np-panel/students/:id/phone"
         element={<DPage component={StudentPhoneDataPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/registration-conditions"
+      <Route path="/np-panel/registration-conditions"
         element={<DPage component={RegistrationConditionsPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/profile"
+      <Route path="/np-panel/profile"
         element={<DPage component={ProfilePage} />}
       />
-      <Route path="/dashboard/password-management"
+      <Route path="/np-panel/password-management"
         element={<DPage component={PasswordManagementPage} roles={ADMIN_ROLES} />}
       />
 
       {/* ── مشرفو المحاضرات (إدارة المدير) ────────────────────── */}
-      <Route path="/dashboard/lecture-supervisors"
+      <Route path="/np-panel/lecture-supervisors"
         element={<DPage component={LectureSupervisorsPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/lecture-supervisors/:id"
+      <Route path="/np-panel/lecture-supervisors/:id"
         element={<DPage component={LectureSupervisorDetailPage} roles={ADMIN_ROLES} />}
       />
 
       {/* ── المالية والتقارير ─────────────────────────────────── */}
-      <Route path="/dashboard/finance"
+      <Route path="/np-panel/finance"
         element={<DPage component={FinancePage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/reports"
+      <Route path="/np-panel/reports"
         element={<DPage component={ReportsPage} roles={ADMIN_ROLES} />}
       />
 
       {/* ── إدارة الأكاديمية ────────────────────────────────────── */}
-      <Route path="/dashboard/academic/levels"
+      <Route path="/np-panel/academic/levels"
         element={<DPage component={LevelsGradesPage} roles={ALL_STAFF} />}
       />
-      <Route path="/dashboard/academic/grades/:id"
+      <Route path="/np-panel/academic/grades/:id"
         element={<DPage component={GradeDetailsPage} roles={ALL_STAFF} />}
       />
-      <Route path="/dashboard/academic/courses"
+      <Route path="/np-panel/academic/courses"
         element={<DPage component={CoursesUnitsPage} roles={LECTURE_CONTENT_ROLES} />}
       />
-      <Route path="/dashboard/academic/courses/:id"
+      <Route path="/np-panel/academic/courses/:id"
         element={<DPage component={CourseDetailsPage} roles={LECTURE_CONTENT_ROLES} />}
       />
-      <Route path="/dashboard/academic/units/:id"
+      <Route path="/np-panel/academic/units/:id"
         element={<DPage component={UnitDetailsPage} roles={LECTURE_CONTENT_ROLES} />}
       />
-      <Route path="/dashboard/academic/lessons"
+      <Route path="/np-panel/academic/lessons"
         element={<DPage component={LessonsExercisesPage} roles={LECTURE_CONTENT_ROLES} />}
       />
-      <Route path="/dashboard/academic/lessons/:id"
+      <Route path="/np-panel/academic/lessons/:id"
         element={<DPage component={LectureDetailsPage} roles={LECTURE_CONTENT_ROLES} />}
       />
-      <Route path="/dashboard/academic/live-podcast"
+      <Route path="/np-panel/academic/live-podcast"
         element={<DPage component={LivePodcastPage} roles={LECTURE_CONTENT_ROLES} />}
       />
-      <Route path="/dashboard/academic/live-podcast/rooms/:id"
+      <Route path="/np-panel/academic/live-podcast/rooms/:id"
         element={<DPage component={LiveRoomDetailsPage} roles={LECTURE_CONTENT_ROLES} />}
       />
-      <Route path="/dashboard/academic/submissions"
+      <Route path="/np-panel/academic/submissions"
         element={<DPage component={AllSubmissionsPage} roles={ALL_STAFF} />}
       />
 
       {/* ── إدارة الاختبارات ─────────────────────────────────────── */}
-      <Route path="/dashboard/exams"
+      <Route path="/np-panel/exams"
         element={<DPage component={ExamListPage} roles={ALL_STAFF} />}
       />
-      <Route path="/dashboard/exams/create"
+      <Route path="/np-panel/exams/create"
         element={<DPage component={ExamCreatePage} roles={ALL_STAFF} />}
       />
-      <Route path="/dashboard/exams/:id/edit"
+      <Route path="/np-panel/exams/:id/edit"
         element={<DPage component={ExamCreatePage} roles={ALL_STAFF} />}
       />
-      <Route path="/dashboard/exams/:id/submissions"
+      <Route path="/np-panel/exams/:id/submissions"
         element={<DPage component={ExamSubmissionsPage} roles={ALL_STAFF} />}
       />
-      <Route path="/dashboard/exams/attempts/:id"
+      <Route path="/np-panel/exams/attempts/:id"
         element={<DPage component={AttemptDetailPage} roles={ALL_STAFF} />}
       />
 
       {/* ── إدارة الموقع ──────────────────────────────────────── */}
-      <Route path="/dashboard/announcements"
+      <Route path="/np-panel/announcements"
         element={<DPage component={AnnouncementsPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/inbox"
+      <Route path="/np-panel/inbox"
         element={<DPage component={InboxPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/settings"
+      <Route path="/np-panel/settings"
         element={<DPage component={SiteSettingsPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/contact-tools"
+      <Route path="/np-panel/contact-tools"
         element={<DPage component={ContactToolsPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/staff"
+      <Route path="/np-panel/staff"
         element={<DPage component={StaffPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/exchange-rates"
+      <Route path="/np-panel/exchange-rates"
         element={<DPage component={ExchangeRatePage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/course-access"
+      <Route path="/np-panel/course-access"
         element={<DPage component={StudentCourseAccessPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/backups"
+      <Route path="/np-panel/backups"
         element={<DPage component={BackupPage} roles={ADMIN_ROLES} />}
       />
-      <Route path="/dashboard/store"
+      <Route path="/np-panel/store"
         element={<DPage component={StoreManagementPage} roles={ADMIN_ROLES} />}
       />
 

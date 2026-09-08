@@ -14,6 +14,7 @@ import {
   AlertTriangle, Users, ShieldCheck, ShieldOff,
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import Pagination from '../../components/ui/Pagination'
 
 /* ── helpers ───────────────────────────────────────────── */
 const ROLE_LABEL = { lecture_supervisor: 'مشرف كورسات' }
@@ -108,6 +109,13 @@ export default function LectureSupervisorsPage() {
   const [creating, setCreating]   = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting]   = useState(false)
+  // ترقيم صفحات — النقطة مُجزَّأة من الخادم وكانت تعرض أول 10 مشرفين فقط.
+  // البحث والفلترة يُرسلان للخادم أصلاً، فيبقيان محفوظين عبر الصفحات.
+  const [page,  setPage]  = useState(1)
+  const [total, setTotal] = useState(0)
+
+  // العودة للصفحة الأولى عند تغيير البحث أو الفلتر
+  useEffect(() => { setPage(1) }, [search, filter])
 
   const notify = (msg, type = 'success') => setToast({ msg, type })
 
@@ -115,15 +123,16 @@ export default function LectureSupervisorsPage() {
   const fetchProfiles = useCallback(async () => {
     setLoading(true)
     try {
-      const params = {}
+      const params = { page }
       if (search) params.search = search
       if (filter === 'active') params.is_active = 'true'
       if (filter === 'inactive') params.is_active = 'false'
       const { data } = await api.get('/lecture-supervisors/', { params })
       setProfiles(Array.isArray(data) ? data : data.results || [])
+      setTotal(Array.isArray(data) ? data.length : (data.count ?? 0))
     } catch { notify('فشل تحميل البيانات', 'error') }
     finally { setLoading(false) }
-  }, [search, filter])
+  }, [search, filter, page])
 
   useEffect(() => { fetchProfiles() }, [fetchProfiles])
 
@@ -264,13 +273,18 @@ export default function LectureSupervisorsPage() {
               <SupervisorCard
                 key={p.id}
                 profile={p}
-                onView={id => navigate(`/dashboard/lecture-supervisors/${id}`)}
+                onView={id => navigate(`/np-panel/lecture-supervisors/${id}`)}
                 onToggle={handleToggle}
                 onDelete={setDeleteTarget}
               />
             ))}
           </div>
         )}
+
+        <p className="text-white/40 text-xs text-center pt-4">
+          إجمالي المشرفين: <span className="text-brand-blue font-medium">{total}</span>
+        </p>
+        <Pagination count={total} currentPage={page} onPageChange={setPage} />
       </div>
 
       {/* ══ Modal: إنشاء مشرف ══════════════════════════════════ */}

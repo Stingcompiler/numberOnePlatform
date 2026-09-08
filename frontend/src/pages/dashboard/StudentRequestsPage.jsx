@@ -165,7 +165,7 @@ function NewRegistrationTab() {
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-1.5">
-                          <button onClick={() => navigate(`/dashboard/student-requests/${req.id}`)} className="p-1.5 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 rounded-lg transition-colors" title="التفاصيل">
+                          <button onClick={() => navigate(`/np-panel/student-requests/${req.id}`)} className="p-1.5 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 rounded-lg transition-colors" title="التفاصيل">
                             <Eye size={16} />
                           </button>
                           {req.status === 'new' && (

@@ -10,6 +10,7 @@ import {
   Instagram, Facebook, Twitter, ToggleLeft, ToggleRight,
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import Pagination from '../../components/ui/Pagination'
 
 /* ─ مطابق أيقونات الأداة ──────────────────────────────────────── */
 const TOOL_ICONS = {
@@ -137,14 +138,20 @@ export default function ContactToolsPage() {
   const [tools,   setTools]   = useState([])
   const [loading, setLoading] = useState(true)
   const [modal,   setModal]   = useState(null)
+  // ترقيم صفحات — النقطة مُجزَّأة من الخادم وكانت تعرض أول 10 فقط
+  const [page,    setPage]    = useState(1)
+  const [total,   setTotal]   = useState(0)
 
   const load = useCallback(() => {
     setLoading(true)
-    api.get('/admin/contact-tools/')
-      .then(({ data }) => setTools(data.results || data))
+    api.get('/admin/contact-tools/', { params: { page } })
+      .then(({ data }) => {
+        setTools(data.results || data)
+        setTotal(data.count ?? (Array.isArray(data) ? data.length : 0))
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [])
+  }, [page])
 
   useEffect(() => { load() }, [load])
 
@@ -231,6 +238,11 @@ export default function ContactToolsPage() {
               </div>
             )
           })}
+
+          <p className="text-white/40 text-xs text-center pt-2">
+            إجمالي الأدوات: <span className="text-brand-blue font-medium">{total}</span>
+          </p>
+          <Pagination count={total} currentPage={page} onPageChange={setPage} />
         </div>
       )}
 

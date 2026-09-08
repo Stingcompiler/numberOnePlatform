@@ -73,7 +73,7 @@ export default function ExamListPage() {
           </p>
         </div>
         <button
-          onClick={() => navigate('/dashboard/exams/create')}
+          onClick={() => navigate('/np-panel/exams/create')}
           className="btn-primary text-sm"
         >
           <Plus size={16} /> إنشاء اختبار جديد
@@ -161,13 +161,13 @@ export default function ExamListPage() {
                 {/* Action buttons */}
                 <div className="grid grid-cols-3 gap-2">
                   <button
-                    onClick={() => navigate(`/dashboard/exams/${exam.id}/submissions`)}
+                    onClick={() => navigate(`/np-panel/exams/${exam.id}/submissions`)}
                     className="btn-ghost border border-white/08 rounded-xl py-2 text-[11px] flex items-center justify-center gap-1.5 hover:border-brand-blue/30 hover:text-brand-blue hover:bg-brand-blue/5 transition-all"
                   >
                     <Users size={12} /> المحاولات
                   </button>
                   <button
-                    onClick={() => navigate(`/dashboard/exams/${exam.id}/edit`)}
+                    onClick={() => navigate(`/np-panel/exams/${exam.id}/edit`)}
                     className="btn-ghost border border-white/08 rounded-xl py-2 text-[11px] flex items-center justify-center gap-1.5 hover:border-neon-cyan/30 hover:text-neon-cyan hover:bg-neon-cyan/5 transition-all"
                   >
                     <Edit3 size={12} /> تعديل

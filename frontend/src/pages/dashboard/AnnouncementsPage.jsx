@@ -9,6 +9,7 @@ import {
   Trash2, Edit2, Image, CheckCircle, XCircle, Upload,
 } from 'lucide-react'
 import api from '../../api/axiosInstance'
+import Pagination from '../../components/ui/Pagination'
 
 function AnnouncementModal({ item, onClose, onSaved }) {
   const isEdit = !!item?.id
@@ -145,14 +146,20 @@ export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState([])
   const [loading,       setLoading]       = useState(true)
   const [modal,         setModal]         = useState(null)  // null | {} | { item }
+  // ترقيم صفحات — النقطة مُجزَّأة من الخادم وكانت الصفحة تعرض أول 10 فقط
+  const [page,          setPage]          = useState(1)
+  const [total,         setTotal]         = useState(0)
 
   const load = useCallback(() => {
     setLoading(true)
-    api.get('/admin/announcements/')
-      .then(({ data }) => setAnnouncements(data.results || data))
+    api.get('/admin/announcements/', { params: { page } })
+      .then(({ data }) => {
+        setAnnouncements(data.results || data)
+        setTotal(data.count ?? (Array.isArray(data) ? data.length : 0))
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [])
+  }, [page])
 
   useEffect(() => { load() }, [load])
 
@@ -233,6 +240,11 @@ export default function AnnouncementsPage() {
               </div>
             </div>
           ))}
+
+          <p className="text-white/40 text-xs text-center pt-2">
+            إجمالي الإعلانات: <span className="text-brand-blue font-medium">{total}</span>
+          </p>
+          <Pagination count={total} currentPage={page} onPageChange={setPage} />
         </div>
       )}
 

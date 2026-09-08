@@ -92,7 +92,7 @@ export default function StudentDetailsPage() {
       <div className="p-12 text-center text-white/50">
         <AlertTriangle size={32} className="mx-auto mb-3 text-brand-red opacity-50" />
         <p>{error || 'الطالب غير موجود'}</p>
-        <button onClick={() => navigate('/dashboard/students')} className="mt-4 text-brand-blue hover:underline">العودة للطلاب</button>
+        <button onClick={() => navigate('/np-panel/students')} className="mt-4 text-brand-blue hover:underline">العودة للطلاب</button>
       </div>
     )
   }
@@ -139,7 +139,7 @@ export default function StudentDetailsPage() {
     <div className="space-y-5 animate-fade-in print:p-8 print:text-black print:bg-white max-w-5xl mx-auto">
       {/* Header Actions - Hidden in Print */}
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
-        <button onClick={() => navigate('/dashboard/students')} className="btn-ghost p-2 text-white/60 hover:text-white flex items-center gap-2 pr-0 border-0">
+        <button onClick={() => navigate('/np-panel/students')} className="btn-ghost p-2 text-white/60 hover:text-white flex items-center gap-2 pr-0 border-0">
           <ChevronRight size={18} /> العودة للطلاب
         </button>
         <button onClick={handlePrint} className="btn-primary py-2 px-5 bg-white/10 hover:bg-white/20 border-white/20">
@@ -246,7 +246,7 @@ export default function StudentDetailsPage() {
           </h3>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate(`/dashboard/students/${id}/phone`)}
+              onClick={() => navigate(`/np-panel/students/${id}/phone`)}
               className="btn-ghost text-xs py-1.5 px-3 text-brand-blue hover:bg-brand-blue/10 border-brand-blue/20"
             >
               عرض التفاصيل

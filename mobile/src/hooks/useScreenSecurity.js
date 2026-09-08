@@ -20,6 +20,16 @@ import {
  *
  * Returns { isRecording } — only ever true on iOS while recording is active.
  */
+/**
+ * تعطيل منع التصوير — لبناء لقطات متجر Google Play فقط.
+ *
+ * FLAG_SECURE يمنع التقاط الشاشة، وهو مطلوب لحماية المحتوى التعليمي، لكنه
+ * يمنع أيضاً تصوير الشاشات اللازمة لصفحة التطبيق على المتجر. يُفعَّل هذا
+ * المتغيّر في profile مخصص للقطات فقط، ويبقى منع التصوير فعّالاً في كل
+ * البناءات الأخرى لأن القيمة الافتراضية غير مضبوطة.
+ */
+const ALLOW_CAPTURE = process.env.EXPO_PUBLIC_ALLOW_CAPTURE === '1';
+
 export function useScreenSecurity() {
   const [isRecording, setIsRecording] = useState(false);
 
@@ -28,6 +38,10 @@ export function useScreenSecurity() {
 
     (async () => {
       try {
+        if (ALLOW_CAPTURE) {
+          console.warn('[Security] منع التصوير معطّل — بناء لقطات المتجر فقط.');
+          return;
+        }
         const available = await isAvailableAsync();
         if (!available) return;
 

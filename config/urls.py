@@ -35,6 +35,7 @@ from django.views.static import serve
 
 # ── استيراد الـ URL patterns المقسّمة من site_settings ──────────────────────
 from site_settings.urls import public_urlpatterns, admin_urlpatterns
+from site_settings.seo_views import landing_ssr, robots_txt, sitemap_xml, privacy_policy
 from store.urls import (
     public_urlpatterns as store_public_urlpatterns,
     admin_urlpatterns as store_admin_urlpatterns,
@@ -46,6 +47,40 @@ from store.urls import (
 
 DIST_DIR   = Path(settings.BASE_DIR) / "frontend" / "dist"
 ASSETS_DIR = DIST_DIR / "assets"
+
+
+def serve_protected_media(request, path):
+    """
+    يخدم ملفات /media/ مع حماية مجلد registrations/ الحسّاس.
+
+    مجلد registrations/ يحوي وثائق شخصية للطلاب (هوية، شهادة ميلاد، إيصال دفع)
+    وكان مكشوفاً للعموم. الآن يُقصر على مدير/مدير النظام فقط عبر كوكي JWT.
+    بقية الوسائط (شعار الموقع، الصور العامة، الأفاتار، الصور المصغّرة...) تُخدَّم
+    كما كانت دون أي تغيير في السلوك.
+    """
+    normalized = path.replace("\\", "/").lstrip("/")
+    if normalized.startswith("registrations/"):
+        from accounts.authentication import CookieJWTAuthentication
+        from accounts.models import CustomUser
+        from django.http import HttpResponseForbidden
+
+        user = None
+        try:
+            result = CookieJWTAuthentication().authenticate(request)
+            if result is not None:
+                user = result[0]
+        except Exception:
+            user = None
+
+        allowed = bool(
+            user
+            and getattr(user, "is_authenticated", False)
+            and getattr(user, "role", None) in (CustomUser.Roles.ADMIN, CustomUser.Roles.MANAGER)
+        )
+        if not allowed:
+            return HttpResponseForbidden("Forbidden")
+
+    return serve(request, path, document_root=str(settings.MEDIA_ROOT))
 
 
 def serve_frontend_assets(request, path):
@@ -101,15 +136,36 @@ urlpatterns = [
     # ── خدمة ملفات الـ Media (الصور المرفوعة) ─────────────────────────────────
     # WhiteNoise تخدم /static/ فقط. ملفات /media/ يُخدِّمها Django مباشرةً
     # عبر django.views.static.serve في كلتا البيئتين (DEBUG=True / DEBUG=False).
-    # الاستثناء المهم: مجلد النسخ الاحتياطية قد يقع داخل MEDIA_ROOT على
-    # الأقراص الدائمة (Render). هذا المسار عام بلا مصادقة، فلولا الاستثناء
-    # لأمكن تنزيل نسخة قاعدة البيانات كاملةً من الإنترنت. التنزيل المشروع
-    # يمرّ عبر /api/backups/<id>/download/ المحمي بـ IsAdminOrManager.
-    # يُحجب مساران: مجلد ‎.backups‎ المخصص، وأي أرشيف نسخ أينما وقع.
-    # الثاني شبكة أمان: ضبط BACKUP_STORAGE_DIR على MEDIA_ROOT نفسه — وهو
-    # خطأ سهل — كان يضع قاعدة البيانات كاملةً تحت رابط عام.
-    re_path(r'^media/(?!\.backups/)(?!.*backup_[^/]*\.zip$)(?P<path>.*)$', serve,
-            {'document_root': settings.MEDIA_ROOT}),
+    # حارسان اثنان على /media/ لأن المحميّ نوعان مختلفان:
+    #
+    # 1) التعبير النمطي يستثني النسخ الاحتياطية من المسار أصلاً. مجلد النسخ قد
+    #    يقع داخل MEDIA_ROOT على الأقراص الدائمة (Render)، فلولا الاستثناء
+    #    لأمكن تنزيل قاعدة البيانات كاملةً من الإنترنت بلا مصادقة. يُحجب مجلد
+    #    ‎.backups‎ المخصص، وأي أرشيف ‎backup_*.zip‎ أينما وقع — والثاني شبكة
+    #    أمان لخطأ سهل: ضبط BACKUP_STORAGE_DIR على MEDIA_ROOT نفسه.
+    #    التنزيل المشروع يمرّ عبر /api/backups/<id>/download/ المحمي.
+    #
+    # 2) serve_protected_media يقصر مجلد registrations/ على مدير/مدير النظام،
+    #    وفيه وثائق شخصية (هوية، شهادة ميلاد، إيصال دفع).
+    #
+    # لا يغني أحدهما عن الآخر: الأول يمنع أرشيف قاعدة البيانات، والثاني يمنع
+    # بيانات الطلاب الشخصية.
+    re_path(r'^media/(?!\.backups/)(?!.*backup_[^/]*\.zip$)(?P<path>.*)$',
+            serve_protected_media),
+
+    # ── SEO ───────────────────────────────────────────────────────────────────
+    # يجب أن تسبق الـ catch-all، وإلا ابتلعها وأعاد index.html بدلاً منها
+    # (كان robots.txt و sitemap.xml يُقدَّمان كـ text/html فعلياً).
+    path('robots.txt',  robots_txt,  name='robots-txt'),
+    path('sitemap.xml', sitemap_xml, name='sitemap-xml'),
+
+    # سياسة الخصوصية — إلزامية لنشر التطبيق على Google Play.
+    # يجب أن تسبق الـ catch-all كي تُقدَّم كصفحة حقيقية لا كقشرة SPA.
+    path('privacy',  privacy_policy, name='privacy-policy'),
+    path('privacy/', privacy_policy),
+
+    # صفحة الهبوط مُصيَّرة من الخادم (Meta + محتوى دلالي داخل الـ HTML)
+    path('', landing_ssr, name='landing-ssr'),
 
     # Catch-all للـ SPA — يُعيد index.html لكل مسار لا يبدأ بـ api أو admin أو static أو media
     re_path(r'^(?!api/|admin/|static/|media/).*$',

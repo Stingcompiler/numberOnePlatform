@@ -1,19 +1,29 @@
 {
   "expo": {
     "name": "نمبر ون",
-    "slug": "number-one-student",
-    "icon": "./src/assets/onelogo.png",
+    "slug": "n1",
+    "owner": "singspp",
+    "icon": "./src/assets/numberOneLogo.png",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.numberoneschools.student"
+      "bundleIdentifier": "com.numberone.app"
     },
     "android": {
-      "package": "com.numberoneschools.student",
+      "package": "com.numberone.app",
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/onelogo.png",
+        "foregroundImage": "./src/assets/numberOneLogo.png",
         "backgroundColor": "#000000"
       }
     },
@@ -22,7 +32,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./src/assets/onelogo.png",
+          "icon": "./src/assets/numberOneLogo.png",
           "color": "#000000"
         }
       ]
@@ -31,12 +41,12 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3b8c38e3-235d-4575-a9e5-4791ba744eb8"
+        "projectId": "af168215-d896-4887-8712-39f69203de77"
       }
     },
     "runtimeVersion": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/3b8c38e3-235d-4575-a9e5-4791ba744eb8"
+      "url": "https://u.expo.dev/af168215-d896-4887-8712-39f69203de77"
     }
   }
 }

@@ -22,8 +22,20 @@ export async function getDeviceIdentifier() {
     }
 
     // 2. Otherwise, retrieve the stable hardware/vendor unique ID
-    if (Platform.OS === 'android' && Application.androidId) {
-      deviceId = 'hw-android-' + Application.androidId;
+    // ملاحظة: expo-application لا يوفّر خاصية باسم `androidId` — الواجهة الصحيحة
+    // هي الدالة getAndroidId(). قراءة الخاصية كانت تُعيد undefined دائماً، فيسقط
+    // التنفيذ إلى توليد UUID عشوائي يُخزَّن في SecureStore. ولأن SecureStore
+    // يُمحى عند إزالة التطبيق، كان كل تثبيت جديد يُنتج معرّفاً مختلفاً فيُرفض
+    // الدخول بحجة أن الحساب مرتبط بجهاز آخر.
+    if (Platform.OS === 'android') {
+      try {
+        const androidId = Application.getAndroidId();
+        if (androidId) {
+          deviceId = 'hw-android-' + androidId;
+        }
+      } catch (e) {
+        // يبقى التوليد العشوائي كملاذ أخير في الخطوة 3
+      }
     } else if (Platform.OS === 'ios') {
       const iosId = await Application.getIosIdForVendorAsync();
       if (iosId) {
