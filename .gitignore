@@ -75,3 +75,14 @@ Thumbs.db
 mobile/node_modules/
 mobile/.expo/
 mobile/dist/
+
+# ─── مفاتيح التوقيع ──────────────────────────────────────────────────────────
+# لا يدخل مفتاح توقيع مستودعاً أبداً. أنزل EAS ملف @singspp__n1.jks إلى mobile/
+# أثناء عملية اعتمادات، فابتلعه `git add -A` ووصل إلى الطرف البعيد. استثناء
+# debug.keystore وحده: مفتاح تطوير قياسي كلمة مروره `android` معروفة للجميع،
+# ووجوده في المستودع هو العُرف.
+*.jks
+*.keystore
+*.p12
+*.pepk
+!android/app/debug.keystore
