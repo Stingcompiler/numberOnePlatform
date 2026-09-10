@@ -170,15 +170,23 @@ class LoginSerializerDeviceTests(TestCase):
         })
         self.assertFalse(serializer.is_valid())
 
-    def test_student_login_without_device_id_is_refused(self):
+    def test_student_login_without_device_id_is_allowed(self):
         """
-        الطالب بلا device_id يُرفض ولا يُربط شيء.
+        الطالب بلا device_id يدخل ولا يُربط شيء — ولا يجوز تشديد هذا.
 
-        كان هذا الاختبار يؤكّد قبولَ الطلب (device_id اختياري)، وهو توثيق
-        للسلوك المتساهل السابق لا اشتراط له. إغفال الحقل كان طريقاً لتجاوز
-        سياسة "جهاز واحد لكل طالب": يكفي حذفه من الطلب. الطالب لا يصل
-        للمنصة إلا من التطبيق، والتطبيق يرسل الحقل دائماً، فصار إلزامياً.
-        ما كان الاختبار يحرسه — ألّا يُربط شيء — ما يزال محروساً هنا.
+        عميلا الديسكتوب (Tauri و MAUI) يسجّلان الدخول على مرحلتين: نداء أول
+        بلا معرّف ليقرآ حالة الارتباط من StudentProfile ويسألا الطالب قبل
+        الربط، ثم نداء ثانٍ بالمعرّف يُنفّذه. والطالب المرتبط بهذا الجهاز
+        يعتمد جلسة النداء الأول مباشرةً — فالمرحلة الأولى تلزمها جلسة صالحة،
+        لا مجرّد قبول.
+
+        جُعل الحقل إلزامياً في الدفعة الأمنية (439ff60) فرفض التطبيقين معاً:
+        كل الحسابات إلا حساب المراجعة المستثنى. هذا الاختبار يحرس الرجوع.
+
+        الثغرة التي يفتحها هذا الاختياريّ حقيقية ومقصودة مؤقتاً: من ينادي
+        الـ API مباشرةً بلا الحقل ينال جلسة من أي جهاز. إغلاقها يحتاج
+        confirm_bind — المعرّف يُرسل دائماً والربط لا يقع إلا بتأكيد صريح —
+        مع إصدارٍ جديد للتطبيقين. لا تُشدَّد قبل ذلك.
         """
         profile = _make_student("s_no_device")
 
@@ -186,13 +194,30 @@ class LoginSerializerDeviceTests(TestCase):
             "username": "s_no_device",
             "password": "pass12345",
         })
-        self.assertFalse(serializer.is_valid())
-        self.assertEqual(
-            serializer.errors["non_field_errors"][0].code, "device_required",
-        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
         profile.refresh_from_db()
         self.assertIsNone(profile.device_id)
+
+    def test_bound_student_login_without_device_id_still_succeeds(self):
+        """
+        المرتبط أصلاً يدخل بلا معرّف أيضاً — وهذا مسار الديسكتوب المعتاد.
+
+        النداء الأول لا يحمل المعرّف حتى بعد الربط: العميل يقارن
+        StudentProfile.device_id بجهازه ثم يعتمد الجلسة. فرفضُ هذه الحالة
+        كان يكسر كل دخول تالٍ لا الأول وحده.
+        """
+        profile = _make_student("s_bound_probe")
+        profile.bind_device("hw-win-probe")
+
+        serializer = LoginSerializer(data={
+            "username": "s_bound_probe",
+            "password": "pass12345",
+        })
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        profile.refresh_from_db()
+        self.assertEqual(profile.device_id, "hw-win-probe")
 
     def test_staff_login_without_device_id_still_works(self):
         """

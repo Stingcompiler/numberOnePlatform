@@ -163,21 +163,29 @@ class LoginSerializer(serializers.Serializer):
                 code="inactive",
             )
 
-        # ── Device Binding (إلزامي للطالب — التطبيق فقط) ────────────────────
-        # الطلاب يستخدمون المنصة عبر تطبيق الهاتف حصراً، والتطبيق يُرسل device_id
-        # دائماً. جعله إلزامياً يمنع تجاوز "جهاز واحد لكل طالب" بحذف الحقل أو
-        # مخاطبة الـ API مباشرةً. المستخدمون غير الطلاب (إدارة/معلمون) لا يتأثرون.
+        # ── Device Binding (للطالب — عند إرسال device_id) ──────────────────
+        # device_id اختياري عن قصد، والربط يُتخطّى عند غيابه. عميلا الديسكتوب
+        # (Tauri و MAUI) يسجّلان الدخول على مرحلتين: نداء أول بلا معرّف يقرأ
+        # StudentProfile.device_id ليعرف أمرتبطٌ الحساب أم لا، فيسأل الطالب قبل
+        # الربط — والربط باب ذو اتجاه واحد لا يفكّه إلا الإدارة — ثم نداء ثانٍ
+        # بالمعرّف يُنفّذه. ولأن الطالب المرتبط بهذا الجهاز يعتمد جلسة النداء
+        # الأول مباشرةً، فإن المرحلة الأولى تلزمها جلسة صالحة.
+        #
+        # جُعل الحقل إلزامياً في الدفعة الأمنية (439ff60) فرفض التطبيقين معاً:
+        # كل الحسابات إلا المستثنى. أُعيد الاختياريّ لإصلاح ذلك.
+        #
+        # الثمن معروف ومقصود: من ينادي /auth/login/ مباشرةً بلا الحقل ينال جلسة
+        # من أي جهاز، فحصرُ "جهاز واحد لكل طالب" يبقى محروساً في العميل لا في
+        # الخادم. إغلاقه يحتاج confirm_bind (المعرّف يُرسل دائماً والربط لا يقع
+        # إلا بتأكيد صريح) مع إصدارٍ جديد للتطبيقين — انظر
+        # test_student_login_without_device_id_is_allowed قبل أي تشديد.
+        #
         # استثناء حساب مراجعة متجر Play: يدخل من أي جهاز ولا يُربط بأيٍّ منها.
         # مضبوط باسم مستخدم واحد فقط عبر متغيّر بيئة، ومعطّل ما لم يُضبط.
         review_username = getattr(settings, "REVIEW_ACCOUNT_USERNAME", "") or ""
         is_review_account = bool(review_username) and user.username == review_username
 
-        if user.is_student and not is_review_account:
-            if not device_id:
-                raise serializers.ValidationError(
-                    _("يجب تسجيل الدخول من تطبيق الهاتف الرسمي."),
-                    code="device_required",
-                )
+        if user.is_student and device_id and not is_review_account:
             try:
                 profile = user.student_profile
             except StudentProfile.DoesNotExist:
