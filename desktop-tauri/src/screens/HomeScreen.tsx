@@ -11,7 +11,6 @@ import {
   liveStatusLabel,
   notificationTimeLabel,
   providerLabel,
-  sessionTimeLabel,
 } from "../api/models";
 import { studentApi } from "../api/studentApi";
 import { openExternal } from "../platform/external";
@@ -21,7 +20,7 @@ import { Icon } from "../ui/Icon";
 import { IconName } from "../ui/icons";
 import { Panel, SectionHeading, Skeleton } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
-import { arabicDigits, count, formatDate, percentLabel } from "../ui/text";
+import { arabicDigits, count, percentLabel } from "../ui/text";
 import { Section, useSection } from "../ui/useSection";
 
 /**
@@ -332,11 +331,10 @@ function bannerSession(rooms: LiveRoom[]): LiveSession | null {
   const now = sessions.find((s) => s.status === LiveStatuses.Live);
   if (now) return now;
 
-  return (
-    sessions
-      .filter((s) => s.status === LiveStatuses.Upcoming && s.scheduled_start)
-      .sort((a, b) => Date.parse(a.scheduled_start!) - Date.parse(b.scheduled_start!))[0] ?? null
-  );
+  // No schedule to sort by any more: the server dropped the times, so the
+  // first upcoming session in server order (newest room, newest session) is
+  // the banner. Which one "starts next" is not knowable without a time.
+  return sessions.find((s) => s.status === LiveStatuses.Upcoming) ?? null;
 }
 
 function roomOf(rooms: LiveRoom[], session: LiveSession): LiveRoom | undefined {
@@ -344,29 +342,14 @@ function roomOf(rooms: LiveRoom[], session: LiveSession): LiveRoom | undefined {
 }
 
 /**
- * "جارٍ الآن" or "يبدأ بعد ١٢ دقيقة", from scheduled_start. The design also
- * shows a connected-student count beside it; nothing in live/ reports one, so
- * it is left out rather than guessed at.
+ * "جارٍ الآن", else the status label. The design showed "يبدأ بعد ١٢ دقيقة"
+ * from scheduled_start; the server dropped the schedule, so there is nothing
+ * to count down to. It also shows a connected-student count; nothing in live/
+ * reports one, so it is left out rather than guessed at.
  */
 function bannerStatus(session: LiveSession): string {
   if (session.status === LiveStatuses.Live) return "جارٍ الآن";
-  if (!session.scheduled_start) return liveStatusLabel(session.status);
-
-  const until = Date.parse(session.scheduled_start) - Date.now();
-  if (!Number.isFinite(until)) return liveStatusLabel(session.status);
-  if (until <= 0) return "على وشك البدء";
-
-  const minutes = until / 60000;
-  if (minutes < 60) {
-    return `يبدأ بعد ${count(Math.ceil(minutes), "دقيقة", "دقيقتان", "دقائق")}`;
-  }
-
-  const hours = minutes / 60;
-  if (hours < 24) {
-    return `يبدأ بعد ${count(Math.floor(hours), "ساعة", "ساعتان", "ساعات")}`;
-  }
-
-  return `يبدأ ${formatDate(session.scheduled_start)}`;
+  return liveStatusLabel(session.status);
 }
 
 function LiveBanner({
@@ -387,8 +370,8 @@ function LiveBanner({
     else toast(`جارٍ فتح ${providerLabel(session)} في المتصفح…`);
   }
 
-  // "قاعة الرياضيات ٢ · Zoom · ١٦:٠٠".
-  const meta = [roomName, providerLabel(session), sessionTimeLabel(session)]
+  // "قاعة الرياضيات ٢ · Zoom".
+  const meta = [roomName, providerLabel(session)]
     .filter((part) => !!part)
     .join(" · ");
 

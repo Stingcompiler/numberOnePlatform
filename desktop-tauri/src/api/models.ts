@@ -415,8 +415,10 @@ export interface LiveSession {
   provider_display?: string | null;
   /** Opened in the system browser, outside the app. There is no player. */
   stream_url?: string | null;
-  scheduled_start?: string | null;
-  scheduled_end?: string | null;
+  /**
+   * There is no schedule. The server dropped scheduled_start/scheduled_end;
+   * status (upcoming / live / ended) is the whole timeline a student sees.
+   */
   /** Raw value; see LiveStatuses. */
   status?: string | null;
   status_display?: string | null;
@@ -426,6 +428,8 @@ export interface LiveRoom {
   id: number;
   room_name: string;
   room_type?: string | null;
+  /** The grade the room is scoped to; null is a system-wide room. */
+  grade_name?: string | null;
   description?: string | null;
   sessions: LiveSession[];
 }
@@ -525,19 +529,6 @@ export function canJoin(session: LiveSession): boolean {
     session.status !== LiveStatuses.Ended &&
     session.status !== LiveStatuses.Archived
   );
-}
-
-/** "16:00 — 17:30", or just the start where no end was set. */
-export function sessionTimeLabel(session: LiveSession): string {
-  const start = parseDate(session.scheduled_start);
-  if (!start) return "";
-
-  // The date is dropped for today: inside a line the student is reading now,
-  // repeating today's date says nothing.
-  const day = isToday(start) ? "" : formatDate(session.scheduled_start) + " ";
-  const end = parseDate(session.scheduled_end);
-
-  return end ? `${day}${clock(start)} — ${clock(end)}` : day + clock(start);
 }
 
 export interface Notification {

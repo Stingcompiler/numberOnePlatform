@@ -7,7 +7,6 @@ import {
   canJoin,
   liveStatusLabel,
   providerLabel,
-  sessionTimeLabel,
 } from "../api/models";
 import { studentApi } from "../api/studentApi";
 import { openExternal } from "../platform/external";
@@ -172,7 +171,6 @@ function Session({
 
       <span className="flex min-w-0 flex-[1.4] flex-col gap-[2px]">
         <span className="ltr text-label text-ink-secondary">{providerLabel(session)}</span>
-        <span className="ltr text-label text-ink-muted">{sessionTimeLabel(session)}</span>
       </span>
 
       {/* live → primary, قادمة → warning, ended and archived → grey. A finished
