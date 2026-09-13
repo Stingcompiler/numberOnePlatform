@@ -16,6 +16,7 @@ import {
   ArrowLeft
 } from "lucide-react"
 import api from "../../api/axiosInstance"
+import fetchAll from "../../api/fetchAll"
 import Pagination from "../../components/ui/Pagination"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,6 +46,22 @@ function RoomTypeBadge({ type }) {
         : "bg-purple-500/10 text-purple-400 border-purple-400/20"
       }`}>
       {type === "online" ? "أونلاين" : "فلاش"}
+    </span>
+  )
+}
+
+/** الفصل الذي تخصّه الغرفة، أو «كل الفصول» لغرفة بلا فصل (بثّ عام لنظامها). */
+function GradeBadge({ room }) {
+  const label = room.grade_name
+    ? (room.level_name ? `${room.level_name} · ${room.grade_name}` : room.grade_name)
+    : "كل الفصول"
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+      room.grade_name
+        ? "bg-emerald-500/10 text-emerald-400 border-emerald-400/20"
+        : "bg-white/05 text-white/40 border-white/10"
+    }`}>
+      {label}
     </span>
   )
 }
@@ -109,22 +126,43 @@ function RoomFormModal({ room, onClose, onSaved }) {
     room_name:   room?.room_name   || "",
     room_type:   room?.room_type   || "online",
     course_type: room?.course_type || "general",
+    // "" = بلا فصل: الغرفة تُرى من كل فصول نظامها
+    grade:       room?.grade       ?? "",
     description: room?.description || "",
     is_active:   room?.is_active   ?? true,
   })
+  const [grades, setGrades] = useState([])
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState("")
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
+  // كل الفصول مرة واحدة ثم تُصفّى محلياً بنظام الغرفة: تبديل النظام يغيّر
+  // القائمة فوراً بلا طلب جديد. غير مُجزَّأة عبر fetchAll وإلا ظهرت أول عشرة.
+  useEffect(() => {
+    fetchAll("/academic/grades/").then(setGrades).catch(() => setGrades([]))
+  }, [])
+
+  // فصل من نظام آخر يرفضه الخادم؛ تبديل النظام يُفرغ الاختيار بدل أن يترك
+  // قيمة لن تمرّ.
+  const setRoomType = (v) => setForm(f => ({ ...f, room_type: v, grade: "" }))
+
+  const gradeOptions = [
+    { value: "", label: "كل الفصول (بثّ عام للنظام)" },
+    ...grades
+      .filter(g => g.system_type === form.room_type)
+      .map(g => ({ value: String(g.id), label: g.level_name ? `${g.level_name} · ${g.name}` : g.name })),
+  ]
+
   const handleSave = async () => {
     if (!form.room_name.trim()) { setError("اسم الغرفة مطلوب."); return }
     setSaving(true); setError("")
     try {
+      const payload = { ...form, grade: form.grade === "" ? null : Number(form.grade) }
       if (isEdit) {
-        await api.patch(`/live/rooms/${room.id}/`, form)
+        await api.patch(`/live/rooms/${room.id}/`, payload)
       } else {
-        await api.post("/live/rooms/", form)
+        await api.post("/live/rooms/", payload)
       }
       onSaved()
     } catch (e) {
@@ -168,7 +206,7 @@ function RoomFormModal({ room, onClose, onSaved }) {
             <FormSelect
               label="نوع النظام *"
               value={form.room_type}
-              onChange={v => set("room_type", v)}
+              onChange={setRoomType}
               options={ROOM_TYPES}
             />
             <FormSelect
@@ -177,6 +215,18 @@ function RoomFormModal({ room, onClose, onSaved }) {
               onChange={v => set("course_type", v)}
               options={COURSE_TYPES}
             />
+          </div>
+          <div className="space-y-1.5">
+            <FormSelect
+              label="الفصل الدراسي"
+              value={String(form.grade)}
+              onChange={v => set("grade", v)}
+              options={gradeOptions}
+              disabled={saving}
+            />
+            <p className="text-white/30 text-[11px] leading-relaxed">
+              الطلاب المسجّلون في هذا الفصل وحدهم يرون الغرفة. اترك «كل الفصول» لبثٍّ يخصّ النظام كاملاً.
+            </p>
           </div>
           <div className="space-y-1.5">
             <FieldLabel>الوصف (اختياري)</FieldLabel>
@@ -235,6 +285,7 @@ function RoomCard({ room, onEditRoom, onDeleteRoom, onToggle, onRefresh }) {
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-white font-bold text-base">{room.room_name}</p>
             <RoomTypeBadge type={room.room_type} />
+            <GradeBadge room={room} />
             {!room.is_active && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/05 text-white/30 border border-white/08">
                 معطّلة
@@ -242,7 +293,7 @@ function RoomCard({ room, onEditRoom, onDeleteRoom, onToggle, onRefresh }) {
             )}
           </div>
           <p className="text-white/35 text-xs mt-1 truncate">
-            {room.sessions_count || 0} جلسة مجدولة
+            {room.sessions_count || 0} جلسة
             {room.description && ` · ${room.description}`}
           </p>
         </div>

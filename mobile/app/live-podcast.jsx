@@ -144,20 +144,6 @@ function SessionCard({ session, colors, isDark }) {
   const onPressIn = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }).start();
   const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
 
-  const formatDate = (iso) => {
-    if (!iso) return '—';
-    try {
-      const d = new Date(iso);
-      return d.toLocaleString('ar-EG', {
-        month: 'short', day: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-      });
-    } catch (e) {
-      console.warn('[LivePodcastScreen] formatDate error:', e);
-      return iso.split('T')[0] || iso;
-    }
-  };
-
   const handleOpen = async () => {
     const url = session.stream_url;
     if (!url) {
@@ -208,15 +194,6 @@ function SessionCard({ session, colors, isDark }) {
           <Text style={[styles.sessionProvider, { color: colors.textSecondary }]}>
             {prov.label}
           </Text>
-          <View style={styles.sessionDates}>
-            <Text style={[styles.sessionDate, { color: colors.textMuted }]}>
-              {formatDate(session.scheduled_start)}
-            </Text>
-            <Text style={[styles.sessionDate, { color: colors.textMuted }]}> — </Text>
-            <Text style={[styles.sessionDate, { color: colors.textMuted }]}>
-              {formatDate(session.scheduled_end)}
-            </Text>
-          </View>
         </View>
 
         {/* Status + enter button */}
@@ -260,6 +237,7 @@ function RoomCard({ room, colors, isDark }) {
           <Text style={[styles.roomMeta, { color: colors.textSecondary }]}>
             {room.sessions?.length || 0} جلسة
             {room.room_type === 'online' ? ' · أونلاين' : ' · فلاش'}
+            {room.grade_name ? ` · ${room.grade_name}` : ''}
           </Text>
         </View>
 
@@ -330,14 +308,9 @@ export default function LivePodcastScreen() {
   const load = useCallback(async (silent = false) => {
     if (!silent) setError(null);
     try {
-      const data = await liveService.getMyLiveSessions();
-      // Client-side safety filter: only show rooms matching the student's system_type
-      const studentSystemType = user?.student_profile?.system_type;
-      if (studentSystemType) {
-        setRooms(data.filter(room => room.room_type === studentSystemType));
-      } else {
-        setRooms(data);
-      }
+      // الخادم يفلتر بنظام الطالب وفصله معاً؛ لا فلتر محلي — كان يكرّر
+      // النظام وحده، ولو أُبقي لأخفى بصمت أي غرفة يضيفها الخادم بمعيار جديد.
+      setRooms(await liveService.getMyLiveSessions());
     } catch (e) {
       console.warn('[LivePodcastScreen] load error:', e);
       if (!silent) setError('تعذّر تحميل البث المباشر. يرجى التحقق من اتصالك.');
@@ -668,15 +641,6 @@ const styles = StyleSheet.create({
     fontSize: rf(TYPOGRAPHY.size.xs),
     marginTop: 2,
     textAlign: 'right',
-  },
-  sessionDates: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    flexWrap: 'wrap',
-    marginTop: 3,
-  },
-  sessionDate: {
-    fontSize: 9,
   },
   sessionRight: {
     alignItems: 'center',

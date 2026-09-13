@@ -17,6 +17,7 @@ Views نظام البث المباشر
 
 import logging
 
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -46,7 +47,12 @@ class LiveRoomListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAdminOrManager]
     # استخدام Serializer مختصر في القائمة لتجنب تحميل الجلسات غير الضرورية
     serializer_class   = LiveRoomListAdminSerializer
-    queryset           = LiveRoom.objects.prefetch_related("sessions").order_by("-created_at")
+    queryset           = (
+        LiveRoom.objects
+        .select_related("grade__level")
+        .prefetch_related("sessions")
+        .order_by("-created_at")
+    )
 
     def perform_create(self, serializer):
         serializer.save()
@@ -65,7 +71,7 @@ class LiveRoomDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     permission_classes = [IsAdminOrManager]
     serializer_class   = LiveRoomAdminSerializer
-    queryset           = LiveRoom.objects.prefetch_related("sessions")
+    queryset           = LiveRoom.objects.select_related("grade__level").prefetch_related("sessions")
 
     def destroy(self, request, *args, **kwargs):
         room = self.get_object()
@@ -133,7 +139,7 @@ class LiveSessionListCreateView(generics.ListCreateAPIView):
             LiveSession.objects
             .filter(room_id=self.kwargs["room_pk"])
             .select_related("room")
-            .order_by("scheduled_start")
+            .order_by("-created_at")
         )
 
     def get_room(self):
@@ -215,7 +221,10 @@ class MyLiveSessionsView(APIView):
     الفلترة:
       1. قراءة StudentProfile من request.user
       2. مطابقة room.room_type مع student.system_type (online/flash)
-      3. عرض الغرف النشطة فقط (is_active=True)
+      3. مطابقة room.grade مع student.enrolled_grade — أو غرفة بلا فصل
+         (بثّ عام لكل فصول النظام). كان الفلتر بالنظام وحده، فيرى طالب
+         الصف الأول بثّ كل الصفوف الأونلاين.
+      4. عرض الغرف النشطة فقط (is_active=True)
 
     البنية المُعادة:
       [
@@ -242,12 +251,20 @@ class MyLiveSessionsView(APIView):
 
         # ── فلترة الغرف المطابقة لنظام الطالب ────────────────────────────
         # select_related + prefetch_related لتجنب N+1 queries
+        # الغرفة بلا فصل تُرى من كل فصول نظامها. الطالب بلا فصل مسجّل
+        # (فلاش عادةً) لا يرى إلا تلك.
+        in_my_grade = Q(grade__isnull=True)
+        if student.enrolled_grade_id:
+            in_my_grade |= Q(grade_id=student.enrolled_grade_id)
+
         rooms = (
             LiveRoom.objects
             .filter(
+                in_my_grade,
                 room_type=student.system_type,
                 is_active=True,
             )
+            .select_related("grade")
             .prefetch_related("sessions")
             .order_by("-created_at")
         )

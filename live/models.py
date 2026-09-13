@@ -7,9 +7,13 @@ live/models.py
 التسلسل الهرمي:
   LiveRoom (الغرفة التنظيمية) → LiveSession (جلسة البث الفعلية)
 
-منطق الفلترة:
-  - كل غرفة لها room_type (online / flash) يُطابق StudentProfile.system_type
+منطق الفلترة (للطالب):
+  - room_type (online / flash) يُطابق StudentProfile.system_type
+  - grade يُطابق StudentProfile.enrolled_grade؛ غرفة بلا فصل تُرى من كل
+    فصول نظامها (بثّ عام لنظام كامل)
   - course_type بيانات تنظيمية للمسؤول فقط، لا تُستخدم لتصفية الطلاب
+
+لا مواعيد للجلسات: الحالة (upcoming / live / ended) هي ما يُدار ويُعرَض.
 ================================================================================
 """
 
@@ -28,6 +32,11 @@ class LiveRoom(models.Model):
     room_type  → يُحدد نوع الطلاب الذين يرون هذه الغرفة:
                  online = طلاب الأونلاين
                  flash  = طلاب الفلاش
+
+    grade      → الفصل الدراسي الذي تخصّه الغرفة. فارغ = كل فصول نظامها.
+                 كانت الغرف بلا فصل، فيرى طالب الصف الأول بثّ كل الصفوف
+                 الأونلاين. الحقل اختياري كي لا تختفي الغرف القائمة فجأة
+                 عن الطلاب حتى تُعيَّن فصولها.
 
     course_type → معلومة تنظيمية/وصفية للمسؤول فقط.
     """
@@ -48,6 +57,15 @@ class LiveRoom(models.Model):
         choices=RoomType.choices,
         default=RoomType.ONLINE,
         help_text=_("يُحدد أي الطلاب يرون هذه الغرفة: أونلاين أم فلاش."),
+    )
+    grade       = models.ForeignKey(
+        "academic.Grade",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="live_rooms",
+        verbose_name=_("الفصل الدراسي"),
+        help_text=_("الطلاب المسجّلون في هذا الفصل وحدهم يرون الغرفة. فارغ = كل فصول النظام."),
     )
     course_type = models.CharField(
         _("نوع الكورس"),
@@ -70,6 +88,7 @@ class LiveRoom(models.Model):
             models.Index(fields=["room_type"],  name="liveroom_room_type_idx"),
             models.Index(fields=["is_active"],  name="liveroom_is_active_idx"),
             models.Index(fields=["room_type", "is_active"], name="liveroom_type_active_idx"),
+            models.Index(fields=["grade"],      name="liveroom_grade_idx"),
         ]
 
     def __str__(self):
@@ -123,8 +142,6 @@ class LiveSession(models.Model):
         _("رابط البث"),
         help_text=_("رابط Zoom / Google Meet / YouTube أو أي منصة بث."),
     )
-    scheduled_start = models.DateTimeField(_("موعد البداية"), null=True, blank=True)
-    scheduled_end   = models.DateTimeField(_("موعد النهاية"), null=True, blank=True)
     status          = models.CharField(
         _("الحالة"),
         max_length=20,
@@ -137,12 +154,12 @@ class LiveSession(models.Model):
     class Meta:
         verbose_name        = _("جلسة بث")
         verbose_name_plural = _("جلسات البث")
-        ordering            = ["scheduled_start"]
+        # أُزيلت المواعيد؛ الأحدث إنشاءً أولاً داخل الغرفة.
+        ordering            = ["-created_at"]
         indexes = [
             # Indexes للحقول المستخدمة في الفلترة والترتيب
             models.Index(fields=["status"],           name="livesession_status_idx"),
             models.Index(fields=["room"],             name="livesession_room_idx"),
-            models.Index(fields=["scheduled_start"],  name="livesession_start_idx"),
             models.Index(fields=["room", "status"],   name="livesession_room_status_idx"),
         ]
 
