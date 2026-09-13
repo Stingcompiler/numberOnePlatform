@@ -10,8 +10,6 @@ four question types, a live room with three sessions, and two notifications --
 all owned by fresh.student, which the tests sign in as.
 """
 
-from django.utils import timezone
-from datetime import timedelta
 
 from accounts.models import CustomUser, StudentProfile
 from academic.models import (
@@ -107,15 +105,16 @@ if created:
         correct_answer={"pairs": [{"a": "مثلث", "b": "٣"}, {"a": "مربع", "b": "٤"}]},
     )
 
+# الغرفة تحمل فصل الطالب: الفلتر يشترط النظام والفصل معاً، وغرفة بلا فصل
+# تُرى من كل فصول النظام.
 room, _ = LiveRoom.objects.get_or_create(
-    room_name="غرفة الرياضيات", defaults={"room_type": "online", "is_active": True},
+    room_name="غرفة الرياضيات",
+    defaults={"room_type": "online", "is_active": True, "grade": grade},
 )
-now = timezone.now()
 LiveSession.objects.get_or_create(
     room=room, session_name="مراجعة الجبر",
     defaults={
         "provider": "zoom", "stream_url": "https://zoom.us/j/1234567890",
-        "scheduled_start": now + timedelta(days=1), "scheduled_end": now + timedelta(days=1, hours=1),
         "status": "upcoming",
     },
 )
@@ -123,7 +122,6 @@ LiveSession.objects.get_or_create(
     room=room, session_name="حصة مباشرة الآن",
     defaults={
         "provider": "google_meet", "stream_url": "https://meet.google.com/abc-defg-hij",
-        "scheduled_start": now - timedelta(minutes=10), "scheduled_end": now + timedelta(minutes=50),
         "status": "live",
     },
 )
@@ -131,7 +129,6 @@ LiveSession.objects.get_or_create(
     room=room, session_name="حصة منتهية",
     defaults={
         "provider": "youtube", "stream_url": "https://youtube.com/live/xyz",
-        "scheduled_start": now - timedelta(days=2), "scheduled_end": now - timedelta(days=2, hours=-1),
         "status": "ended",
     },
 )

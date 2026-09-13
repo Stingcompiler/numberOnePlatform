@@ -10,7 +10,7 @@ import { useParams, useNavigate } from "react-router-dom"
 import {
   Radio, Plus, Pencil, Trash2, X, Check, Loader2,
   AlertCircle, RefreshCw, Link2, ExternalLink, Play,
-  Clock, Calendar, Video, Youtube, Monitor, Wifi, ArrowRight
+  Video, Youtube, Monitor, Wifi, ArrowRight
 } from "lucide-react"
 import api from "../../api/axiosInstance"
 
@@ -119,20 +119,11 @@ function ErrorBanner({ message }) {
 function SessionFormModal({ roomId, session, onClose, onSaved }) {
   const isEdit = !!session
 
-  const toLocal = (iso) => {
-    if (!iso) return ""
-    const d = new Date(iso)
-    const pad = n => String(n).padStart(2, "0")
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  }
-
   const [form, setForm] = useState({
     session_name:    session?.session_name    || "",
     description:     session?.description     || "",
     provider:        session?.provider        || "zoom",
     stream_url:      session?.stream_url      || "",
-    scheduled_start: toLocal(session?.scheduled_start) || "",
-    scheduled_end:   toLocal(session?.scheduled_end)   || "",
     status:          session?.status          || "upcoming",
   })
   const [saving, setSaving] = useState(false)
@@ -143,16 +134,10 @@ function SessionFormModal({ roomId, session, onClose, onSaved }) {
   const handleSave = async () => {
     if (!form.session_name.trim())    { setError("اسم الجلسة مطلوب.");       return }
     if (!form.stream_url.trim())      { setError("رابط البث مطلوب.");         return }
-    if (form.scheduled_start && form.scheduled_end && form.scheduled_end <= form.scheduled_start) {
-      setError("موعد النهاية يجب أن يكون بعد موعد البداية.")
-      return
-    }
 
     setSaving(true); setError("")
     try {
       const payload = { ...form, room: roomId }
-      if (!payload.scheduled_start) payload.scheduled_start = null
-      if (!payload.scheduled_end)   payload.scheduled_end = null
 
       if (isEdit) {
         await api.patch(`/live/rooms/${roomId}/sessions/${session.id}/`, payload)
@@ -235,29 +220,6 @@ function SessionFormModal({ roomId, session, onClose, onSaved }) {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <FieldLabel>موعد البداية</FieldLabel>
-              <input
-                type="datetime-local"
-                value={form.scheduled_start}
-                onChange={e => set("scheduled_start", e.target.value)}
-                className="w-full input-glass"
-                disabled={saving}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <FieldLabel>موعد النهاية</FieldLabel>
-              <input
-                type="datetime-local"
-                value={form.scheduled_end}
-                onChange={e => set("scheduled_end", e.target.value)}
-                className="w-full input-glass"
-                disabled={saving}
-              />
-            </div>
-          </div>
-
           <div className="space-y-1.5">
             <FieldLabel>الوصف (اختياري)</FieldLabel>
             <textarea
@@ -299,15 +261,6 @@ function SessionRow({ session, onEdit, onDelete }) {
   const provider = PROVIDERS.find(p => p.value === session.provider)
   const ProviderIcon = provider?.icon || Wifi
 
-  const formatDate = (iso) => {
-    if (!iso) return "—"
-    const d = new Date(iso)
-    return d.toLocaleString("ar-EG", {
-      month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    })
-  }
-
   const handleDelete = async () => {
     if (!window.confirm(`هل تريد حذف الجلسة «${session.session_name}»؟`)) return
     setDeleting(true)
@@ -323,17 +276,9 @@ function SessionRow({ session, onEdit, onDelete }) {
 
       <div className="flex-1 min-w-0">
         <p className="text-white text-sm font-semibold truncate">{session.session_name}</p>
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <span className="text-white/35 text-xs flex items-center gap-1">
-            <Calendar size={12} />
-            {formatDate(session.scheduled_start)}
-          </span>
-          <span className="text-white/20 text-xs">·</span>
-          <span className="text-white/35 text-xs flex items-center gap-1">
-            <Clock size={12} />
-            {formatDate(session.scheduled_end)}
-          </span>
-        </div>
+        {session.description && (
+          <p className="text-white/35 text-xs mt-1 truncate">{session.description}</p>
+        )}
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
@@ -443,6 +388,15 @@ export default function LiveRoomDetailsPage() {
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-xl font-bold text-white font-cairo">{room.room_name}</h1>
                 <RoomTypeBadge type={room.room_type} />
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                  room.grade_name
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-400/20"
+                    : "bg-white/05 text-white/40 border-white/10"
+                }`}>
+                  {room.grade_name
+                    ? (room.level_name ? `${room.level_name} · ${room.grade_name}` : room.grade_name)
+                    : "كل الفصول"}
+                </span>
                 {!room.is_active && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/05 text-white/30 border border-white/08">
                     معطّلة

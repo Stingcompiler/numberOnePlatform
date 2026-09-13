@@ -30,22 +30,10 @@ class LiveSessionAdminSerializer(serializers.ModelSerializer):
             "id", "room", "room_name",
             "session_name", "description",
             "provider", "stream_url",
-            "scheduled_start", "scheduled_end",
             "status",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "room_name"]
-
-    def validate(self, attrs):
-        """التحقق من أن موعد النهاية بعد موعد البداية."""
-        start = attrs.get("scheduled_start") or (self.instance and self.instance.scheduled_start)
-        end   = attrs.get("scheduled_end")   or (self.instance and self.instance.scheduled_end)
-
-        if start and end and end <= start:
-            raise serializers.ValidationError({
-                "scheduled_end": "موعد النهاية يجب أن يكون بعد موعد البداية."
-            })
-        return attrs
 
     def validate_stream_url(self, value):
         """التحقق من صحة الرابط."""
@@ -54,22 +42,47 @@ class LiveSessionAdminSerializer(serializers.ModelSerializer):
         return value
 
 
-class LiveRoomAdminSerializer(serializers.ModelSerializer):
+class _RoomGradeValidationMixin:
+    """
+    الفصل يجب أن يكون من نظام الغرفة نفسه.
+
+    غرفة أونلاين بفصل فلاش لا يراها أحد: فلتر الطالب يشترط الاثنين معاً،
+    وطالب الفلاش لا يمرّ من room_type ولا طالب الأونلاين من grade. الرفض
+    هنا أوضح من غرفة صامتة. يقرأ الحقل غير المُرسَل من الكائن فلا يُلتفّ
+    عليه بـ PATCH يغيّر أحدهما فقط.
+
+    مشترك لأن الإنشاء يمرّ من السيريالايزر المختصر والتعديل من الكامل.
+    """
+
+    def validate(self, attrs):
+        grade     = attrs.get("grade",     self.instance.grade     if self.instance else None)
+        room_type = attrs.get("room_type", self.instance.room_type if self.instance else None)
+        if grade and room_type and grade.system_type != room_type:
+            raise serializers.ValidationError({
+                "grade": "الفصل المختار من نظام آخر — اختر فصلاً من نظام الغرفة نفسه."
+            })
+        return attrs
+
+
+class LiveRoomAdminSerializer(_RoomGradeValidationMixin, serializers.ModelSerializer):
     """
     Serializer الغرفة للمسؤول — يتضمن جميع الجلسات متداخلة.
     """
     sessions       = LiveSessionAdminSerializer(many=True, read_only=True)
     sessions_count = serializers.IntegerField(source="sessions.count", read_only=True)
+    grade_name     = serializers.CharField(source="grade.name",       read_only=True, default=None)
+    level_name     = serializers.CharField(source="grade.level.name", read_only=True, default=None)
 
     class Meta:
         model  = LiveRoom
         fields = [
             "id", "room_name", "room_type", "course_type",
+            "grade", "grade_name", "level_name",
             "description", "is_active",
             "sessions_count", "sessions",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at", "grade_name", "level_name"]
 
     def validate_room_name(self, value):
         """التحقق من أن اسم الغرفة ليس فارغاً."""
@@ -78,21 +91,24 @@ class LiveRoomAdminSerializer(serializers.ModelSerializer):
         return value.strip()
 
 
-class LiveRoomListAdminSerializer(serializers.ModelSerializer):
+class LiveRoomListAdminSerializer(_RoomGradeValidationMixin, serializers.ModelSerializer):
     """
     Serializer مختصر للغرفة — يُستخدم في قوائم الغرف (بدون جلسات متداخلة).
     """
     sessions_count = serializers.IntegerField(source="sessions.count", read_only=True)
+    grade_name     = serializers.CharField(source="grade.name",       read_only=True, default=None)
+    level_name     = serializers.CharField(source="grade.level.name", read_only=True, default=None)
 
     class Meta:
         model  = LiveRoom
         fields = [
             "id", "room_name", "room_type", "course_type",
+            "grade", "grade_name", "level_name",
             "description", "is_active",
             "sessions_count",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at", "grade_name", "level_name"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -112,7 +128,6 @@ class LiveSessionStudentSerializer(serializers.ModelSerializer):
             "id", "session_name", "description",
             "provider", "provider_display",
             "stream_url",
-            "scheduled_start", "scheduled_end",
             "status", "status_display",
         ]
 
@@ -122,11 +137,12 @@ class LiveRoomStudentSerializer(serializers.ModelSerializer):
     Serializer الغرفة للطالب — يتضمن جميع جلساتها متداخلة.
     الاستجابة مُهيأة: كل غرفة تحتوي على sessions داخلها.
     """
-    sessions = LiveSessionStudentSerializer(many=True, read_only=True)
+    sessions   = LiveSessionStudentSerializer(many=True, read_only=True)
+    grade_name = serializers.CharField(source="grade.name", read_only=True, default=None)
 
     class Meta:
         model  = LiveRoom
         fields = [
-            "id", "room_name", "room_type",
+            "id", "room_name", "room_type", "grade_name",
             "description", "sessions",
         ]
