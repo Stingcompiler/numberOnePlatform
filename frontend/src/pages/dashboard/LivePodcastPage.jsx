@@ -120,10 +120,12 @@ function ErrorBanner({ message }) {
 // Room Form Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-function RoomFormModal({ room, onClose, onSaved }) {
+function RoomFormModal({ room, roomCount, onClose, onSaved }) {
   const isEdit = !!room
   const [form, setForm] = useState({
     room_name:   room?.room_name   || "",
+    // الجديد يُلحق بالنهاية، كما في المراحل والفصول
+    display_order: room?.display_order ?? roomCount,
     room_type:   room?.room_type   || "online",
     course_type: room?.course_type || "general",
     // "" = بلا فصل: الغرفة تُرى من كل فصول نظامها
@@ -158,7 +160,11 @@ function RoomFormModal({ room, onClose, onSaved }) {
     if (!form.room_name.trim()) { setError("اسم الغرفة مطلوب."); return }
     setSaving(true); setError("")
     try {
-      const payload = { ...form, grade: form.grade === "" ? null : Number(form.grade) }
+      const payload = {
+        ...form,
+        grade: form.grade === "" ? null : Number(form.grade),
+        display_order: Number(form.display_order) || 0,
+      }
       if (isEdit) {
         await api.patch(`/live/rooms/${room.id}/`, payload)
       } else {
@@ -216,17 +222,31 @@ function RoomFormModal({ room, onClose, onSaved }) {
               options={COURSE_TYPES}
             />
           </div>
-          <div className="space-y-1.5">
-            <FormSelect
-              label="الفصل الدراسي"
-              value={String(form.grade)}
-              onChange={v => set("grade", v)}
-              options={gradeOptions}
-              disabled={saving}
-            />
-            <p className="text-white/30 text-[11px] leading-relaxed">
-              الطلاب المسجّلون في هذا الفصل وحدهم يرون الغرفة. اترك «كل الفصول» لبثٍّ يخصّ النظام كاملاً.
-            </p>
+          <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+            <div className="space-y-1.5">
+              <FormSelect
+                label="الفصل الدراسي"
+                value={String(form.grade)}
+                onChange={v => set("grade", v)}
+                options={gradeOptions}
+                disabled={saving}
+              />
+              <p className="text-white/30 text-[11px] leading-relaxed">
+                الطلاب المسجّلون في هذا الفصل وحدهم يرون الغرفة. اترك «كل الفصول» لبثٍّ يخصّ النظام كاملاً.
+              </p>
+            </div>
+            <div className="space-y-1.5 w-24">
+              <FieldLabel>الترتيب</FieldLabel>
+              <input
+                type="number"
+                min="0"
+                value={form.display_order}
+                onChange={e => set("display_order", e.target.value)}
+                className="w-full input-glass"
+                dir="ltr"
+                disabled={saving}
+              />
+            </div>
           </div>
           <div className="space-y-1.5">
             <FieldLabel>الوصف (اختياري)</FieldLabel>
@@ -286,6 +306,7 @@ function RoomCard({ room, onEditRoom, onDeleteRoom, onToggle, onRefresh }) {
             <p className="text-white font-bold text-base">{room.room_name}</p>
             <RoomTypeBadge type={room.room_type} />
             <GradeBadge room={room} />
+            <span className="badge badge-blue">مرتبة: {room.display_order ?? 0}</span>
             {!room.is_active && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/05 text-white/30 border border-white/08">
                 معطّلة
@@ -471,6 +492,7 @@ export default function LivePodcastPage() {
       {showForm && (
         <RoomFormModal
           room={editRoom}
+          roomCount={rooms.length}
           onClose={() => { setShowForm(false); setEditRoom(null) }}
           onSaved={() => { setShowForm(false); setEditRoom(null); fetchRooms() }}
         />
