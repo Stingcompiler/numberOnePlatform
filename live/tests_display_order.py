@@ -176,32 +176,55 @@ class DisplayOrderTests(TestCase):
 
 class ExistingRowsNumberingTests(TransactionTestCase):
     """
-    ما ترقّمه الهجرة 0005 للقائم: بترتيب الإنشاء، الأقدم 1 والأحدث N، مع
-    إبقاء ما رقّمه المدير يدوياً والترقيم فوقه. تُشغَّل الهجرة فعلاً على
-    قاعدة عند 0004 (حيث الأصفار المتكررة مسموحة) ثم تُقاس النتيجة.
+    ترقيم الهجرة 0005 للقائم قبل فرض قيد التفرّد.
+
+    يُحاكى وضع الإنتاج الفعلي الذي أسقط النشر: قيمٌ **غير صفرية مكرّرة**
+    خلّفتها واجهة #10 (بلا تفرّد) إلى جانب الأصفار. تُشغَّل الهجرة على قاعدة
+    عند 0004 ثم يُتحقَّق أن الناتج تسلسل فريد كثيف يحفظ الترتيب المرئي.
     """
 
-    def test_migration_numbers_zeros_by_creation_and_keeps_manual_values(self):
+    def _run_0004(self):
         executor = MigrationExecutor(connection)
         executor.migrate([("live", "0004_display_order")])
-        old_apps = executor.loader.project_state([("live", "0004_display_order")]).apps
-        LiveRoom    = old_apps.get_model("live", "LiveRoom")
-        LiveSession = old_apps.get_model("live", "LiveSession")
+        state = executor.loader.project_state([("live", "0004_display_order")]).apps
+        return state.get_model("live", "LiveRoom"), state.get_model("live", "LiveSession")
 
-        first  = LiveRoom.objects.create(room_name="الأقدم",  room_type="online", display_order=0)
-        manual = LiveRoom.objects.create(room_name="يدوية",   room_type="online", display_order=7)
-        last   = LiveRoom.objects.create(room_name="الأحدث",  room_type="online", display_order=0)
-        s1 = LiveSession.objects.create(room=first, session_name="ج1", stream_url="https://e.com/1", display_order=0)
-        s2 = LiveSession.objects.create(room=first, session_name="ج2", stream_url="https://e.com/2", display_order=0)
+    def test_duplicate_nonzero_values_are_renumbered_uniquely(self):
+        LiveRoom, LiveSession = self._run_0004()
 
-        executor = MigrationExecutor(connection)
-        executor.migrate([("live", "0005_order_unique_desc")])
+        # الوضع الذي أسقط النشر: رقمان 1، وصفر، ثم رقم أكبر.
+        LiveRoom.objects.create(room_name="أ", room_type="online", display_order=1)
+        LiveRoom.objects.create(room_name="ب", room_type="online", display_order=1)
+        LiveRoom.objects.create(room_name="ج", room_type="online", display_order=0)
+        LiveRoom.objects.create(room_name="د", room_type="online", display_order=5)
+
+        # الهجرة يجب ألا تُخفق على القيد المكرّر.
+        MigrationExecutor(connection).migrate([("live", "0005_order_unique_desc")])
+
+        from live.models import LiveRoom as Room
+        orders = sorted(r.display_order for r in Room.objects.all())
+        self.assertEqual(orders, [1, 2, 3, 4])  # فريد كثيف بلا فجوات
+
+    def test_last_seen_order_is_preserved_under_descending(self):
+        LiveRoom, LiveSession = self._run_0004()
+        # تحت #10 التصاعدي: 0،0 تُرتَّب بالاسم فالأعلى «الأقدم» ثم «الأحدث»،
+        # يليهما «يدوية» (7). الترتيب المرئي: الأقدم، الأحدث، يدوية.
+        # تحت #10 التصاعدي، الصفران يُرتَّبان بالاسم: «الأحدث» قبل «الأقدم»
+        # (ح < ق)، ثم «يدوية» (7). فالترتيب المرئي: الأحدث، الأقدم، يدوية.
+        LiveRoom.objects.create(room_name="الأقدم", room_type="online", display_order=0)
+        newer = LiveRoom.objects.create(room_name="الأحدث", room_type="online", display_order=0)
+        LiveRoom.objects.create(room_name="يدوية",  room_type="online", display_order=7)
+        LiveSession.objects.create(room=newer, session_name="ج1", stream_url="https://e.com/1", display_order=0)
+        LiveSession.objects.create(room=newer, session_name="ج2", stream_url="https://e.com/2", display_order=0)
+
+        MigrationExecutor(connection).migrate([("live", "0005_order_unique_desc")])
 
         from live.models import LiveRoom as Room, LiveSession as Session
-        by_name = {r.room_name: r.display_order for r in Room.objects.all()}
-        # اليدوية 7 تبقى؛ الأصفار تُرقَّم فوقها: الأقدم 8 ثم الأحدث 9
-        self.assertEqual(by_name, {"يدوية": 7, "الأقدم": 8, "الأحدث": 9})
+        # الترتيب المرئي نفسه يبقى تحت التنازلي (أعلى رقم أولاً).
         self.assertEqual([r.room_name for r in Room.objects.all()], ["الأحدث", "الأقدم", "يدوية"])
-
-        orders = {x.session_name: x.display_order for x in Session.objects.filter(room_id=first.pk)}
-        self.assertEqual(orders, {"ج1": 1, "ج2": 2})
+        self.assertEqual({r.room_name: r.display_order for r in Room.objects.all()},
+                         {"الأحدث": 3, "الأقدم": 2, "يدوية": 1})
+        # جلسات الغرفة: تسلسل فريد كثيف داخلها (الترتيب الدقيق بين اسمين
+        # متطابقي البادئة يتبع تنسيق القاعدة، فيُكتفى بالتفرّد والكثافة).
+        session_orders = sorted(s.display_order for s in Session.objects.filter(room_id=newer.pk))
+        self.assertEqual(session_orders, [1, 2])
