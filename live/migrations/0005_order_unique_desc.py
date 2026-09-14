@@ -7,24 +7,34 @@ def number_existing(apps, schema_editor):
     """
     ترقيم مميّز لكل ما هو قائم قبل فرض قيد التفرّد.
 
-    كل الغرف والجلسات على صفر بعد 0004، وقيد التفرّد يرفض ذلك. تُرقَّم
-    بترتيب الإنشاء تصاعدياً — الأقدم 1 والأحدث N — فمع «الأعلى أولاً»
-    يعود الشكل الذي عرفه المدير قبل الترتيب اليدوي: الأحدث في الأعلى.
-    ما رقّمه المدير يدوياً بعد 0004 (غير صفر) يُترك، ويُرقَّم الباقي فوقه.
+    كل صفٍّ يُعاد ترقيمه لا الأصفار وحدها: بعد 0004 كانت القيمة الافتراضية
+    صفراً، لكن المدير كان قد رقّم بعض الغرف يدوياً عبر واجهة #10 التي لم
+    تفرض تفرّداً، فوُجدت في الإنتاج قيمٌ غير صفرية مكرّرة (رقمان 1 مثلاً)
+    والترقيم السابق كان يتخطّاها فيسقط القيد.
+
+    يُحفَظ الترتيب المرئي الأخير: واجهة #10 كانت تصاعدية
+    (display_order ثم الاسم)، و#11 تنازلية. فنرتّب كما كان يراه المدير
+    تصاعدياً، ونُسند N للأول و1 للأخير، فيبقى الأول أولاً تحت التنازلي.
+    النتيجة تسلسل كثيف فريد 1..N بلا فجوات ولا تكرار.
     """
     LiveRoom    = apps.get_model("live", "LiveRoom")
     LiveSession = apps.get_model("live", "LiveSession")
 
-    def renumber(qs):
-        top = qs.exclude(display_order=0).order_by("-display_order")                 .values_list("display_order", flat=True).first() or 0
-        for obj in qs.filter(display_order=0).order_by("created_at", "id"):
-            top += 1
-            obj.display_order = top
+    def renumber(rows):
+        # لا قيد تفرّد بعدُ عند تنفيذ RunPython، فالتكرار اللحظي أثناء
+        # الحلقة غير مهم؛ الحالة النهائية وحدها تُحسب.
+        n = len(rows)
+        for i, obj in enumerate(rows):
+            obj.display_order = n - i
             obj.save(update_fields=["display_order"])
 
-    renumber(LiveRoom.objects.all())
+    renumber(list(LiveRoom.objects.order_by("display_order", "room_name", "id")))
     for room_id in LiveSession.objects.values_list("room_id", flat=True).distinct():
-        renumber(LiveSession.objects.filter(room_id=room_id))
+        renumber(list(
+            LiveSession.objects
+            .filter(room_id=room_id)
+            .order_by("display_order", "session_name", "id")
+        ))
 
 
 class Migration(migrations.Migration):
