@@ -4,13 +4,15 @@ live/tests_display_order.py
 ================================================================================
 ترتيب غرف البث وجلساتها بيد المدير.
 
-كانت الغرف والجلسات تُعرض بالأحدث أولاً بلا تحكّم. أُضيف display_order على
-نسق المراحل والفصول والكورسات: الأصغر أعلى، والتعادل بالاسم. يسري الترتيب في
-قوائم المدير وفي ما يراه الطالب على السواء، وفي الجلسات داخل كل غرفة.
+القاعدتان: الأعلى رقماً أولاً، ولا تتشارك غرفتان رقماً (ولا جلستان داخل
+غرفة). الجديد بلا رقم يأخذ الأعلى+1 فيظهر أولاً، والتكرار يُرفض برسالة تسمّي
+صاحب الرقم. يسري في قوائم المدير وما يراه الطالب وجلسات كل غرفة.
 ================================================================================
 """
 
-from django.test import TestCase
+from django.db import IntegrityError, connection, transaction
+from django.db.migrations.executor import MigrationExecutor
+from django.test import TestCase, TransactionTestCase
 from rest_framework.test import APIClient
 
 from academic.models import Grade, Level
@@ -54,80 +56,152 @@ class DisplayOrderTests(TestCase):
         level = Level.objects.create(name="ثانوي أونلاين", system_type="online")
         self.grade = Grade.objects.create(level=level, name="الصف الأول", system_type="online")
 
-        # أُنشئت بترتيب الإنشاء ج، ب، أ — فلو بقي "الأحدث أولاً" لظهرت أ، ب، ج.
-        # display_order يقلبها: ب (1)، ثم أ (2)، ثم ج (3).
+        # أُنشئت بترتيب ج، ب، أ. الأعلى رقماً أولاً: ج (3)، ثم أ (2)، ثم ب (1).
         self.room_c = _room("غرفة ج", 3, self.grade)
         self.room_b = _room("غرفة ب", 1, self.grade)
         self.room_a = _room("غرفة أ", 2, self.grade)
 
-        # الجلسات داخل غرفة واحدة، أُنشئت بترتيب 3، 1، 2.
-        _session(self.room_b, "جلسة ثالثة", 3)
-        _session(self.room_b, "جلسة أولى",  1)
-        _session(self.room_b, "جلسة ثانية", 2)
+        _session(self.room_c, "جلسة ثالثة", 3)
+        _session(self.room_c, "جلسة أولى",  1)
+        _session(self.room_c, "جلسة ثانية", 2)
 
-    def test_admin_room_list_follows_display_order(self):
-        client = APIClient()
-        client.force_authenticate(_admin())
-        res = client.get("/api/live/rooms/")
-        self.assertEqual(res.status_code, 200, res.content)
-        names = [r["room_name"] for r in res.json()["results"]]
-        self.assertEqual(names, ["غرفة ب", "غرفة أ", "غرفة ج"])
+        self.admin = APIClient()
+        self.admin.force_authenticate(_admin())
 
-    def test_student_rooms_follow_display_order(self):
-        client = APIClient()
-        client.force_authenticate(_student(self.grade).user)
-        res = client.get("/api/live/my-sessions/")
-        self.assertEqual(res.status_code, 200, res.content)
-        names = [r["room_name"] for r in res.json()]
-        self.assertEqual(names, ["غرفة ب", "غرفة أ", "غرفة ج"])
+    def _admin_rooms(self):
+        return [r["room_name"] for r in self.admin.get("/api/live/rooms/").json()["results"]]
 
-    def test_sessions_inside_room_follow_display_order_for_student(self):
+    def _admin_sessions(self, room):
+        res = self.admin.get(f"/api/live/rooms/{room.pk}/sessions/")
+        return [s["session_name"] for s in res.json()["results"]]
+
+    # ── الأعلى أولاً ──────────────────────────────────────────────────────
+
+    def test_admin_room_list_highest_first(self):
+        self.assertEqual(self._admin_rooms(), ["غرفة ج", "غرفة أ", "غرفة ب"])
+
+    def test_student_rooms_highest_first(self):
         client = APIClient()
         client.force_authenticate(_student(self.grade).user)
         res = client.get("/api/live/my-sessions/")
-        room_b = next(r for r in res.json() if r["room_name"] == "غرفة ب")
-        names = [s["session_name"] for s in room_b["sessions"]]
-        self.assertEqual(names, ["جلسة أولى", "جلسة ثانية", "جلسة ثالثة"])
-
-    def test_sessions_inside_room_follow_display_order_for_admin(self):
-        client = APIClient()
-        client.force_authenticate(_admin())
-        res = client.get(f"/api/live/rooms/{self.room_b.pk}/sessions/")
         self.assertEqual(res.status_code, 200, res.content)
-        names = [s["session_name"] for s in res.json()["results"]]
-        self.assertEqual(names, ["جلسة أولى", "جلسة ثانية", "جلسة ثالثة"])
+        self.assertEqual([r["room_name"] for r in res.json()], ["غرفة ج", "غرفة أ", "غرفة ب"])
 
-    def test_ties_fall_back_to_name(self):
-        """كل الغرف القائمة ستكون 0 بعد الهجرة؛ التعادل يُحسم بالاسم لا عشوائياً."""
-        LiveRoom.objects.update(display_order=0)
+    def test_sessions_highest_first_for_student(self):
         client = APIClient()
-        client.force_authenticate(_admin())
-        names = [r["room_name"] for r in client.get("/api/live/rooms/").json()["results"]]
-        self.assertEqual(names, sorted(names))
+        client.force_authenticate(_student(self.grade).user)
+        room_c = next(r for r in client.get("/api/live/my-sessions/").json() if r["room_name"] == "غرفة ج")
+        self.assertEqual([s["session_name"] for s in room_c["sessions"]],
+                         ["جلسة ثالثة", "جلسة ثانية", "جلسة أولى"])
 
-    def test_admin_can_set_order_on_room_and_session(self):
-        client = APIClient()
-        client.force_authenticate(_admin())
+    def test_sessions_highest_first_for_admin(self):
+        self.assertEqual(self._admin_sessions(self.room_c),
+                         ["جلسة ثالثة", "جلسة ثانية", "جلسة أولى"])
 
-        res = client.patch(f"/api/live/rooms/{self.room_c.pk}/", {"display_order": 0}, format="json")
-        self.assertEqual(res.status_code, 200, res.content)
-        self.assertEqual(res.json()["display_order"], 0)
-        names = [r["room_name"] for r in client.get("/api/live/rooms/").json()["results"]]
-        self.assertEqual(names[0], "غرفة ج")
+    # ── الجديد يأخذ الأعلى+1 فيظهر أولاً ─────────────────────────────────
 
-        session = self.room_b.sessions.get(session_name="جلسة ثالثة")
-        res = client.patch(
-            f"/api/live/rooms/{self.room_b.pk}/sessions/{session.pk}/",
-            {"display_order": 0}, format="json",
-        )
-        self.assertEqual(res.status_code, 200, res.content)
-        names = [s["session_name"] for s in
-                 client.get(f"/api/live/rooms/{self.room_b.pk}/sessions/").json()["results"]]
-        self.assertEqual(names[0], "جلسة ثالثة")
-
-    def test_display_order_defaults_to_zero(self):
-        client = APIClient()
-        client.force_authenticate(_admin())
-        res = client.post("/api/live/rooms/", {"room_name": "بلا ترتيب", "room_type": "online"}, format="json")
+    def test_new_room_without_order_goes_to_top(self):
+        res = self.admin.post("/api/live/rooms/", {"room_name": "غرفة جديدة", "room_type": "online"}, format="json")
         self.assertEqual(res.status_code, 201, res.content)
-        self.assertEqual(res.json()["display_order"], 0)
+        self.assertEqual(res.json()["display_order"], 4)
+        self.assertEqual(self._admin_rooms()[0], "غرفة جديدة")
+
+    def test_first_room_ever_gets_one(self):
+        LiveRoom.objects.all().delete()
+        res = self.admin.post("/api/live/rooms/", {"room_name": "الأولى", "room_type": "online"}, format="json")
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["display_order"], 1)
+
+    def test_new_session_without_order_goes_to_top_of_its_room(self):
+        res = self.admin.post(
+            f"/api/live/rooms/{self.room_c.pk}/sessions/",
+            {"session_name": "جلسة رابعة", "stream_url": "https://example.com/x"}, format="json",
+        )
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["display_order"], 4)
+        self.assertEqual(self._admin_sessions(self.room_c)[0], "جلسة رابعة")
+
+        # الترقيم لكل غرفة على حدة: غرفة أخرى فارغة تبدأ من 1
+        res = self.admin.post(
+            f"/api/live/rooms/{self.room_a.pk}/sessions/",
+            {"session_name": "أول جلسة هنا", "stream_url": "https://example.com/y"}, format="json",
+        )
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["display_order"], 1)
+
+    # ── لا تكرار ─────────────────────────────────────────────────────────
+
+    def test_duplicate_room_order_is_rejected_naming_the_holder(self):
+        res = self.admin.post(
+            "/api/live/rooms/", {"room_name": "مكرّرة", "room_type": "online", "display_order": 2}, format="json",
+        )
+        self.assertEqual(res.status_code, 400, res.content)
+        self.assertIn("غرفة أ", res.json()["display_order"][0])
+
+        res = self.admin.patch(f"/api/live/rooms/{self.room_b.pk}/", {"display_order": 3}, format="json")
+        self.assertEqual(res.status_code, 400, res.content)
+        self.assertIn("غرفة ج", res.json()["display_order"][0])
+
+    def test_keeping_own_order_on_update_is_fine(self):
+        res = self.admin.patch(f"/api/live/rooms/{self.room_b.pk}/", {"display_order": 1, "room_name": "غرفة ب2"}, format="json")
+        self.assertEqual(res.status_code, 200, res.content)
+
+    def test_duplicate_session_order_in_same_room_is_rejected(self):
+        res = self.admin.post(
+            f"/api/live/rooms/{self.room_c.pk}/sessions/",
+            {"session_name": "مكرّرة", "stream_url": "https://example.com/x", "display_order": 2}, format="json",
+        )
+        self.assertEqual(res.status_code, 400, res.content)
+        self.assertIn("جلسة ثانية", res.json()["display_order"][0])
+
+    def test_same_session_order_in_another_room_is_fine(self):
+        res = self.admin.post(
+            f"/api/live/rooms/{self.room_a.pk}/sessions/",
+            {"session_name": "في غرفة أخرى", "stream_url": "https://example.com/x", "display_order": 2}, format="json",
+        )
+        self.assertEqual(res.status_code, 201, res.content)
+
+    def test_database_refuses_duplicates_too(self):
+        """شبكة أمان تحت السيريالايزر: القيد على مستوى القاعدة."""
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            _room("تكرار مباشر", 3)
+
+    # ── تعديل الترتيب ────────────────────────────────────────────────────
+
+    def test_admin_can_move_a_room_to_the_top(self):
+        res = self.admin.patch(f"/api/live/rooms/{self.room_b.pk}/", {"display_order": 9}, format="json")
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(self._admin_rooms()[0], "غرفة ب")
+
+
+class ExistingRowsNumberingTests(TransactionTestCase):
+    """
+    ما ترقّمه الهجرة 0005 للقائم: بترتيب الإنشاء، الأقدم 1 والأحدث N، مع
+    إبقاء ما رقّمه المدير يدوياً والترقيم فوقه. تُشغَّل الهجرة فعلاً على
+    قاعدة عند 0004 (حيث الأصفار المتكررة مسموحة) ثم تُقاس النتيجة.
+    """
+
+    def test_migration_numbers_zeros_by_creation_and_keeps_manual_values(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate([("live", "0004_display_order")])
+        old_apps = executor.loader.project_state([("live", "0004_display_order")]).apps
+        LiveRoom    = old_apps.get_model("live", "LiveRoom")
+        LiveSession = old_apps.get_model("live", "LiveSession")
+
+        first  = LiveRoom.objects.create(room_name="الأقدم",  room_type="online", display_order=0)
+        manual = LiveRoom.objects.create(room_name="يدوية",   room_type="online", display_order=7)
+        last   = LiveRoom.objects.create(room_name="الأحدث",  room_type="online", display_order=0)
+        s1 = LiveSession.objects.create(room=first, session_name="ج1", stream_url="https://e.com/1", display_order=0)
+        s2 = LiveSession.objects.create(room=first, session_name="ج2", stream_url="https://e.com/2", display_order=0)
+
+        executor = MigrationExecutor(connection)
+        executor.migrate([("live", "0005_order_unique_desc")])
+
+        from live.models import LiveRoom as Room, LiveSession as Session
+        by_name = {r.room_name: r.display_order for r in Room.objects.all()}
+        # اليدوية 7 تبقى؛ الأصفار تُرقَّم فوقها: الأقدم 8 ثم الأحدث 9
+        self.assertEqual(by_name, {"يدوية": 7, "الأقدم": 8, "الأحدث": 9})
+        self.assertEqual([r.room_name for r in Room.objects.all()], ["الأحدث", "الأقدم", "يدوية"])
+
+        orders = {x.session_name: x.display_order for x in Session.objects.filter(room_id=first.pk)}
+        self.assertEqual(orders, {"ج1": 1, "ج2": 2})

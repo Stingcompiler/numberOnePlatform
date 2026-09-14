@@ -51,7 +51,7 @@ class LiveRoomListCreateView(generics.ListCreateAPIView):
         LiveRoom.objects
         .select_related("grade__level")
         .prefetch_related("sessions")
-        .order_by("display_order", "room_name")
+        .order_by("-display_order", "room_name")
     )
 
     def perform_create(self, serializer):
@@ -139,7 +139,7 @@ class LiveSessionListCreateView(generics.ListCreateAPIView):
             LiveSession.objects
             .filter(room_id=self.kwargs["room_pk"])
             .select_related("room")
-            .order_by("display_order", "session_name")
+            .order_by("-display_order", "session_name")
         )
 
     def get_room(self):
@@ -266,7 +266,7 @@ class MyLiveSessionsView(APIView):
             )
             .select_related("grade")
             .prefetch_related("sessions")
-            .order_by("display_order", "room_name")
+            .order_by("-display_order", "room_name")
         )
 
         serializer = LiveRoomStudentSerializer(rooms, many=True)

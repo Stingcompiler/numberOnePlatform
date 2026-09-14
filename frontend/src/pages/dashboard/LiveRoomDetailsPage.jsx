@@ -116,13 +116,14 @@ function ErrorBanner({ message }) {
 // Session Form Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SessionFormModal({ roomId, session, sessionCount, onClose, onSaved }) {
+function SessionFormModal({ roomId, session, nextOrder, onClose, onSaved }) {
   const isEdit = !!session
 
   const [form, setForm] = useState({
     session_name:    session?.session_name    || "",
-    // الجديدة تُلحق بالنهاية، كما في المحاضرات داخل الوحدة
-    display_order:   session?.display_order   ?? sessionCount,
+    // الأعلى يظهر أولاً؛ الجديدة تُقترَح بالأعلى+1 داخل الغرفة.
+    // إن فُرّغ الحقل يُرسَل null فيعطيه الخادم الأعلى+1 بنفسه.
+    display_order:   session?.display_order   ?? nextOrder,
     description:     session?.description     || "",
     provider:        session?.provider        || "zoom",
     stream_url:      session?.stream_url      || "",
@@ -139,7 +140,11 @@ function SessionFormModal({ roomId, session, sessionCount, onClose, onSaved }) {
 
     setSaving(true); setError("")
     try {
-      const payload = { ...form, room: roomId, display_order: Number(form.display_order) || 0 }
+      const payload = {
+        ...form,
+        room: roomId,
+        display_order: form.display_order === "" ? null : Number(form.display_order),
+      }
 
       if (isEdit) {
         await api.patch(`/live/rooms/${roomId}/sessions/${session.id}/`, payload)
@@ -209,6 +214,7 @@ function SessionFormModal({ roomId, session, sessionCount, onClose, onSaved }) {
                 dir="ltr"
                 disabled={saving}
               />
+              <p className="text-white/30 text-[11px] leading-relaxed">الأعلى أولاً، ولا يتكرر.</p>
             </div>
           </div>
 
@@ -471,7 +477,7 @@ export default function LiveRoomDetailsPage() {
         <SessionFormModal
           roomId={room.id}
           session={editSession}
-          sessionCount={sessions.length}
+          nextOrder={Math.max(0, ...sessions.map(s => s.display_order ?? 0)) + 1}
           onClose={() => { setShowSessionForm(false); setEditSession(null) }}
           onSaved={handleSessionSaved}
         />

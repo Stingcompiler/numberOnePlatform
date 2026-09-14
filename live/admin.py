@@ -28,7 +28,7 @@ class LiveRoomAdmin(admin.ModelAdmin):
     search_fields  = ["room_name"]
     list_editable  = ["display_order", "is_active"]
     inlines        = [LiveSessionInline]
-    ordering       = ["display_order", "room_name"]
+    ordering       = ["-display_order", "room_name"]
 
 
 @admin.register(LiveSession)
@@ -38,5 +38,5 @@ class LiveSessionAdmin(admin.ModelAdmin):
     search_fields  = ["session_name", "room__room_name"]
     list_select_related = ["room"]
     list_editable  = ["display_order"]
-    ordering       = ["room", "display_order", "session_name"]
+    ordering       = ["room", "-display_order", "session_name"]
     date_hierarchy = "created_at"

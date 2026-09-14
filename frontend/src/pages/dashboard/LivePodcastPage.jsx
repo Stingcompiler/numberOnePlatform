@@ -120,12 +120,13 @@ function ErrorBanner({ message }) {
 // Room Form Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-function RoomFormModal({ room, roomCount, onClose, onSaved }) {
+function RoomFormModal({ room, nextOrder, onClose, onSaved }) {
   const isEdit = !!room
   const [form, setForm] = useState({
     room_name:   room?.room_name   || "",
-    // الجديد يُلحق بالنهاية، كما في المراحل والفصول
-    display_order: room?.display_order ?? roomCount,
+    // الأعلى يظهر أولاً؛ الجديدة تُقترَح بالأعلى+1 فتظهر في القمة.
+    // إن فُرّغ الحقل يُرسَل null فيعطيه الخادم الأعلى+1 بنفسه.
+    display_order: room?.display_order ?? nextOrder,
     room_type:   room?.room_type   || "online",
     course_type: room?.course_type || "general",
     // "" = بلا فصل: الغرفة تُرى من كل فصول نظامها
@@ -163,7 +164,7 @@ function RoomFormModal({ room, roomCount, onClose, onSaved }) {
       const payload = {
         ...form,
         grade: form.grade === "" ? null : Number(form.grade),
-        display_order: Number(form.display_order) || 0,
+        display_order: form.display_order === "" ? null : Number(form.display_order),
       }
       if (isEdit) {
         await api.patch(`/live/rooms/${room.id}/`, payload)
@@ -246,6 +247,7 @@ function RoomFormModal({ room, roomCount, onClose, onSaved }) {
                 dir="ltr"
                 disabled={saving}
               />
+              <p className="text-white/30 text-[11px] leading-relaxed">الأعلى أولاً، ولا يتكرر.</p>
             </div>
           </div>
           <div className="space-y-1.5">
@@ -492,7 +494,7 @@ export default function LivePodcastPage() {
       {showForm && (
         <RoomFormModal
           room={editRoom}
-          roomCount={rooms.length}
+          nextOrder={Math.max(0, ...rooms.map(r => r.display_order ?? 0)) + 1}
           onClose={() => { setShowForm(false); setEditRoom(null) }}
           onSaved={() => { setShowForm(false); setEditRoom(null); fetchRooms() }}
         />
