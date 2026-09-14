@@ -21,8 +21,14 @@ from .models import LiveRoom, LiveSession
 class LiveSessionAdminSerializer(serializers.ModelSerializer):
     """
     Serializer جلسة البث للمسؤول — يكشف جميع الحقول مع التحقق الكامل.
+
+    display_order فريد داخل الغرفة والأعلى أولاً. مُصرَّح به هنا لا مولَّداً
+    كي تُكتب رسالة الرفض بالعربية وتسمّي الجلسة التي تحمل الرقم، ولأن
+    الغرفة تأتي من المسار لا من الجسم فلا يصلح مُحقِّق DRF المشترك.
     """
-    room_name = serializers.CharField(source="room.room_name", read_only=True)
+    room_name     = serializers.CharField(source="room.room_name", read_only=True)
+    # بلا رقم ⇒ الموديل يعطي الأعلى+1 عند الحفظ.
+    display_order = serializers.IntegerField(min_value=0, required=False, allow_null=True)
 
     class Meta:
         model  = LiveSession
@@ -33,12 +39,64 @@ class LiveSessionAdminSerializer(serializers.ModelSerializer):
             "status", "display_order",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "room_name"]
+        # الغرفة تُحدَّد من المسار (save(room=...)) لا من جسم الطلب.
+        read_only_fields = ["id", "room", "created_at", "updated_at", "room_name"]
+
+    def _room_id(self):
+        if self.instance is not None:
+            return self.instance.room_id
+        view = self.context.get("view")
+        return view.kwargs.get("room_pk") if view is not None else None
+
+    def validate_display_order(self, value):
+        if value is None:
+            return value
+        taken = (
+            LiveSession.objects
+            .filter(room_id=self._room_id(), display_order=value)
+            .exclude(pk=self.instance.pk if self.instance else None)
+            .first()
+        )
+        if taken:
+            raise serializers.ValidationError(
+                f"الترتيب {value} مستخدم للجلسة «{taken.session_name}» — اختر رقماً آخر."
+            )
+        return value
 
     def validate_stream_url(self, value):
         """التحقق من صحة الرابط."""
         if value and not (value.startswith("http://") or value.startswith("https://")):
             raise serializers.ValidationError("الرابط يجب أن يبدأ بـ http:// أو https://")
+        return value
+
+
+class _RoomOrderMixin(serializers.Serializer):
+    """
+    display_order فريد بين كل الغرف والأعلى أولاً — قائمة المدير واحدة لكل
+    الأنظمة فالتفرّد على مستواها. مُصرَّح به هنا لا مولَّداً كي تُكتب رسالة
+    الرفض بالعربية وتسمّي الغرفة التي تحمل الرقم. الغرفة الجديدة بلا رقم
+    تأخذ الأعلى+1 فتظهر أولاً.
+
+    يرث Serializer لا object: حقل مُصرَّح في خليط عادي لا يلتقطه
+    SerializerMetaclass، فيولّد ModelSerializer الحقل من الموديل بمُحقِّق
+    التفرّد العام ورسالته العامة بدل هذه.
+    """
+    # بلا رقم ⇒ الموديل يعطي الأعلى+1 عند الحفظ.
+    display_order = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+
+    def validate_display_order(self, value):
+        if value is None:
+            return value
+        taken = (
+            LiveRoom.objects
+            .filter(display_order=value)
+            .exclude(pk=self.instance.pk if self.instance else None)
+            .first()
+        )
+        if taken:
+            raise serializers.ValidationError(
+                f"الترتيب {value} مستخدم للغرفة «{taken.room_name}» — اختر رقماً آخر."
+            )
         return value
 
 
@@ -64,7 +122,7 @@ class _RoomGradeValidationMixin:
         return attrs
 
 
-class LiveRoomAdminSerializer(_RoomGradeValidationMixin, serializers.ModelSerializer):
+class LiveRoomAdminSerializer(_RoomOrderMixin, _RoomGradeValidationMixin, serializers.ModelSerializer):
     """
     Serializer الغرفة للمسؤول — يتضمن جميع الجلسات متداخلة.
     """
@@ -91,7 +149,7 @@ class LiveRoomAdminSerializer(_RoomGradeValidationMixin, serializers.ModelSerial
         return value.strip()
 
 
-class LiveRoomListAdminSerializer(_RoomGradeValidationMixin, serializers.ModelSerializer):
+class LiveRoomListAdminSerializer(_RoomOrderMixin, _RoomGradeValidationMixin, serializers.ModelSerializer):
     """
     Serializer مختصر للغرفة — يُستخدم في قوائم الغرف (بدون جلسات متداخلة).
     """
