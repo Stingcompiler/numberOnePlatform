@@ -199,7 +199,7 @@ class ExistingRowsNumberingTests(TransactionTestCase):
         LiveRoom.objects.create(room_name="د", room_type="online", display_order=5)
 
         # الهجرة يجب ألا تُخفق على القيد المكرّر.
-        MigrationExecutor(connection).migrate([("live", "0005_order_unique_desc")])
+        MigrationExecutor(connection).migrate([("live", "0006_order_schema")])
 
         from live.models import LiveRoom as Room
         orders = sorted(r.display_order for r in Room.objects.all())
@@ -217,7 +217,7 @@ class ExistingRowsNumberingTests(TransactionTestCase):
         LiveSession.objects.create(room=newer, session_name="ج1", stream_url="https://e.com/1", display_order=0)
         LiveSession.objects.create(room=newer, session_name="ج2", stream_url="https://e.com/2", display_order=0)
 
-        MigrationExecutor(connection).migrate([("live", "0005_order_unique_desc")])
+        MigrationExecutor(connection).migrate([("live", "0006_order_schema")])
 
         from live.models import LiveRoom as Room, LiveSession as Session
         # الترتيب المرئي نفسه يبقى تحت التنازلي (أعلى رقم أولاً).
