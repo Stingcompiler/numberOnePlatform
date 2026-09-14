@@ -75,6 +75,9 @@ class LiveRoom(models.Model):
         help_text=_("معلومة تنظيمية للمسؤول — لا تؤثر في فلترة الطلاب."),
     )
     description = models.TextField(_("الوصف"), blank=True)
+    # الترتيب اليدوي، على نسق المراحل والفصول والكورسات: الأصغر أعلى،
+    # والتعادل بالاسم. كانت الغرف تُعرض بالأحدث أولاً بلا تحكّم من المدير.
+    display_order = models.PositiveSmallIntegerField(_("ترتيب العرض"), default=0)
     is_active   = models.BooleanField(_("نشطة"), default=True)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
@@ -82,7 +85,7 @@ class LiveRoom(models.Model):
     class Meta:
         verbose_name        = _("غرفة بث")
         verbose_name_plural = _("غرف البث")
-        ordering            = ["-created_at"]
+        ordering            = ["display_order", "room_name"]
         indexes = [
             # Indexes للحقول المستخدمة في الفلترة — يحسّن أداء استعلامات الطلاب
             models.Index(fields=["room_type"],  name="liveroom_room_type_idx"),
@@ -148,6 +151,8 @@ class LiveSession(models.Model):
         choices=Status.choices,
         default=Status.UPCOMING,
     )
+    # الترتيب اليدوي داخل الغرفة، على نسق المحاضرات داخل الوحدة.
+    display_order   = models.PositiveSmallIntegerField(_("ترتيب العرض"), default=0)
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at      = models.DateTimeField(auto_now=True)
 
@@ -155,7 +160,7 @@ class LiveSession(models.Model):
         verbose_name        = _("جلسة بث")
         verbose_name_plural = _("جلسات البث")
         # أُزيلت المواعيد؛ الأحدث إنشاءً أولاً داخل الغرفة.
-        ordering            = ["-created_at"]
+        ordering            = ["room", "display_order", "session_name"]
         indexes = [
             # Indexes للحقول المستخدمة في الفلترة والترتيب
             models.Index(fields=["status"],           name="livesession_status_idx"),

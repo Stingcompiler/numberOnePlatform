@@ -116,11 +116,13 @@ function ErrorBanner({ message }) {
 // Session Form Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SessionFormModal({ roomId, session, onClose, onSaved }) {
+function SessionFormModal({ roomId, session, sessionCount, onClose, onSaved }) {
   const isEdit = !!session
 
   const [form, setForm] = useState({
     session_name:    session?.session_name    || "",
+    // الجديدة تُلحق بالنهاية، كما في المحاضرات داخل الوحدة
+    display_order:   session?.display_order   ?? sessionCount,
     description:     session?.description     || "",
     provider:        session?.provider        || "zoom",
     stream_url:      session?.stream_url      || "",
@@ -137,7 +139,7 @@ function SessionFormModal({ roomId, session, onClose, onSaved }) {
 
     setSaving(true); setError("")
     try {
-      const payload = { ...form, room: roomId }
+      const payload = { ...form, room: roomId, display_order: Number(form.display_order) || 0 }
 
       if (isEdit) {
         await api.patch(`/live/rooms/${roomId}/sessions/${session.id}/`, payload)
@@ -183,7 +185,7 @@ function SessionFormModal({ roomId, session, onClose, onSaved }) {
             disabled={saving}
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-4">
             <FormSelect
               label="مزود البث *"
               value={form.provider}
@@ -196,6 +198,18 @@ function SessionFormModal({ roomId, session, onClose, onSaved }) {
               onChange={v => set("status", v)}
               options={SESSION_STATUSES.map(s => ({ value: s.value, label: s.label }))}
             />
+            <div className="space-y-1.5 w-24">
+              <FieldLabel>الترتيب</FieldLabel>
+              <input
+                type="number"
+                min="0"
+                value={form.display_order}
+                onChange={e => set("display_order", e.target.value)}
+                className="w-full input-glass"
+                dir="ltr"
+                disabled={saving}
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -282,6 +296,7 @@ function SessionRow({ session, onEdit, onDelete }) {
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
+        <span className="badge badge-blue">مرتبة: {session.display_order ?? 0}</span>
         <StatusBadge status={session.status} />
         {session.stream_url && (
           <a href={session.stream_url} target="_blank" rel="noopener noreferrer"
@@ -456,6 +471,7 @@ export default function LiveRoomDetailsPage() {
         <SessionFormModal
           roomId={room.id}
           session={editSession}
+          sessionCount={sessions.length}
           onClose={() => { setShowSessionForm(false); setEditSession(null) }}
           onSaved={handleSessionSaved}
         />

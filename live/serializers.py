@@ -30,7 +30,7 @@ class LiveSessionAdminSerializer(serializers.ModelSerializer):
             "id", "room", "room_name",
             "session_name", "description",
             "provider", "stream_url",
-            "status",
+            "status", "display_order",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "room_name"]
@@ -78,7 +78,7 @@ class LiveRoomAdminSerializer(_RoomGradeValidationMixin, serializers.ModelSerial
         fields = [
             "id", "room_name", "room_type", "course_type",
             "grade", "grade_name", "level_name",
-            "description", "is_active",
+            "description", "display_order", "is_active",
             "sessions_count", "sessions",
             "created_at", "updated_at",
         ]
@@ -104,7 +104,7 @@ class LiveRoomListAdminSerializer(_RoomGradeValidationMixin, serializers.ModelSe
         fields = [
             "id", "room_name", "room_type", "course_type",
             "grade", "grade_name", "level_name",
-            "description", "is_active",
+            "description", "display_order", "is_active",
             "sessions_count",
             "created_at", "updated_at",
         ]
